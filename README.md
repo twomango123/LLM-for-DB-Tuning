@@ -1,6 +1,8 @@
 # L0:evaluation
 ### 环境准备
-.venv\Scripts\activate  
+python -m venv .venv  
+.venv\Scripts\activate      # Windows  
+pip install -r requirements.txt   
 ### 运行 包含mysql database删除和创建，schema创建，源数据导入，sql语句导入并执行查询收集指标（预热，串行，并行，latency和吞吐量）
 python ./DataBase/MySQLDriver.py  
 ### 测试结果  
