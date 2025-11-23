@@ -1,19 +1,35 @@
 # L0:evaluation
-### 环境准备
-python -m venv .venv  
-.venv\Scripts\activate      # Windows  
-pip install -r requirements.txt   
-### 运行 包含mysql database删除和创建，schema创建，源数据导入，sql语句导入并执行查询收集指标（预热，串行，并行，latency和吞吐量）
-python ./DataBase/MySQLDriver.py  
-### 测试结果  
-cd ./DataBase/tpcc_benchmark_results.json  
+### 创建镜像 运行并进入docker  
+在git clone之前需要先创建一个工作目录，在工作目录下clone  
+```bash
+chmod +x docker.sh  
+./docker.sh  
+```
 
-# 其他前置工作
-### ch-benchmark的tpc-h queries，来自于ch-benchmark-mysqlDialect
-cd DataBase/cleaned_sql  
-### 源数据
-cd ./tpcc_data  
-### 源数据生成 来自ch-benchmark中生成数据的c++程序改写
-cd Data/DataSource/DataGen  
-g++ -o tpcc_data_gen main.cpp DataSource.cpp TupleGen.cpp -std=c++11 -lpthread  
-./tpcc_data_gen -w 1 -o D:\LLM4DBTUNING\tpcc_data 
+# 单独运行ch-benchmark （在原始统计tpms、qps基础上加入latency统计）
+### 进入docker后 启动mysql服务  
+`service mysql start`  
+### 进入ch-benchmark 编译
+```bash
+cd ch-benchmark  
+make  
+```  
+### 运行生成数据命令 可指定warehouse数量（-wh 1） 最好不要更改csv输出目录
+`./chBenchmark -csv -wh 1 -pa /var/lib/mysql-files  `  
+### 运行ch-benchmark测试
+-a是OLAP线程数量，-t是TP线程数，a=1,t=0时仅顺序执行22个查询测试AP_latency，a=0,t=1时仅顺序执行5个事务测试TP_latency。  
+-wd是warmup duration，-td是test duration，限定了并发执行的时间，当测试latency时不受test duration控制，执行完毕后直接结束线程不会等待。  
+一个测试AP_latency的示例  
+`./chBenchmark -run -dsn mysql-bench -usr root -pwd '123!@#200' -a 1 -t 0 -wd 30 -td 100 -pa /var/lib/mysql-files -op /var/lib/mysql-files `  
+查看结果  
+`cat /var/lib/mysql-files/latency_AP.txt  `  
+一个测试TP_latency的示例  
+`./chBenchmark -run -dsn mysql-bench -usr root -pwd '123!@#200' -a 0 -t 1 -wd 30 -td 100 -pa /var/lib/mysql-files -op /var/lib/mysql-files`  
+查看结果  
+`cat /var/lib/mysql-files/latency_TP.txt`  
+一个测试tps等的示例  
+`./chBenchmark -run -dsn mysql-bench -usr root -pwd '123!@#200' -a 5 -t 10 -wd 60 -td 300 -pa /var/lib/mysql-files -op /var/lib/mysql-files`  
+查看结果  
+`cat /var/lib/mysql-files/Result.txt`  
+
+

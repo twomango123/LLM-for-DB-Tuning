@@ -33,18 +33,18 @@ ofstream TupleGen::supplierStream;
 ofstream TupleGen::regionStream;
 
 void TupleGen::openOutputFiles(){
-	warehouseStream.open( (Config::getInitialDbCreationPath()+"/WAREHOUSE.tbl").c_str() );
-	districtStream.open( (Config::getInitialDbCreationPath()+"/DISTRICT.tbl").c_str() );
-	customerStream.open( (Config::getInitialDbCreationPath()+"/CUSTOMER.tbl").c_str() );
-	historyStream.open( (Config::getInitialDbCreationPath()+"/HISTORY.tbl").c_str() );
-	neworderStream.open( (Config::getInitialDbCreationPath()+"/NEWORDER.tbl").c_str() );
-	orderStream.open( (Config::getInitialDbCreationPath()+"/ORDER.tbl").c_str() );
-	orderlineStream.open( (Config::getInitialDbCreationPath()+"/ORDERLINE.tbl").c_str() );
-	itemStream.open( (Config::getInitialDbCreationPath()+"/ITEM.tbl").c_str() );
-	stockStream.open( (Config::getInitialDbCreationPath()+"/STOCK.tbl").c_str() );
-	nationStream.open( (Config::getInitialDbCreationPath()+"/NATION.tbl").c_str() );
-	supplierStream.open( (Config::getInitialDbCreationPath()+"/SUPPLIER.tbl").c_str() );
-	regionStream.open( (Config::getInitialDbCreationPath()+"/REGION.tbl").c_str() );
+	warehouseStream.open( (Config::getInitialDbCreationPath()+"/warehouse.tbl").c_str() );
+	districtStream.open( (Config::getInitialDbCreationPath()+"/district.tbl").c_str() );
+	customerStream.open( (Config::getInitialDbCreationPath()+"/customer.tbl").c_str() );
+	historyStream.open( (Config::getInitialDbCreationPath()+"/history.tbl").c_str() );
+	neworderStream.open( (Config::getInitialDbCreationPath()+"/neworder.tbl").c_str() );
+	orderStream.open( (Config::getInitialDbCreationPath()+"/order.tbl").c_str() );
+	orderlineStream.open( (Config::getInitialDbCreationPath()+"/orderline.tbl").c_str() );
+	itemStream.open( (Config::getInitialDbCreationPath()+"/item.tbl").c_str() );
+	stockStream.open( (Config::getInitialDbCreationPath()+"/stock.tbl").c_str() );
+	nationStream.open( (Config::getInitialDbCreationPath()+"/nation.tbl").c_str() );
+	supplierStream.open( (Config::getInitialDbCreationPath()+"/supplier.tbl").c_str() );
+	regionStream.open( (Config::getInitialDbCreationPath()+"/region.tbl").c_str() );
 }
 
 void TupleGen::closeOutputFiles(){

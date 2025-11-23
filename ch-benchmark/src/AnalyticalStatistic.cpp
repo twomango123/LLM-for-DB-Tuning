@@ -22,18 +22,27 @@ AnalyticalStatistic::AnalyticalStatistic(){
 	for(int i=0; i<22; i++){
 		executeTPCHSuccessCount[i] = 0;
 		executeTPCHFailCount[i] = 0;
+		// totalLatency[i] = 0;  // 累计延迟
+        // countLatency[i] = 0;  // 记录次数
 	}
 }
 
 void AnalyticalStatistic::addResult(unsigned long long& analyticalResults){
 	for(int i=0; i<22; i++){
 		analyticalResults += executeTPCHSuccessCount[i];
+		// if(countLatency[i] > 0){
+        //         avgLatencies[i] = static_cast<double>(totalLatency[i]) / countLatency[i];
+        //     } else {
+        //         avgLatencies[i] = 0.0;
+        //     }
 	}
 }
 
 void AnalyticalStatistic::executeTPCHSuccess(int queryNumber, bool success){
-	if(success)
-		executeTPCHSuccessCount[queryNumber-1]++;
-	else
-		executeTPCHFailCount[queryNumber-1]++;
+	int idx = queryNumber - 1;
+        if(success) executeTPCHSuccessCount[idx]++;
+        else executeTPCHFailCount[idx]++;
+        // totalLatency[idx] += latencyMicrosec;
+        // countLatency[idx]++;
 }
+
