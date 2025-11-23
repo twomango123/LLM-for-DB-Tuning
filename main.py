@@ -1,6 +1,35 @@
 from DataBase.DatabaseDriver import DatabaseDriver
 from DataBase.MySQLDriver import MySQLDriver
 from Data.DataPreparation.DataPreparation import DataPreparation
+def run_chbenchmark(csv_path: Path, output_path: Path, db_config, warmup=60, duration=300):
+    chb_path = Path("/path/to/chBenchmark")  # C++可执行文件路径
+    cmd_csv = [
+        str(chb_path),
+        "-csv",
+        "-wh", "1",
+        "-pa", str(csv_path)
+    ]
+    
+    # 生成CSV
+    subprocess.run(cmd_csv, check=True)
+    
+    # 运行测试
+    cmd_run = [
+        str(chb_path),
+        "-run",
+        "-dsn", db_config['dsn'],
+        "-usr", db_config['user'],
+        "-pwd", db_config['password'],
+        "-a", "5",
+        "-t", "10",
+        "-wd", str(warmup),
+        "-td", str(duration),
+        "-pa", str(csv_path),
+        "-op", str(output_path)
+    ]
+    
+    subprocess.run(cmd_run, check=True)
+    print(f"✅ 测试完成，结果输出到 {output_path}")
 def suggest_schema():
     pass
 
@@ -45,23 +74,8 @@ def main():
     sql = rewrite_sql()
 
     # 准备 rewrite后的数据
-
-    new_db = MySQLDriver(config={
-        "host": "localhost",
-        "port": 3306,
-        "user": "root",
-        "password": "947722",
-        "database": "new_tpcch"
-    })
-
-    if not new_db.connect():
-        print("数据库连接失败，程序退出")
-        return
     
     rewritten_data = DataPreparation(new_db, )
-    rewritten_data.prepare_rewritten_data(db)
-
-    db.disconnect()
 
     # 进行 evaluation 测试
 

@@ -32,6 +32,10 @@ limitations under the License.
 #include <sqlext.h>
 #include <sqltypes.h>
 #include <unistd.h>
+#include <chrono>
+#include <functional>
+#include <array>
+
 
 using namespace std;
 
@@ -149,15 +153,68 @@ void* analyticalThread(void* args){
 		}
 	}
 	if(*(prm->runState)==2){
+		bool collectAPLatency = (Config::getAnalyticalClients() == 1 && Config::getTransactionalClients() == 0);
 		Log::l1() << Log::tm() << "-analytical " << prm->threadId << ": start test\n";
-		while(*(prm->runState)==2){
-			q=(query%22)+1;
 
-			Log::l1() << Log::tm() << "-analytical " << prm->threadId << ": TPC-H " << q << "\n";
-			b = queries->executeTPCH(hDBC,q);
-			aStat->executeTPCHSuccess(q,b);
-			query++;
+		while(*(prm->runState)==2){
+
+			if (collectAPLatency) {
+				// ---------------------------------------------------------
+				// SOLO 执行 22 个 TPCH Query 并记录每个 Query 的延迟
+				// ---------------------------------------------------------
+				const std::string apOut = "/var/lib/mysql-files/latency_AP.txt"; // ⭐你可以改路径
+				std::ofstream ofs(apOut, std::ios::app);
+
+				if (!ofs.is_open()) {
+					Log::l1() << "Error: cannot write AP latency file " << apOut << "\n";
+					break;
+				}
+
+				ofs << "AP Solo Latency Collection:\n";
+
+				for (int qid = 1; qid <= 22; qid++) {
+					using namespace std::chrono;
+
+					auto start = high_resolution_clock::now();
+					bool ok = queries->executeTPCH(hDBC, qid);
+					auto end = high_resolution_clock::now();
+
+					long long ms = duration_cast<milliseconds>(end - start).count();
+
+					// 写入统计模块
+					aStat->executeTPCHSuccess(qid, ok);
+
+					// 写入文件：QueryID, success/fail, latency
+					ofs << "Q" << qid << ", "
+						<< (ok ? "success" : "rollback") << ", "
+						<< ms << " ms\n";
+
+					Log::l1() << Log::tm()
+							<< "-analytical " << prm->threadId
+							<< ": TPCH " << qid
+							<< " (" << (ok ? "success" : "rollback")
+							<< ") latency=" << ms << "ms\n";
+
+					if (*(prm->runState) != 2)
+						break;  // 外部要求停止
+				}
+
+				ofs << "--------------------------\n";
+				ofs.close();
+
+				break; 
+			}
+			else{
+				// 正常执行随机query
+				q=(query%22)+1;
+
+				Log::l1() << Log::tm() << "-analytical " << prm->threadId << ": TPC-H " << q << "\n";
+				b = queries->executeTPCH(hDBC,q);
+				aStat->executeTPCHSuccess(q,b);
+				query++;
+			}
 		}
+		
 	}
 
 	Log::l1() << Log::tm() << "-analytical " << prm->threadId << ": exit\n";
@@ -216,42 +273,102 @@ void* transactionalThread(void* args){
 					transactions->executeStockLevel(hDBC);
 				}
 			}
+			
 		}
 
 		if(*(prm->runState)==2){
+			bool soloTransactional = (Config::getAnalyticalClients() == 0 && Config::getTransactionalClients() == 1);
 			Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": start test\n";
 			while(*(prm->runState)==2){
-				DataSource::randomUniformInt(1,100,decision);
-				if(decision<=44 && (*(prm->runState)==2)){
-					Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": NewOrder\n";
-					b = transactions->executeNewOrder(hDBC);
-					tStat->executeTPCCSuccess(1,b);
+
+				if(soloTransactional){
+            		// 单独执行事务负载，逐个执行每种事务
+					using namespace std::chrono;
+
+    				// 记录5个事务的耗时 (单位：毫秒)
+					std::array<long long, 5> txnLatency = {0,0,0,0,0};
+					// 记录5个事务是否成功（true=success，false=rollback）
+        			std::array<bool, 5> txnResult = {false, false, false, false, false};
+
+					// 事务函数指针列表，按照你原始顺序：NewOrder、Payment、OrderStatus、Delivery、StockLevel
+					std::function<bool()> txnFuncs[5] = {
+						[&](){ return transactions->executeNewOrder(hDBC); },
+						[&](){ return transactions->executePayment(hDBC); },
+						[&](){ return transactions->executeOrderStatus(hDBC); },
+						[&](){ return transactions->executeDelivery(hDBC); },
+						[&](){ return transactions->executeStockLevel(hDBC); }
+					};
+
+					const char* txnNames[5] = { 
+						"NewOrder", "Payment", "OrderStatus", "Delivery", "StockLevel" 
+					};
+
+					// 顺序执行 5 个事务，并分别计时
+					for (int i=0; i<5; i++) {
+						auto start = high_resolution_clock::now();
+						bool ok = txnFuncs[i]();
+						auto end = high_resolution_clock::now();
+
+						long long ms = duration_cast<milliseconds>(end - start).count();
+						txnLatency[i] = ms;
+
+						tStat->executeTPCCSuccess(i+1, ok);
+					}
+
+					// 写入到指定文件
+					const std::string outPath = "/var/lib/mysql-files/latency_TP.txt"; // ⚠你可改成想要的路径
+					std::ofstream ofs(outPath, std::ios::app);
+
+					if (ofs.is_open()) {
+						ofs << "Solo Transaction Latency (ms):\n";
+
+						for (int i = 0; i < 5; i++) {
+							ofs << txnNames[i] 
+								<< " (" << (txnResult[i] ? "success" : "rollback") << "): "
+								<< txnLatency[i] << " ms\n";
+						}
+
+						ofs << "-----------------------------\n";
+						ofs.close();
+					} else {
+						Log::l1() << "Error: cannot write latency file " << outPath << "\n";
+					}
+					break;
 				}
-				DataSource::randomUniformInt(1,100,decision);
-				if(decision<=44 && (*(prm->runState)==2)){
-					Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": Payment\n";
-					b = transactions->executePayment(hDBC);
-					tStat->executeTPCCSuccess(2,b);
-				}
-				DataSource::randomUniformInt(1,100,decision);
-				if(decision<=4 && (*(prm->runState)==2)){
-					Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": OrderStatus\n";
-					b = transactions->executeOrderStatus(hDBC);
-					tStat->executeTPCCSuccess(3,b);
-				}
-				DataSource::randomUniformInt(1,100,decision);
-				if(decision<=4 && (*(prm->runState)==2)){
-					Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": Delivery\n";
-					b = transactions->executeDelivery(hDBC);
-					tStat->executeTPCCSuccess(4,b);
-				}
-				DataSource::randomUniformInt(1,100,decision);
-				if(decision<=4 && (*(prm->runState)==2)){
-					Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": StockLevel\n";
-					b = transactions->executeStockLevel(hDBC);
-					tStat->executeTPCCSuccess(5,b);
+				else{
+					DataSource::randomUniformInt(1,100,decision);
+					if(decision<=44 && (*(prm->runState)==2)){
+						Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": NewOrder\n";
+						b = transactions->executeNewOrder(hDBC);
+						tStat->executeTPCCSuccess(1,b);
+					}
+					DataSource::randomUniformInt(1,100,decision);
+					if(decision<=44 && (*(prm->runState)==2)){
+						Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": Payment\n";
+						b = transactions->executePayment(hDBC);
+						tStat->executeTPCCSuccess(2,b);
+					}
+					DataSource::randomUniformInt(1,100,decision);
+					if(decision<=4 && (*(prm->runState)==2)){
+						Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": OrderStatus\n";
+						b = transactions->executeOrderStatus(hDBC);
+						tStat->executeTPCCSuccess(3,b);
+					}
+					DataSource::randomUniformInt(1,100,decision);
+					if(decision<=4 && (*(prm->runState)==2)){
+						Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": Delivery\n";
+						b = transactions->executeDelivery(hDBC);
+						tStat->executeTPCCSuccess(4,b);
+					}
+					DataSource::randomUniformInt(1,100,decision);
+					if(decision<=4 && (*(prm->runState)==2)){
+						Log::l1() << Log::tm() << "-transactional " << prm->threadId << ": StockLevel\n";
+						b = transactions->executeStockLevel(hDBC);
+						tStat->executeTPCCSuccess(5,b);
+					}
 				}
 			}
+			
 		}
 	}
 
@@ -364,9 +481,31 @@ int main(int argc, char* argv[]){
 		Log::l2() << Log::tm() << "-start warmup\n";
 		sleep(Config::getWarmupDurationInS());
 
-		runState = 2;
-		Log::l2() << Log::tm() << "-start test\n";
-		sleep(Config::getTestDurationInS());
+	// 正式测试，分为latency自动结束和多线程tps测试等待duation
+		if ((Config::getAnalyticalClients() == 1 && Config::getTransactionalClients() == 0) || (Config::getAnalyticalClients() == 0 && Config::getTransactionalClients() == 1)) {
+    		// 单客户端，线程执行完就结束
+			runState = 2; // 让线程进入测试状态
+			Log::l2() << Log::tm() << "-start test (single client)\n";
+
+			// 不再 sleep，主线程直接等待线程结束
+			// 只等待实际存在的线程
+			if (Config::getAnalyticalClients() == 1) {
+				pthread_join(apt[0], nullptr);
+			}
+			if (Config::getTransactionalClients() == 1) {
+				pthread_join(tpt[0], nullptr);
+			}
+
+
+			Log::l2() << Log::tm() << "-single thread finished\n";
+			runState = 0;
+		} else {
+			// 原来的逻辑：sleep 指定测试时间
+			runState = 2;
+			Log::l2() << Log::tm() << "-start test\n";
+			sleep(Config::getTestDurationInS());
+			runState = 0;
+		}
 
 		Log::l2() << Log::tm() << "-stop\n";
 		runState = 0;

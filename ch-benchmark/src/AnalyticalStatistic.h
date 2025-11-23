@@ -22,6 +22,9 @@ class AnalyticalStatistic {
 	private:
 		unsigned long long executeTPCHSuccessCount[22];
 		unsigned long long executeTPCHFailCount[22];
+		
+		// long long totalLatency[22];         // 累计延迟
+		// unsigned long long countLatency[22]; // 执行次数
 
 	public:
 		AnalyticalStatistic();
