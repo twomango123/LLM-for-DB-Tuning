@@ -1,6 +1,76 @@
 from DataBase.DatabaseDriver import DatabaseDriver
 from DataBase.MySQLDriver import MySQLDriver
-from Data.DataPreparation.DataPreparation import DataPreparation
+from Data.DataPreparation.DataRecom import DataRecom
+import subprocess
+from pathlib import Path
+
+
+def chbenchmark_origin_csv():
+    # 生成初始数据
+    chb_path = Path("./ch-benchmark/chBenchmark")  # C++可执行文件路径
+    cmd_csv = [
+        str(chb_path),
+        "-csv",
+        "-wh", "1",
+        "-pa", str('/var/lib/mysql-files')
+    ]
+    
+    # 生成CSV
+    subprocess.run(cmd_csv, check=True, text=True)
+
+def chbenchmark_first_test():
+    chb_path = Path("./ch-benchmark/chBenchmark")
+    # 测试AP latency
+    cmd_run = [
+        str(chb_path),
+        "-run",
+        "-dsn", 'mysql-bench',
+        "-usr", 'root',
+        "-pwd", '123!@#200',
+        "-a", "1",
+        "-t", "0",
+        "-wd", "30",
+        "-td", "200",
+        "-pa", '/var/lib/mysql-files',
+        "-op", '/var/lib/mysql-files'
+    ]
+    
+    subprocess.run(cmd_run, check=True, text=True)
+
+    # 测试TP latency
+    cmd_run = [
+        str(chb_path),
+        "-run",
+        "-dsn", 'mysql-bench',
+        "-usr", 'root',
+        "-pwd", '123!@#200',
+        "-a", "0",
+        "-t", "1",
+        "-wd", "30",
+        "-td", "200",
+        "-pa", '/var/lib/mysql-files',
+        "-op", '/var/lib/mysql-files'
+    ]
+    subprocess.run(cmd_run, check=True, text=True)
+
+    # 测试吞吐
+    cmd_run = [
+        str(chb_path),
+        "-run",
+        "-dsn", 'mysql-bench',
+        "-usr", 'root',
+        "-pwd", '123!@#200',
+        "-a", "5",
+        "-t", "10",
+        "-wd", "60",
+        "-td", "300",
+        "-pa", '/var/lib/mysql-files',
+        "-op", '/var/lib/mysql-files'
+    ]
+    subprocess.run(cmd_run, check=True, text=True)
+
+def chbenchmark_schema_update_test():
+    pass
 def run_chbenchmark(csv_path: Path, output_path: Path, db_config, warmup=60, duration=300):
     chb_path = Path("/path/to/chBenchmark")  # C++可执行文件路径
     cmd_csv = [
@@ -33,58 +103,44 @@ def run_chbenchmark(csv_path: Path, output_path: Path, db_config, warmup=60, dur
 def suggest_schema():
     pass
 
+def compare_schema():
+    # 涉及到的SMO操作类型
+def apply_schema():
+
+def rewrite_data():
+
 def rewrite_sql():
-    pass
+    # 遍历sql文件，逐组语句进行rewrite
+
+    # 
 def main():
 
     # 数据库连接
-    # 参数行提供的数据库参数 连接
-    # 调试时先使用以下默认数据库参数
     
-    db = MySQLDriver(config={
-        "host": "localhost",
-        "port": 3306,
-        "user": "root",
-        "password": "947722",
-        "database": "tpcch"
-    })
-
-    if not db.connect():
-        print("数据库连接失败，程序退出")
-        return
     # 原始数据准备
-    # 参数行提供的源数据位置 导入
-    # 调试时先使用以下给定路径数据
-    original_data_path = './tpcc_data'
-    original_sql_path = './Data/DataPreparation/schema_sql.sql'
-    origin_data = DataPreparation(db, original_data_path, original_sql_path)
-    origin_data.prepare_origin_data()
-    
+    chbenchmark_origin_csv()
+    # 源数据导入并进行L0基准测试
+    chbenchmark_first_test()
 
-    # 开始进行L0 基准测试
-    tpcc_queries_path = './DataBase/cleaned_sql/TPC-C'
-    tpch_queries_path = './DataBase/cleaned_sql/TPC-H'
-    db.evaluation(tpcc_queries_path, tpch_queries_path, physical_schema='tpcch')
-    
-    
     # 开始进行 Schema 优化 (L3)
     # suggest_schema()
     # 调试使用给定Schema
 
-    sql = rewrite_sql()
+    new_schema_sql = rewrite_sql()
 
     # 准备 rewrite后的数据
     
-    rewritten_data = DataPreparation(new_db, )
+    rewritten_data = DataRecom(new_schema_sql)
+    
+    rewritten_data.start_rewrite()
 
     # 进行 evaluation 测试
+    chbenchmark_schema_update_test(new_schema_sql)
 
-    new_db.evaluation(tpcc_queries_path, tpch_queries_path, physical_schema='new_tpcch')
+    return 0
 
-    new_db.disconnect()
-    
 
-    
+       
 
 
 if __name__ == "__main__":
