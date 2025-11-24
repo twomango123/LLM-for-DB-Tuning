@@ -1,3 +1,6 @@
+# rewrite接口
+main.py -> ./rewrite/smo_types.py  
+
 # L0:evaluation
 ### 创建镜像 运行并进入docker  
 在git clone之前需要先创建一个工作目录，在工作目录下clone  
