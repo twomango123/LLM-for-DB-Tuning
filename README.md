@@ -1,7 +1,16 @@
-# rewrite接口
-main.py -> ./rewrite/smo_types.py  
+# rewrite接口 测试运行方法  
+在当前目录创建并激活虚拟环境  
+`python -m venv venv`
+`source venv/bin/activate`
+安装依赖  
+`pip install -r requirements.txt`  
+进入rewrite目录  
+`cd rewrite`
+可运行测试  
+`python TableMerge.py`
+部分已设置用例测试
 
-# L0:evaluation
+# L0:evaluation-chbenchmark
 ### 创建镜像 运行并进入docker  
 在git clone之前需要先创建一个工作目录，在工作目录下clone  
 ```bash
