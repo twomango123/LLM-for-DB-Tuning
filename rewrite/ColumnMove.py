@@ -3,25 +3,25 @@ from sqlparse.sql import Identifier, IdentifierList, Function, TokenList
 from sqlparse.tokens import Keyword, DML, Name, Punctuation
 import csv
 from pathlib import Path
+from base import SMO
 
 # 列移动
-class ColumnMove:
+class ColumnMove(SMO):
     """
     Move column: source_table.source_column -> target_table.target_column
     SQL rewrite implemented with sqlglot.
     """
 
-    def __init__(self, source_table, source_column, target_table, target_column, source_fp, target_fp, column_name, sep='|'):
+    def __init__(self, source_table, source_column, target_table, target_column):
         # keep bare table names
         self.source_table = source_table.split(".")[-1]
         self.source_column = source_column
         self.target_table = target_table.split(".")[-1]
         self.target_column = target_column
-        self.source_fp = source_fp
-        self.target_fp = target_fp
-        self.column_name = column_name
-        self.sep = sep
+        
 
+    def apply_to_schema(self, schema):
+        pass
     
     def apply_to_sql(self, sql: str) -> str:
         parsed = sqlparse.parse(sql)
@@ -36,11 +36,11 @@ class ColumnMove:
 
         return " ".join(new_statements)
     
-    def apply_to_data(self):
+    def apply_to_data(self, source_fp, target_fp, column_name, sep='|'):
         
         # 1. 读取原表
-        self.source_fp.seek(0)
-        reader = csv.DictReader(self.source_fp, delimiter=self.sep)
+        source_fp.seek(0)
+        reader = csv.DictReader(source_fp, delimiter=sep)
         rows = list(reader)
         fieldnames = reader.fieldnames
 
@@ -48,9 +48,9 @@ class ColumnMove:
             raise ValueError(f"Column {self.column_name} not in source table")
 
         # 2. 读取目标表已有内容
-        self.target_fp.seek(0)
+        target_fp.seek(0)
         try:
-            target_reader = csv.DictReader(self.target_fp, delimiter=self.sep)
+            target_reader = csv.DictReader(target_fp, delimiter=sep)
             target_fieldnames = target_reader.fieldnames or []
             target_rows = list(target_reader)
         except csv.Error:
@@ -59,19 +59,19 @@ class ColumnMove:
 
         # 3. 复制列到目标表
         for i, row in enumerate(rows):
-            value = row[self.column_name]
+            value = row[column_name]
             if i < len(target_rows):
-                target_rows[i][self.column_name] = value
+                target_rows[i][column_name] = value
             else:
-                target_rows.append({self.column_name: value})
+                target_rows.append({column_name: value})
 
-        if self.column_name not in target_fieldnames:
-            target_fieldnames.append(self.column_name)
+        if column_name not in target_fieldnames:
+            target_fieldnames.append(column_name)
 
         # 写入目标表
-        self.target_fp.seek(0)
-        self.target_fp.truncate(0)
-        writer = csv.DictWriter(self.target_fp, fieldnames=target_fieldnames, delimiter=self.sep)
+        target_fp.seek(0)
+        target_fp.truncate(0)
+        writer = csv.DictWriter(target_fp, fieldnames=target_fieldnames, delimiter=sep)
         writer.writeheader()
         for row in target_rows:
             for col in target_fieldnames:
@@ -80,10 +80,10 @@ class ColumnMove:
             writer.writerow(row)
 
         # 4. 删除原表列
-        new_fieldnames = [col for col in fieldnames if col != self.column_name]
-        self.source_fp.seek(0)
-        self.source_fp.truncate(0)
-        writer = csv.DictWriter(self.source_fp, fieldnames=new_fieldnames, delimiter=self.sep)
+        new_fieldnames = [col for col in fieldnames if col != column_name]
+        source_fp.seek(0)
+        source_fp.truncate(0)
+        writer = csv.DictWriter(source_fp, fieldnames=new_fieldnames, delimiter=sep)
         writer.writeheader()
         for row in rows:
             new_row = {col: row[col] for col in new_fieldnames}
@@ -176,44 +176,44 @@ class ColumnMove:
         process(stmt)
 
 # 使用示例
-  
-sql = """
-select
-	n_name,
-	sum(ol_amount) as revenue
-from
-	tpcch.customer, tpcch.order, tpcch.orderline, tpcch.stock, tpcch.supplier, tpcch.nation, tpcch.region
-where
-		c_id = o_c_id
-	and c_w_id = o_w_id
-	and c_d_id = o_d_id
-	and ol_o_id = o_id
-	and ol_w_id = o_w_id
-	and ol_d_id=o_d_id
-	and ol_w_id = s_w_id
-	and ol_i_id = s_i_id
-	and s_su_suppkey = su_suppkey
-	and c_n_nationkey = su_nationkey
-	and su_nationkey = n_nationkey
-	and n_regionkey = r_regionkey
-	and r_name = 'EUROPE'
-	and o_entry_d >= '2007-01-02 00:00:00.000000'
-group by
-		n_name
-order by
-	revenue desc;
-"""
-source_path = "../tpcc_data/NEW_CUSTOMER.tbl"
-target_path = "../tpcc_data/CUSTOMER.tbl"
+if __name__ == "__main__":
+    sql = """
+    select
+        n_name,
+        sum(ol_amount) as revenue
+    from
+        tpcch.customer, tpcch.order, tpcch.orderline, tpcch.stock, tpcch.supplier, tpcch.nation, tpcch.region
+    where
+            c_id = o_c_id
+        and c_w_id = o_w_id
+        and c_d_id = o_d_id
+        and ol_o_id = o_id
+        and ol_w_id = o_w_id
+        and ol_d_id=o_d_id
+        and ol_w_id = s_w_id
+        and ol_i_id = s_i_id
+        and s_su_suppkey = su_suppkey
+        and c_n_nationkey = su_nationkey
+        and su_nationkey = n_nationkey
+        and n_regionkey = r_regionkey
+        and r_name = 'EUROPE'
+        and o_entry_d >= '2007-01-02 00:00:00.000000'
+    group by
+            n_name
+    order by
+        revenue desc;
+    """
+    source_path = "../tpcc_data/NEW_CUSTOMER.tbl"
+    target_path = "../tpcc_data/CUSTOMER.tbl"
 
-# rewrite data
-rewrite = ColumnMove("customer", "c_id", "cc", "cc_id", source_path, target_path, "c_balance")
-print(rewrite.apply_to_sql(sql))
+    # rewrite data
+    rewrite = ColumnMove("customer", "c_id", "cc", "cc_id", source_path, target_path, "c_balance")
+    print(rewrite.apply_to_sql(sql))
 
 
-# rewrite slq
-# 运行完需要把源文件的列恢复，c_id是第一列
-# 打开文件
-with open(source_path, 'r+', newline='') as source_fp, open(target_path, 'a+', newline='') as target_fp:
-    mover = ColumnMove("customer", "c_id", "cc", "cc_id", source_fp, target_fp, "C_ID")
-    mover.apply_to_data()
+    # rewrite slq
+    # 运行完需要把源文件的列恢复，c_id是第一列
+    # 打开文件
+    with open(source_path, 'r+', newline='') as source_fp, open(target_path, 'a+', newline='') as target_fp:
+        mover = ColumnMove("customer", "c_id", "cc", "cc_id", source_fp, target_fp, "C_ID")
+        mover.apply_to_data()

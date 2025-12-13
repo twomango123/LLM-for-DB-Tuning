@@ -1,0 +1,1 @@
+update tpcch.district set D_YTD=D_YTD+? where D_W_ID=? and D_ID=?

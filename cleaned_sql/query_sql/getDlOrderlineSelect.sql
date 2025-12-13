@@ -1,0 +1,1 @@
+select sum(OL_AMOUNT) from tpcch.orderline where OL_W_ID=? and OL_D_ID=? and OL_O_ID=?

@@ -1,0 +1,1 @@
+select NO_O_ID from tpcch.neworder where NO_W_ID=? and NO_D_ID=? and NO_O_ID=(select min(NO_O_ID) from tpcch.neworder where NO_W_ID=? and NO_D_ID=?);

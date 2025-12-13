@@ -87,7 +87,7 @@ bool Config::initialize(int argc, char* argv[]){
 	if(is("-csv",argc,argv)){
 
 		TYPE = 1;
-
+		
 		//Warehouse count
 		if(!is("-wh",argc,argv,&WAREHOUSE_COUNT))
 			return 0;
@@ -155,6 +155,56 @@ bool Config::initialize(int argc, char* argv[]){
 		TYPE = 3;
 	}else if(is("--help",argc,argv)){
 		TYPE = 3;
+	}else if(is("-init",argc,argv)){
+
+		TYPE = 4;
+
+		//IP Adress and port of target DBS
+		if(!is("-dsn",argc,argv,&DATA_SOURCE_NAME))
+			return 0;
+
+		//User on target DBS
+		if(!is("-usr",argc,argv,&DBS_USER))
+			return 0;
+
+		//Password of user on target DBS
+		if(!is("-pwd",argc,argv,&DBS_PASSWORD))
+			return 0;
+
+		//Number of transctional clients
+		if(!is("-a",argc,argv,&ANALYTICAL_CLIENTS))
+			return 0;
+
+		//Number of analytical clients
+		if(!is("-t",argc,argv,&TRANSACTIONAL_CLIENTS))
+			return 0;
+
+		//Test duration
+		if(!is("-td",argc,argv,&TEST_DURATION_IN_S))
+			return 0;
+		if(TEST_DURATION_IN_S<1){
+			cout << "Error: TEST_DURATION_IN_S has to be larger than zero!" << endl;
+			return 0;
+		}
+
+		//Warmup duration
+		if(!is("-wd",argc,argv,&WARMUP_DURATION_IN_S))
+			return 0;
+
+		//Path to input binaries
+		if(!is("-pa",argc,argv,&INITIAL_DB_CREATION_PATH))
+			return 0;
+
+		//Results and log output path
+		if(!is("-op",argc,argv,&OUTPUT_PATH))
+			return 0;
+
+		Log::l1() << Log::tm() << "Config:\n";
+		Log::l1() << Log::tm() << "-data source name: " << DATA_SOURCE_NAME << "\n";
+		Log::l1() << Log::tm() << "-dbs user: " << DBS_USER << "\n";
+		Log::l1() << Log::tm() << "-password: " << DBS_PASSWORD << "\n";
+		
+
 	}else{
 		cout << "Unkown command\ntype: chBenchmark --help" << endl;
 		return 0;

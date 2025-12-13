@@ -1,0 +1,1 @@
+select S_QUANTITY,S_DIST_10,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?;

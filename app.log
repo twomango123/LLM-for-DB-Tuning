@@ -1,0 +1,1378 @@
+2025-12-09 03:21:01,186 - DEBUG - ============================================================
+2025-12-09 03:21:01,186 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,186 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,186 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,186 - DEBUG - Original SQL:
+select W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP from tpcch.warehouse where W_ID=?
+2025-12-09 03:21:01,186 - DEBUG - ------------------------------
+2025-12-09 03:21:01,190 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,190 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,190 - DEBUG -   Full table object: tpcch.warehouse
+2025-12-09 03:21:01,190 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,190 - DEBUG -   Table SQL: 'tpcch.warehouse'
+2025-12-09 03:21:01,190 - DEBUG -   Table name: 'warehouse'
+2025-12-09 03:21:01,190 - DEBUG -   Method1 - table.name: 'warehouse'
+2025-12-09 03:21:01,191 - DEBUG -   Method2 - table.sql(): 'tpcch.warehouse'
+2025-12-09 03:21:01,191 - DEBUG -   Method3 - table.this: warehouse
+2025-12-09 03:21:01,191 - DEBUG -   Method3 - table.this.name: 'warehouse'
+2025-12-09 03:21:01,191 - DEBUG -   Table name (without schema): 'warehouse'
+2025-12-09 03:21:01,191 - DEBUG -   ✗ NO MATCH: table_name_only 'warehouse' != self.old_table 'order'
+2025-12-09 03:21:01,191 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,191 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,191 - DEBUG - Rewritten SQL:
+SELECT W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP FROM tpcch.warehouse WHERE W_ID = ?
+2025-12-09 03:21:01,191 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,191 - DEBUG - ============================================================
+2025-12-09 03:21:01,191 - DEBUG - ============================================================
+2025-12-09 03:21:01,191 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,191 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,191 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,191 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_08,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,191 - DEBUG - ------------------------------
+2025-12-09 03:21:01,193 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,193 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,193 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,193 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,193 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,193 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,193 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,193 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,193 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,193 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,193 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,193 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,193 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,193 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,194 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_08, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,194 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,194 - DEBUG - ============================================================
+2025-12-09 03:21:01,194 - DEBUG - ============================================================
+2025-12-09 03:21:01,194 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,194 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,194 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,194 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_02,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,194 - DEBUG - ------------------------------
+2025-12-09 03:21:01,194 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,194 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,195 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,195 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,195 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,195 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,195 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,195 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,195 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,195 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,195 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,195 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,195 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,195 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,195 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_02, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,195 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,195 - DEBUG - ============================================================
+2025-12-09 03:21:01,195 - DEBUG - ============================================================
+2025-12-09 03:21:01,195 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,196 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,196 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,196 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_10,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,196 - DEBUG - ------------------------------
+2025-12-09 03:21:01,196 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,196 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,196 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,196 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,196 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,196 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,196 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,197 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,197 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,197 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,197 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,197 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,197 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,197 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,197 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_10, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,197 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,197 - DEBUG - ============================================================
+2025-12-09 03:21:01,197 - DEBUG - ============================================================
+2025-12-09 03:21:01,197 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,197 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,197 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,197 - DEBUG - Original SQL:
+select C_ID, C_BALANCE, C_FIRST, C_MIDDLE, C_LAST from tpcch.customer where C_LAST=? and C_D_ID=? and C_W_ID=? order by C_FIRST asc
+2025-12-09 03:21:01,197 - DEBUG - ------------------------------
+2025-12-09 03:21:01,198 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,198 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,198 - DEBUG -   Full table object: tpcch.customer
+2025-12-09 03:21:01,198 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,198 - DEBUG -   Table SQL: 'tpcch.customer'
+2025-12-09 03:21:01,198 - DEBUG -   Table name: 'customer'
+2025-12-09 03:21:01,198 - DEBUG -   Method1 - table.name: 'customer'
+2025-12-09 03:21:01,198 - DEBUG -   Method2 - table.sql(): 'tpcch.customer'
+2025-12-09 03:21:01,198 - DEBUG -   Method3 - table.this: customer
+2025-12-09 03:21:01,199 - DEBUG -   Method3 - table.this.name: 'customer'
+2025-12-09 03:21:01,199 - DEBUG -   Table name (without schema): 'customer'
+2025-12-09 03:21:01,199 - DEBUG -   ✗ NO MATCH: table_name_only 'customer' != self.old_table 'order'
+2025-12-09 03:21:01,199 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,199 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,199 - DEBUG - Rewritten SQL:
+SELECT C_ID, C_BALANCE, C_FIRST, C_MIDDLE, C_LAST FROM tpcch.customer WHERE C_LAST = ? AND C_D_ID = ? AND C_W_ID = ? ORDER BY C_FIRST ASC
+2025-12-09 03:21:01,199 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,199 - DEBUG - ============================================================
+2025-12-09 03:21:01,199 - DEBUG - ============================================================
+2025-12-09 03:21:01,199 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,199 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,199 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,199 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_09,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,199 - DEBUG - ------------------------------
+2025-12-09 03:21:01,200 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,200 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,200 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,200 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,200 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,200 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,200 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,200 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,200 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,200 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,200 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,200 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,200 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,200 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,201 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_09, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,201 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,201 - DEBUG - ============================================================
+2025-12-09 03:21:01,201 - DEBUG - ============================================================
+2025-12-09 03:21:01,201 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,201 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,201 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,201 - DEBUG - Original SQL:
+select D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP from tpcch.district where D_W_ID=? and D_ID=?
+2025-12-09 03:21:01,201 - DEBUG - ------------------------------
+2025-12-09 03:21:01,201 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,202 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,202 - DEBUG -   Full table object: tpcch.district
+2025-12-09 03:21:01,202 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,202 - DEBUG -   Table SQL: 'tpcch.district'
+2025-12-09 03:21:01,202 - DEBUG -   Table name: 'district'
+2025-12-09 03:21:01,202 - DEBUG -   Method1 - table.name: 'district'
+2025-12-09 03:21:01,202 - DEBUG -   Method2 - table.sql(): 'tpcch.district'
+2025-12-09 03:21:01,202 - DEBUG -   Method3 - table.this: district
+2025-12-09 03:21:01,202 - DEBUG -   Method3 - table.this.name: 'district'
+2025-12-09 03:21:01,202 - DEBUG -   Table name (without schema): 'district'
+2025-12-09 03:21:01,202 - DEBUG -   ✗ NO MATCH: table_name_only 'district' != self.old_table 'order'
+2025-12-09 03:21:01,202 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,202 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,203 - DEBUG - Rewritten SQL:
+SELECT D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP FROM tpcch.district WHERE D_W_ID = ? AND D_ID = ?
+2025-12-09 03:21:01,203 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,203 - DEBUG - ============================================================
+2025-12-09 03:21:01,203 - DEBUG - ============================================================
+2025-12-09 03:21:01,203 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,203 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,203 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,203 - DEBUG - Original SQL:
+select I_PRICE,I_NAME,I_DATA from tpcch.item where I_ID=?
+2025-12-09 03:21:01,203 - DEBUG - ------------------------------
+2025-12-09 03:21:01,203 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,203 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,203 - DEBUG -   Full table object: tpcch.item
+2025-12-09 03:21:01,203 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,203 - DEBUG -   Table SQL: 'tpcch.item'
+2025-12-09 03:21:01,204 - DEBUG -   Table name: 'item'
+2025-12-09 03:21:01,204 - DEBUG -   Method1 - table.name: 'item'
+2025-12-09 03:21:01,204 - DEBUG -   Method2 - table.sql(): 'tpcch.item'
+2025-12-09 03:21:01,204 - DEBUG -   Method3 - table.this: item
+2025-12-09 03:21:01,204 - DEBUG -   Method3 - table.this.name: 'item'
+2025-12-09 03:21:01,204 - DEBUG -   Table name (without schema): 'item'
+2025-12-09 03:21:01,204 - DEBUG -   ✗ NO MATCH: table_name_only 'item' != self.old_table 'order'
+2025-12-09 03:21:01,204 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,204 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,204 - DEBUG - Rewritten SQL:
+SELECT I_PRICE, I_NAME, I_DATA FROM tpcch.item WHERE I_ID = ?
+2025-12-09 03:21:01,204 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,204 - DEBUG - ============================================================
+2025-12-09 03:21:01,204 - DEBUG - ============================================================
+2025-12-09 03:21:01,204 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,204 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,204 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,204 - DEBUG - Original SQL:
+select C_DISCOUNT,C_LAST,C_CREDIT from tpcch.customer where C_W_ID=? and C_D_ID=? and C_ID=?
+2025-12-09 03:21:01,204 - DEBUG - ------------------------------
+2025-12-09 03:21:01,205 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,205 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,205 - DEBUG -   Full table object: tpcch.customer
+2025-12-09 03:21:01,205 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,205 - DEBUG -   Table SQL: 'tpcch.customer'
+2025-12-09 03:21:01,205 - DEBUG -   Table name: 'customer'
+2025-12-09 03:21:01,205 - DEBUG -   Method1 - table.name: 'customer'
+2025-12-09 03:21:01,205 - DEBUG -   Method2 - table.sql(): 'tpcch.customer'
+2025-12-09 03:21:01,205 - DEBUG -   Method3 - table.this: customer
+2025-12-09 03:21:01,205 - DEBUG -   Method3 - table.this.name: 'customer'
+2025-12-09 03:21:01,205 - DEBUG -   Table name (without schema): 'customer'
+2025-12-09 03:21:01,205 - DEBUG -   ✗ NO MATCH: table_name_only 'customer' != self.old_table 'order'
+2025-12-09 03:21:01,205 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,205 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,206 - DEBUG - Rewritten SQL:
+SELECT C_DISCOUNT, C_LAST, C_CREDIT FROM tpcch.customer WHERE C_W_ID = ? AND C_D_ID = ? AND C_ID = ?
+2025-12-09 03:21:01,206 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,206 - DEBUG - ============================================================
+2025-12-09 03:21:01,206 - DEBUG - ============================================================
+2025-12-09 03:21:01,206 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,206 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,206 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,206 - DEBUG - Original SQL:
+select D_NEXT_O_ID from tpcch.district where D_W_ID=? and D_ID=?
+2025-12-09 03:21:01,206 - DEBUG - ------------------------------
+2025-12-09 03:21:01,206 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,206 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,207 - DEBUG -   Full table object: tpcch.district
+2025-12-09 03:21:01,207 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,207 - DEBUG -   Table SQL: 'tpcch.district'
+2025-12-09 03:21:01,207 - DEBUG -   Table name: 'district'
+2025-12-09 03:21:01,207 - DEBUG -   Method1 - table.name: 'district'
+2025-12-09 03:21:01,207 - DEBUG -   Method2 - table.sql(): 'tpcch.district'
+2025-12-09 03:21:01,207 - DEBUG -   Method3 - table.this: district
+2025-12-09 03:21:01,207 - DEBUG -   Method3 - table.this.name: 'district'
+2025-12-09 03:21:01,207 - DEBUG -   Table name (without schema): 'district'
+2025-12-09 03:21:01,207 - DEBUG -   ✗ NO MATCH: table_name_only 'district' != self.old_table 'order'
+2025-12-09 03:21:01,207 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,207 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,207 - DEBUG - Rewritten SQL:
+SELECT D_NEXT_O_ID FROM tpcch.district WHERE D_W_ID = ? AND D_ID = ?
+2025-12-09 03:21:01,207 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,207 - DEBUG - ============================================================
+2025-12-09 03:21:01,207 - DEBUG - ============================================================
+2025-12-09 03:21:01,207 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,207 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,207 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,208 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_03,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,208 - DEBUG - ------------------------------
+2025-12-09 03:21:01,208 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,208 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,208 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,208 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,208 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,208 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,208 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,208 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,209 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,209 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,209 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,209 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,209 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,209 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,209 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_03, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,209 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,209 - DEBUG - ============================================================
+2025-12-09 03:21:01,209 - DEBUG - ============================================================
+2025-12-09 03:21:01,209 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,209 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,209 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,209 - DEBUG - Original SQL:
+select D_TAX, D_NEXT_O_ID from tpcch.district where D_W_ID=? and D_ID=?
+2025-12-09 03:21:01,209 - DEBUG - ------------------------------
+2025-12-09 03:21:01,210 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,210 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,210 - DEBUG -   Full table object: tpcch.district
+2025-12-09 03:21:01,210 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,210 - DEBUG -   Table SQL: 'tpcch.district'
+2025-12-09 03:21:01,210 - DEBUG -   Table name: 'district'
+2025-12-09 03:21:01,210 - DEBUG -   Method1 - table.name: 'district'
+2025-12-09 03:21:01,210 - DEBUG -   Method2 - table.sql(): 'tpcch.district'
+2025-12-09 03:21:01,210 - DEBUG -   Method3 - table.this: district
+2025-12-09 03:21:01,210 - DEBUG -   Method3 - table.this.name: 'district'
+2025-12-09 03:21:01,210 - DEBUG -   Table name (without schema): 'district'
+2025-12-09 03:21:01,210 - DEBUG -   ✗ NO MATCH: table_name_only 'district' != self.old_table 'order'
+2025-12-09 03:21:01,210 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,210 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,211 - DEBUG - Rewritten SQL:
+SELECT D_TAX, D_NEXT_O_ID FROM tpcch.district WHERE D_W_ID = ? AND D_ID = ?
+2025-12-09 03:21:01,211 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,211 - DEBUG - ============================================================
+2025-12-09 03:21:01,211 - DEBUG - ============================================================
+2025-12-09 03:21:01,211 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,211 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,211 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,211 - DEBUG - Original SQL:
+select OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT, OL_DELIVERY_D from tpcch.orderline where OL_W_ID=? and OL_D_ID=? and OL_O_ID=?
+2025-12-09 03:21:01,211 - DEBUG - ------------------------------
+2025-12-09 03:21:01,212 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,212 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,212 - DEBUG -   Full table object: tpcch.orderline
+2025-12-09 03:21:01,212 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,212 - DEBUG -   Table SQL: 'tpcch.orderline'
+2025-12-09 03:21:01,212 - DEBUG -   Table name: 'orderline'
+2025-12-09 03:21:01,212 - DEBUG -   Method1 - table.name: 'orderline'
+2025-12-09 03:21:01,212 - DEBUG -   Method2 - table.sql(): 'tpcch.orderline'
+2025-12-09 03:21:01,212 - DEBUG -   Method3 - table.this: orderline
+2025-12-09 03:21:01,212 - DEBUG -   Method3 - table.this.name: 'orderline'
+2025-12-09 03:21:01,212 - DEBUG -   Table name (without schema): 'orderline'
+2025-12-09 03:21:01,212 - DEBUG -   ✗ NO MATCH: table_name_only 'orderline' != self.old_table 'order'
+2025-12-09 03:21:01,212 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,212 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,213 - DEBUG - Rewritten SQL:
+SELECT OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT, OL_DELIVERY_D FROM tpcch.orderline WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID = ?
+2025-12-09 03:21:01,213 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,213 - DEBUG - ============================================================
+2025-12-09 03:21:01,213 - DEBUG - ============================================================
+2025-12-09 03:21:01,213 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,213 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,213 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,213 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_04,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,213 - DEBUG - ------------------------------
+2025-12-09 03:21:01,213 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,213 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,214 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,214 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,214 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,214 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,214 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,214 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,214 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,214 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,214 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,214 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,214 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,214 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,214 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_04, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,214 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,214 - DEBUG - ============================================================
+2025-12-09 03:21:01,214 - DEBUG - ============================================================
+2025-12-09 03:21:01,214 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,214 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,214 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,214 - DEBUG - Original SQL:
+select C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE from tpcch.customer where C_ID=? and C_D_ID=? and C_W_ID=?
+2025-12-09 03:21:01,214 - DEBUG - ------------------------------
+2025-12-09 03:21:01,215 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,216 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,216 - DEBUG -   Full table object: tpcch.customer
+2025-12-09 03:21:01,216 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,216 - DEBUG -   Table SQL: 'tpcch.customer'
+2025-12-09 03:21:01,216 - DEBUG -   Table name: 'customer'
+2025-12-09 03:21:01,216 - DEBUG -   Method1 - table.name: 'customer'
+2025-12-09 03:21:01,216 - DEBUG -   Method2 - table.sql(): 'tpcch.customer'
+2025-12-09 03:21:01,216 - DEBUG -   Method3 - table.this: customer
+2025-12-09 03:21:01,216 - DEBUG -   Method3 - table.this.name: 'customer'
+2025-12-09 03:21:01,216 - DEBUG -   Table name (without schema): 'customer'
+2025-12-09 03:21:01,216 - DEBUG -   ✗ NO MATCH: table_name_only 'customer' != self.old_table 'order'
+2025-12-09 03:21:01,216 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,216 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,217 - DEBUG - Rewritten SQL:
+SELECT C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE FROM tpcch.customer WHERE C_ID = ? AND C_D_ID = ? AND C_W_ID = ?
+2025-12-09 03:21:01,217 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,217 - DEBUG - ============================================================
+2025-12-09 03:21:01,217 - DEBUG - ============================================================
+2025-12-09 03:21:01,217 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,217 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,217 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,217 - DEBUG - Original SQL:
+select C_BALANCE, C_FIRST, C_MIDDLE, C_LAST from tpcch.customer where C_ID=? and C_D_ID=? and C_W_ID=?
+2025-12-09 03:21:01,217 - DEBUG - ------------------------------
+2025-12-09 03:21:01,217 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,217 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,217 - DEBUG -   Full table object: tpcch.customer
+2025-12-09 03:21:01,218 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,218 - DEBUG -   Table SQL: 'tpcch.customer'
+2025-12-09 03:21:01,218 - DEBUG -   Table name: 'customer'
+2025-12-09 03:21:01,218 - DEBUG -   Method1 - table.name: 'customer'
+2025-12-09 03:21:01,218 - DEBUG -   Method2 - table.sql(): 'tpcch.customer'
+2025-12-09 03:21:01,218 - DEBUG -   Method3 - table.this: customer
+2025-12-09 03:21:01,218 - DEBUG -   Method3 - table.this.name: 'customer'
+2025-12-09 03:21:01,218 - DEBUG -   Table name (without schema): 'customer'
+2025-12-09 03:21:01,218 - DEBUG -   ✗ NO MATCH: table_name_only 'customer' != self.old_table 'order'
+2025-12-09 03:21:01,218 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,218 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,218 - DEBUG - Rewritten SQL:
+SELECT C_BALANCE, C_FIRST, C_MIDDLE, C_LAST FROM tpcch.customer WHERE C_ID = ? AND C_D_ID = ? AND C_W_ID = ?
+2025-12-09 03:21:01,218 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,218 - DEBUG - ============================================================
+2025-12-09 03:21:01,218 - DEBUG - ============================================================
+2025-12-09 03:21:01,218 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,218 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,218 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,218 - DEBUG - Original SQL:
+select sum(OL_AMOUNT) from tpcch.orderline where OL_W_ID=? and OL_D_ID=? and OL_O_ID=?
+2025-12-09 03:21:01,219 - DEBUG - ------------------------------
+2025-12-09 03:21:01,219 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,219 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,219 - DEBUG -   Full table object: tpcch.orderline
+2025-12-09 03:21:01,219 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,219 - DEBUG -   Table SQL: 'tpcch.orderline'
+2025-12-09 03:21:01,219 - DEBUG -   Table name: 'orderline'
+2025-12-09 03:21:01,219 - DEBUG -   Method1 - table.name: 'orderline'
+2025-12-09 03:21:01,220 - DEBUG -   Method2 - table.sql(): 'tpcch.orderline'
+2025-12-09 03:21:01,220 - DEBUG -   Method3 - table.this: orderline
+2025-12-09 03:21:01,220 - DEBUG -   Method3 - table.this.name: 'orderline'
+2025-12-09 03:21:01,220 - DEBUG -   Table name (without schema): 'orderline'
+2025-12-09 03:21:01,220 - DEBUG -   ✗ NO MATCH: table_name_only 'orderline' != self.old_table 'order'
+2025-12-09 03:21:01,220 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,220 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,220 - DEBUG - Rewritten SQL:
+SELECT SUM(OL_AMOUNT) FROM tpcch.orderline WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID = ?
+2025-12-09 03:21:01,220 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,220 - DEBUG - ============================================================
+2025-12-09 03:21:01,220 - DEBUG - ============================================================
+2025-12-09 03:21:01,220 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,220 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,220 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,220 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_06,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,220 - DEBUG - ------------------------------
+2025-12-09 03:21:01,221 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,221 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,221 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,221 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,221 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,221 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,221 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,221 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,221 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,221 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,221 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,221 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,221 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,221 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,222 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_06, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,222 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,222 - DEBUG - ============================================================
+2025-12-09 03:21:01,222 - DEBUG - ============================================================
+2025-12-09 03:21:01,222 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,222 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,222 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,222 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_07,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,222 - DEBUG - ------------------------------
+2025-12-09 03:21:01,222 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,223 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,223 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,223 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,223 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,223 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,223 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,223 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,223 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,223 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,223 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,223 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,223 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,223 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,223 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_07, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,223 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,223 - DEBUG - ============================================================
+2025-12-09 03:21:01,223 - DEBUG - ============================================================
+2025-12-09 03:21:01,223 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,224 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,224 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,224 - DEBUG - Original SQL:
+select NO_O_ID from tpcch.neworder where NO_W_ID=? and NO_D_ID=? and NO_O_ID=(select min(NO_O_ID) from tpcch.neworder where NO_W_ID=? and NO_D_ID=?)
+2025-12-09 03:21:01,224 - DEBUG - ------------------------------
+2025-12-09 03:21:01,224 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,224 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,225 - DEBUG -   Full table object: tpcch.neworder
+2025-12-09 03:21:01,225 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,225 - DEBUG -   Table SQL: 'tpcch.neworder'
+2025-12-09 03:21:01,225 - DEBUG -   Table name: 'neworder'
+2025-12-09 03:21:01,225 - DEBUG -   Method1 - table.name: 'neworder'
+2025-12-09 03:21:01,225 - DEBUG -   Method2 - table.sql(): 'tpcch.neworder'
+2025-12-09 03:21:01,225 - DEBUG -   Method3 - table.this: neworder
+2025-12-09 03:21:01,225 - DEBUG -   Method3 - table.this.name: 'neworder'
+2025-12-09 03:21:01,225 - DEBUG -   Table name (without schema): 'neworder'
+2025-12-09 03:21:01,225 - DEBUG -   ✗ NO MATCH: table_name_only 'neworder' != self.old_table 'order'
+2025-12-09 03:21:01,225 - DEBUG - 
+[Table #2]
+2025-12-09 03:21:01,225 - DEBUG -   Full table object: tpcch.neworder
+2025-12-09 03:21:01,225 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,225 - DEBUG -   Table SQL: 'tpcch.neworder'
+2025-12-09 03:21:01,225 - DEBUG -   Table name: 'neworder'
+2025-12-09 03:21:01,225 - DEBUG -   Method1 - table.name: 'neworder'
+2025-12-09 03:21:01,225 - DEBUG -   Method2 - table.sql(): 'tpcch.neworder'
+2025-12-09 03:21:01,226 - DEBUG -   Method3 - table.this: neworder
+2025-12-09 03:21:01,226 - DEBUG -   Method3 - table.this.name: 'neworder'
+2025-12-09 03:21:01,226 - DEBUG -   Table name (without schema): 'neworder'
+2025-12-09 03:21:01,226 - DEBUG -   ✗ NO MATCH: table_name_only 'neworder' != self.old_table 'order'
+2025-12-09 03:21:01,226 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,226 - INFO - Summary: Found 2 tables, replaced 0 tables
+2025-12-09 03:21:01,226 - DEBUG - Rewritten SQL:
+SELECT NO_O_ID FROM tpcch.neworder WHERE NO_W_ID = ? AND NO_D_ID = ? AND NO_O_ID = (SELECT MIN(NO_O_ID) FROM tpcch.neworder WHERE NO_W_ID = ? AND NO_D_ID = ?)
+2025-12-09 03:21:01,226 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,226 - DEBUG - ============================================================
+2025-12-09 03:21:01,226 - DEBUG - ============================================================
+2025-12-09 03:21:01,226 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,226 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,226 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,226 - DEBUG - Original SQL:
+select count(*) from tpcch.customer where C_LAST=? and C_D_ID=? and C_W_ID=?
+2025-12-09 03:21:01,226 - DEBUG - ------------------------------
+2025-12-09 03:21:01,227 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,227 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,227 - DEBUG -   Full table object: tpcch.customer
+2025-12-09 03:21:01,227 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,227 - DEBUG -   Table SQL: 'tpcch.customer'
+2025-12-09 03:21:01,227 - DEBUG -   Table name: 'customer'
+2025-12-09 03:21:01,227 - DEBUG -   Method1 - table.name: 'customer'
+2025-12-09 03:21:01,227 - DEBUG -   Method2 - table.sql(): 'tpcch.customer'
+2025-12-09 03:21:01,227 - DEBUG -   Method3 - table.this: customer
+2025-12-09 03:21:01,227 - DEBUG -   Method3 - table.this.name: 'customer'
+2025-12-09 03:21:01,227 - DEBUG -   Table name (without schema): 'customer'
+2025-12-09 03:21:01,227 - DEBUG -   ✗ NO MATCH: table_name_only 'customer' != self.old_table 'order'
+2025-12-09 03:21:01,228 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,228 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,228 - DEBUG - Rewritten SQL:
+SELECT COUNT(*) FROM tpcch.customer WHERE C_LAST = ? AND C_D_ID = ? AND C_W_ID = ?
+2025-12-09 03:21:01,228 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,228 - DEBUG - ============================================================
+2025-12-09 03:21:01,228 - DEBUG - ============================================================
+2025-12-09 03:21:01,228 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,228 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,228 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,228 - DEBUG - Original SQL:
+select W_TAX from tpcch.warehouse where W_ID=?
+2025-12-09 03:21:01,228 - DEBUG - ------------------------------
+2025-12-09 03:21:01,228 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,228 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,229 - DEBUG -   Full table object: tpcch.warehouse
+2025-12-09 03:21:01,229 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,229 - DEBUG -   Table SQL: 'tpcch.warehouse'
+2025-12-09 03:21:01,229 - DEBUG -   Table name: 'warehouse'
+2025-12-09 03:21:01,229 - DEBUG -   Method1 - table.name: 'warehouse'
+2025-12-09 03:21:01,229 - DEBUG -   Method2 - table.sql(): 'tpcch.warehouse'
+2025-12-09 03:21:01,229 - DEBUG -   Method3 - table.this: warehouse
+2025-12-09 03:21:01,229 - DEBUG -   Method3 - table.this.name: 'warehouse'
+2025-12-09 03:21:01,229 - DEBUG -   Table name (without schema): 'warehouse'
+2025-12-09 03:21:01,229 - DEBUG -   ✗ NO MATCH: table_name_only 'warehouse' != self.old_table 'order'
+2025-12-09 03:21:01,229 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,229 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,229 - DEBUG - Rewritten SQL:
+SELECT W_TAX FROM tpcch.warehouse WHERE W_ID = ?
+2025-12-09 03:21:01,229 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,229 - DEBUG - ============================================================
+2025-12-09 03:21:01,229 - DEBUG - ============================================================
+2025-12-09 03:21:01,229 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,229 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,229 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,229 - DEBUG - Original SQL:
+select C_ID, C_FIRST, C_MIDDLE, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE from tpcch.customer where C_LAST=? and C_D_ID=? and C_W_ID=? order by C_FIRST asc
+2025-12-09 03:21:01,229 - DEBUG - ------------------------------
+2025-12-09 03:21:01,231 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,231 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,231 - DEBUG -   Full table object: tpcch.customer
+2025-12-09 03:21:01,231 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,231 - DEBUG -   Table SQL: 'tpcch.customer'
+2025-12-09 03:21:01,231 - DEBUG -   Table name: 'customer'
+2025-12-09 03:21:01,231 - DEBUG -   Method1 - table.name: 'customer'
+2025-12-09 03:21:01,231 - DEBUG -   Method2 - table.sql(): 'tpcch.customer'
+2025-12-09 03:21:01,231 - DEBUG -   Method3 - table.this: customer
+2025-12-09 03:21:01,231 - DEBUG -   Method3 - table.this.name: 'customer'
+2025-12-09 03:21:01,231 - DEBUG -   Table name (without schema): 'customer'
+2025-12-09 03:21:01,231 - DEBUG -   ✗ NO MATCH: table_name_only 'customer' != self.old_table 'order'
+2025-12-09 03:21:01,231 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,231 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,232 - DEBUG - Rewritten SQL:
+SELECT C_ID, C_FIRST, C_MIDDLE, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE FROM tpcch.customer WHERE C_LAST = ? AND C_D_ID = ? AND C_W_ID = ? ORDER BY C_FIRST ASC
+2025-12-09 03:21:01,232 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,232 - DEBUG - ============================================================
+2025-12-09 03:21:01,232 - DEBUG - ============================================================
+2025-12-09 03:21:01,232 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,232 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,232 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,232 - DEBUG - Original SQL:
+select O_ID, O_ENTRY_D, O_CARRIER_ID from tpcch.order where O_W_ID=? and O_D_ID=? and O_C_ID=? and O_ID=(select max(O_ID) from tpcch.order where O_W_ID=? and O_D_ID=? and O_C_ID=?)
+2025-12-09 03:21:01,232 - DEBUG - ------------------------------
+2025-12-09 03:21:01,233 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,233 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,233 - DEBUG -   Full table object: tpcch.order
+2025-12-09 03:21:01,233 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,233 - DEBUG -   Table SQL: 'tpcch.order'
+2025-12-09 03:21:01,233 - DEBUG -   Table name: 'order'
+2025-12-09 03:21:01,233 - DEBUG -   Method1 - table.name: 'order'
+2025-12-09 03:21:01,233 - DEBUG -   Method2 - table.sql(): 'tpcch.order'
+2025-12-09 03:21:01,234 - DEBUG -   Method3 - table.this: order
+2025-12-09 03:21:01,234 - DEBUG -   Method3 - table.this.name: 'order'
+2025-12-09 03:21:01,234 - DEBUG -   Table name (without schema): 'order'
+2025-12-09 03:21:01,234 - INFO -   ✓ MATCH FOUND! table_name_only 'order' == self.old_table 'order'
+2025-12-09 03:21:01,234 - DEBUG -   Old full name: 'order'
+2025-12-09 03:21:01,234 - DEBUG -   New full name: 'order_view'
+2025-12-09 03:21:01,234 - DEBUG -   Created new table object: order_view
+2025-12-09 03:21:01,234 - INFO -   ✓ Successfully replaced table
+2025-12-09 03:21:01,234 - DEBUG -   After replacement, table.sql(): 'tpcch.order'
+2025-12-09 03:21:01,234 - DEBUG - 
+[Table #2]
+2025-12-09 03:21:01,234 - DEBUG -   Full table object: tpcch.order
+2025-12-09 03:21:01,234 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,234 - DEBUG -   Table SQL: 'tpcch.order'
+2025-12-09 03:21:01,234 - DEBUG -   Table name: 'order'
+2025-12-09 03:21:01,234 - DEBUG -   Method1 - table.name: 'order'
+2025-12-09 03:21:01,234 - DEBUG -   Method2 - table.sql(): 'tpcch.order'
+2025-12-09 03:21:01,234 - DEBUG -   Method3 - table.this: order
+2025-12-09 03:21:01,234 - DEBUG -   Method3 - table.this.name: 'order'
+2025-12-09 03:21:01,234 - DEBUG -   Table name (without schema): 'order'
+2025-12-09 03:21:01,234 - INFO -   ✓ MATCH FOUND! table_name_only 'order' == self.old_table 'order'
+2025-12-09 03:21:01,235 - DEBUG -   Old full name: 'order'
+2025-12-09 03:21:01,235 - DEBUG -   New full name: 'order_view'
+2025-12-09 03:21:01,235 - DEBUG -   Created new table object: order_view
+2025-12-09 03:21:01,235 - INFO -   ✓ Successfully replaced table
+2025-12-09 03:21:01,235 - DEBUG -   After replacement, table.sql(): 'tpcch.order'
+2025-12-09 03:21:01,235 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,235 - INFO - Summary: Found 2 tables, replaced 2 tables
+2025-12-09 03:21:01,235 - DEBUG - Rewritten SQL:
+SELECT O_ID, O_ENTRY_D, O_CARRIER_ID FROM order_view WHERE O_W_ID = ? AND O_D_ID = ? AND O_C_ID = ? AND O_ID = (SELECT MAX(O_ID) FROM order_view WHERE O_W_ID = ? AND O_D_ID = ? AND O_C_ID = ?)
+2025-12-09 03:21:01,235 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,235 - DEBUG - ============================================================
+2025-12-09 03:21:01,235 - DEBUG - ============================================================
+2025-12-09 03:21:01,235 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,235 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,235 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,235 - DEBUG - Original SQL:
+select count(*) from tpcch.stock,(select distinct OL_I_ID from tpcch.orderline where OL_W_ID=? and OL_D_ID=? and OL_O_ID<? and OL_O_ID>=?) _ where S_I_ID=OL_I_ID and S_W_ID=? and S_QUANTITY<?
+2025-12-09 03:21:01,236 - DEBUG - ------------------------------
+2025-12-09 03:21:01,237 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,237 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,237 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,237 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,237 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,237 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,237 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,237 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,237 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,237 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,237 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,237 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,237 - DEBUG - 
+[Table #2]
+2025-12-09 03:21:01,237 - DEBUG -   Full table object: tpcch.orderline
+2025-12-09 03:21:01,238 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,238 - DEBUG -   Table SQL: 'tpcch.orderline'
+2025-12-09 03:21:01,238 - DEBUG -   Table name: 'orderline'
+2025-12-09 03:21:01,238 - DEBUG -   Method1 - table.name: 'orderline'
+2025-12-09 03:21:01,238 - DEBUG -   Method2 - table.sql(): 'tpcch.orderline'
+2025-12-09 03:21:01,238 - DEBUG -   Method3 - table.this: orderline
+2025-12-09 03:21:01,238 - DEBUG -   Method3 - table.this.name: 'orderline'
+2025-12-09 03:21:01,238 - DEBUG -   Table name (without schema): 'orderline'
+2025-12-09 03:21:01,238 - DEBUG -   ✗ NO MATCH: table_name_only 'orderline' != self.old_table 'order'
+2025-12-09 03:21:01,238 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,238 - INFO - Summary: Found 2 tables, replaced 0 tables
+2025-12-09 03:21:01,239 - DEBUG - Rewritten SQL:
+SELECT COUNT(*) FROM tpcch.stock, (SELECT DISTINCT OL_I_ID FROM tpcch.orderline WHERE OL_W_ID = ? AND OL_D_ID = ? AND OL_O_ID < ? AND OL_O_ID >= ?) AS _ WHERE S_I_ID = OL_I_ID AND S_W_ID = ? AND S_QUANTITY < ?
+2025-12-09 03:21:01,239 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,239 - DEBUG - ============================================================
+2025-12-09 03:21:01,239 - DEBUG - ============================================================
+2025-12-09 03:21:01,239 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,239 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,239 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,239 - DEBUG - Original SQL:
+select count(*) from tpcch.customer where C_LAST=? and C_D_ID=? and C_W_ID=?
+2025-12-09 03:21:01,239 - DEBUG - ------------------------------
+2025-12-09 03:21:01,239 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,239 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,240 - DEBUG -   Full table object: tpcch.customer
+2025-12-09 03:21:01,240 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,240 - DEBUG -   Table SQL: 'tpcch.customer'
+2025-12-09 03:21:01,240 - DEBUG -   Table name: 'customer'
+2025-12-09 03:21:01,240 - DEBUG -   Method1 - table.name: 'customer'
+2025-12-09 03:21:01,240 - DEBUG -   Method2 - table.sql(): 'tpcch.customer'
+2025-12-09 03:21:01,240 - DEBUG -   Method3 - table.this: customer
+2025-12-09 03:21:01,240 - DEBUG -   Method3 - table.this.name: 'customer'
+2025-12-09 03:21:01,240 - DEBUG -   Table name (without schema): 'customer'
+2025-12-09 03:21:01,240 - DEBUG -   ✗ NO MATCH: table_name_only 'customer' != self.old_table 'order'
+2025-12-09 03:21:01,240 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,240 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,240 - DEBUG - Rewritten SQL:
+SELECT COUNT(*) FROM tpcch.customer WHERE C_LAST = ? AND C_D_ID = ? AND C_W_ID = ?
+2025-12-09 03:21:01,240 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,240 - DEBUG - ============================================================
+2025-12-09 03:21:01,240 - DEBUG - ============================================================
+2025-12-09 03:21:01,240 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,240 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,240 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,240 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_05,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,240 - DEBUG - ------------------------------
+2025-12-09 03:21:01,241 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,241 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,241 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,241 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,241 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,241 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,241 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,241 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,242 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,242 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,242 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,242 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,242 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,242 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,242 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_05, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,242 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,242 - DEBUG - ============================================================
+2025-12-09 03:21:01,242 - DEBUG - ============================================================
+2025-12-09 03:21:01,242 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,242 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,242 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,242 - DEBUG - Original SQL:
+select C_DATA from tpcch.customer where C_ID=? and C_D_ID=? and C_W_ID=?
+2025-12-09 03:21:01,242 - DEBUG - ------------------------------
+2025-12-09 03:21:01,243 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,243 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,243 - DEBUG -   Full table object: tpcch.customer
+2025-12-09 03:21:01,243 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,243 - DEBUG -   Table SQL: 'tpcch.customer'
+2025-12-09 03:21:01,243 - DEBUG -   Table name: 'customer'
+2025-12-09 03:21:01,243 - DEBUG -   Method1 - table.name: 'customer'
+2025-12-09 03:21:01,243 - DEBUG -   Method2 - table.sql(): 'tpcch.customer'
+2025-12-09 03:21:01,243 - DEBUG -   Method3 - table.this: customer
+2025-12-09 03:21:01,243 - DEBUG -   Method3 - table.this.name: 'customer'
+2025-12-09 03:21:01,243 - DEBUG -   Table name (without schema): 'customer'
+2025-12-09 03:21:01,243 - DEBUG -   ✗ NO MATCH: table_name_only 'customer' != self.old_table 'order'
+2025-12-09 03:21:01,243 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,243 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,243 - DEBUG - Rewritten SQL:
+SELECT C_DATA FROM tpcch.customer WHERE C_ID = ? AND C_D_ID = ? AND C_W_ID = ?
+2025-12-09 03:21:01,244 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,244 - DEBUG - ============================================================
+2025-12-09 03:21:01,244 - DEBUG - ============================================================
+2025-12-09 03:21:01,244 - DEBUG - DEBUG: Starting _replace_table_name
+2025-12-09 03:21:01,244 - DEBUG - self.old_table: 'order'
+2025-12-09 03:21:01,244 - DEBUG - view_name: 'order_view'
+2025-12-09 03:21:01,244 - DEBUG - Original SQL:
+select S_QUANTITY,S_DIST_01,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?
+2025-12-09 03:21:01,244 - DEBUG - ------------------------------
+2025-12-09 03:21:01,244 - DEBUG - ✓ Successfully parsed SQL
+2025-12-09 03:21:01,244 - DEBUG - 
+[Table #1]
+2025-12-09 03:21:01,244 - DEBUG -   Full table object: tpcch.stock
+2025-12-09 03:21:01,244 - DEBUG -   Table type: <class 'sqlglot.expressions.Table'>
+2025-12-09 03:21:01,244 - DEBUG -   Table SQL: 'tpcch.stock'
+2025-12-09 03:21:01,244 - DEBUG -   Table name: 'stock'
+2025-12-09 03:21:01,245 - DEBUG -   Method1 - table.name: 'stock'
+2025-12-09 03:21:01,245 - DEBUG -   Method2 - table.sql(): 'tpcch.stock'
+2025-12-09 03:21:01,245 - DEBUG -   Method3 - table.this: stock
+2025-12-09 03:21:01,245 - DEBUG -   Method3 - table.this.name: 'stock'
+2025-12-09 03:21:01,245 - DEBUG -   Table name (without schema): 'stock'
+2025-12-09 03:21:01,245 - DEBUG -   ✗ NO MATCH: table_name_only 'stock' != self.old_table 'order'
+2025-12-09 03:21:01,245 - DEBUG - 
+------------------------------
+2025-12-09 03:21:01,245 - INFO - Summary: Found 1 tables, replaced 0 tables
+2025-12-09 03:21:01,245 - DEBUG - Rewritten SQL:
+SELECT S_QUANTITY, S_DIST_01, S_DATA FROM tpcch.stock WHERE S_I_ID = ? AND S_W_ID = ?
+2025-12-09 03:21:01,245 - INFO - ✓ SQL has been successfully modified
+2025-12-09 03:21:01,245 - DEBUG - ============================================================
+=== 测试文件可写入 ===
+2025-12-09 03:22:31,513 - DEBUG - 这是DEBUG消息
+2025-12-09 03:22:31,514 - INFO - 这是INFO消息
+2025-12-09 03:22:31,514 - WARNING - 这是WARNING消息
+2025-12-09 03:22:31,514 - ERROR - 这是ERROR消息
+2025-12-09 03:34:37,447 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:34:37,452 - DEBUG - SQL解析成功
+2025-12-09 03:34:37,452 - DEBUG - 检查表: warehouse (简称: warehouse)
+2025-12-09 03:34:37,452 - WARNING - 未找到表: order
+2025-12-09 03:34:37,452 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,585 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,589 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,589 - DEBUG - 检查表: warehouse (简称: warehouse)
+2025-12-09 03:36:15,589 - WARNING - 未找到表: order
+2025-12-09 03:36:15,589 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,589 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,589 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,590 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,590 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,590 - WARNING - 未找到表: order
+2025-12-09 03:36:15,590 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,590 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,590 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,591 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,591 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,591 - WARNING - 未找到表: order
+2025-12-09 03:36:15,591 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,591 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,591 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,592 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,592 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,592 - WARNING - 未找到表: order
+2025-12-09 03:36:15,592 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,592 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,592 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,593 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,593 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:36:15,593 - WARNING - 未找到表: order
+2025-12-09 03:36:15,593 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,594 - DEBUG - 找到 1 个匹配
+2025-12-09 03:36:15,594 - DEBUG - 手动替换:  order ->  order_view
+2025-12-09 03:36:15,594 - INFO - 手动替换完成
+2025-12-09 03:36:15,594 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,594 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,594 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,594 - WARNING - 未找到表: order
+2025-12-09 03:36:15,594 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,594 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,594 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,595 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,595 - DEBUG - 检查表: district (简称: district)
+2025-12-09 03:36:15,595 - WARNING - 未找到表: order
+2025-12-09 03:36:15,595 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,595 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,595 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,596 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,596 - DEBUG - 检查表: item (简称: item)
+2025-12-09 03:36:15,596 - WARNING - 未找到表: order
+2025-12-09 03:36:15,596 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,596 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,596 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,596 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,597 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:36:15,597 - WARNING - 未找到表: order
+2025-12-09 03:36:15,597 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,597 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,597 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,597 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,597 - DEBUG - 检查表: district (简称: district)
+2025-12-09 03:36:15,597 - WARNING - 未找到表: order
+2025-12-09 03:36:15,597 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,597 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,597 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,598 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,598 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,598 - WARNING - 未找到表: order
+2025-12-09 03:36:15,598 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,598 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,598 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,599 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,599 - DEBUG - 检查表: district (简称: district)
+2025-12-09 03:36:15,599 - WARNING - 未找到表: order
+2025-12-09 03:36:15,599 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,599 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,599 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,600 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,600 - DEBUG - 检查表: orderline (简称: orderline)
+2025-12-09 03:36:15,600 - WARNING - 未找到表: order
+2025-12-09 03:36:15,600 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,600 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,600 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,600 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,600 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,600 - WARNING - 未找到表: order
+2025-12-09 03:36:15,600 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,601 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,601 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,602 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,602 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:36:15,602 - WARNING - 未找到表: order
+2025-12-09 03:36:15,602 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,602 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,602 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,603 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,603 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:36:15,603 - WARNING - 未找到表: order
+2025-12-09 03:36:15,603 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,603 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,603 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,603 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,603 - DEBUG - 检查表: orderline (简称: orderline)
+2025-12-09 03:36:15,603 - WARNING - 未找到表: order
+2025-12-09 03:36:15,604 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,604 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,604 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,604 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,604 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,604 - WARNING - 未找到表: order
+2025-12-09 03:36:15,604 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,604 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,604 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,605 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,605 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,605 - WARNING - 未找到表: order
+2025-12-09 03:36:15,605 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,605 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,605 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,606 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,606 - DEBUG - 检查表: neworder (简称: neworder)
+2025-12-09 03:36:15,606 - DEBUG - 检查表: neworder (简称: neworder)
+2025-12-09 03:36:15,606 - WARNING - 未找到表: order
+2025-12-09 03:36:15,606 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,606 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,606 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,607 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,607 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:36:15,607 - WARNING - 未找到表: order
+2025-12-09 03:36:15,607 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,607 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,607 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,607 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,607 - DEBUG - 检查表: warehouse (简称: warehouse)
+2025-12-09 03:36:15,607 - WARNING - 未找到表: order
+2025-12-09 03:36:15,607 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,608 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,608 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,609 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,609 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:36:15,609 - WARNING - 未找到表: order
+2025-12-09 03:36:15,609 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,609 - DEBUG - 找到 1 个匹配
+2025-12-09 03:36:15,609 - DEBUG - 手动替换:  order ->  order_view
+2025-12-09 03:36:15,609 - INFO - 手动替换完成
+2025-12-09 03:36:15,609 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,610 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,610 - DEBUG - 检查表: order (简称: order)
+2025-12-09 03:36:15,610 - INFO - 替换成功: order -> order_view
+2025-12-09 03:36:15,610 - DEBUG - 检查表: order (简称: order)
+2025-12-09 03:36:15,610 - INFO - 替换成功: order -> order_view
+2025-12-09 03:36:15,611 - INFO - 完成: 替换了 2 个表
+2025-12-09 03:36:15,611 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,612 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,612 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,612 - DEBUG - 检查表: orderline (简称: orderline)
+2025-12-09 03:36:15,612 - WARNING - 未找到表: order
+2025-12-09 03:36:15,612 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,612 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,612 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,613 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,613 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:36:15,613 - WARNING - 未找到表: order
+2025-12-09 03:36:15,613 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,613 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,613 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,614 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,614 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,614 - WARNING - 未找到表: order
+2025-12-09 03:36:15,614 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,614 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,614 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,614 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,614 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:36:15,614 - WARNING - 未找到表: order
+2025-12-09 03:36:15,614 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,615 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:36:15,615 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:36:15,615 - DEBUG - SQL解析成功
+2025-12-09 03:36:15,615 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:36:15,615 - WARNING - 未找到表: order
+2025-12-09 03:36:15,615 - WARNING - 使用手动替换方法
+2025-12-09 03:36:15,615 - WARNING - 手动替换也未找到匹配
+2025-12-09 03:42:14,001 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:42:14,004 - DEBUG - SQL解析成功
+2025-12-09 03:42:14,004 - DEBUG - 检查表: warehouse (简称: warehouse)
+2025-12-09 03:42:14,004 - WARNING - 未找到表: order
+2025-12-09 03:43:23,718 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,721 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,722 - DEBUG - 检查表: warehouse (简称: warehouse)
+2025-12-09 03:43:23,722 - WARNING - 未找到表: order
+2025-12-09 03:43:23,722 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,722 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,722 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,723 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,723 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,723 - WARNING - 未找到表: order
+2025-12-09 03:43:23,723 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,723 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,723 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,724 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,724 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,724 - WARNING - 未找到表: order
+2025-12-09 03:43:23,724 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,724 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,724 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,724 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,724 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,724 - WARNING - 未找到表: order
+2025-12-09 03:43:23,724 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,724 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,725 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,726 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,726 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:43:23,726 - WARNING - 未找到表: order
+2025-12-09 03:43:23,726 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,726 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,726 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,727 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,727 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,727 - WARNING - 未找到表: order
+2025-12-09 03:43:23,727 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,727 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,727 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,728 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,728 - DEBUG - 检查表: district (简称: district)
+2025-12-09 03:43:23,728 - WARNING - 未找到表: order
+2025-12-09 03:43:23,728 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,728 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,728 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,728 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,728 - DEBUG - 检查表: item (简称: item)
+2025-12-09 03:43:23,728 - WARNING - 未找到表: order
+2025-12-09 03:43:23,729 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,729 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,729 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,729 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,729 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:43:23,729 - WARNING - 未找到表: order
+2025-12-09 03:43:23,729 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,729 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,729 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,730 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,730 - DEBUG - 检查表: district (简称: district)
+2025-12-09 03:43:23,730 - WARNING - 未找到表: order
+2025-12-09 03:43:23,730 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,730 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,730 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,731 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,731 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,731 - WARNING - 未找到表: order
+2025-12-09 03:43:23,731 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,731 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,731 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,731 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,731 - DEBUG - 检查表: district (简称: district)
+2025-12-09 03:43:23,731 - WARNING - 未找到表: order
+2025-12-09 03:43:23,731 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,731 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,732 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,732 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,732 - DEBUG - 检查表: orderline (简称: orderline)
+2025-12-09 03:43:23,732 - WARNING - 未找到表: order
+2025-12-09 03:43:23,732 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,732 - INFO - ✅ 直接替换: tpcch.order -> order_view (共1处)
+2025-12-09 03:43:23,732 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,733 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,733 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,733 - WARNING - 未找到表: order
+2025-12-09 03:43:23,733 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,733 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,733 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,734 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,734 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:43:23,734 - WARNING - 未找到表: order
+2025-12-09 03:43:23,734 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,734 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,734 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,735 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,735 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:43:23,735 - WARNING - 未找到表: order
+2025-12-09 03:43:23,735 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,735 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,735 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,736 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,736 - DEBUG - 检查表: orderline (简称: orderline)
+2025-12-09 03:43:23,736 - WARNING - 未找到表: order
+2025-12-09 03:43:23,736 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,736 - INFO - ✅ 直接替换: tpcch.order -> order_view (共1处)
+2025-12-09 03:43:23,736 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,737 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,737 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,737 - WARNING - 未找到表: order
+2025-12-09 03:43:23,737 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,737 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,737 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,737 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,737 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,737 - WARNING - 未找到表: order
+2025-12-09 03:43:23,737 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,737 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,738 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,738 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,738 - DEBUG - 检查表: neworder (简称: neworder)
+2025-12-09 03:43:23,739 - DEBUG - 检查表: neworder (简称: neworder)
+2025-12-09 03:43:23,739 - WARNING - 未找到表: order
+2025-12-09 03:43:23,739 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,739 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,739 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,739 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,739 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:43:23,739 - WARNING - 未找到表: order
+2025-12-09 03:43:23,739 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,739 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,739 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,740 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,740 - DEBUG - 检查表: warehouse (简称: warehouse)
+2025-12-09 03:43:23,740 - WARNING - 未找到表: order
+2025-12-09 03:43:23,740 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,740 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,740 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,741 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,741 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:43:23,741 - WARNING - 未找到表: order
+2025-12-09 03:43:23,741 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,741 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,741 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,742 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,742 - DEBUG - 检查表: order (简称: order)
+2025-12-09 03:43:23,742 - INFO - 替换成功: order -> order_view
+2025-12-09 03:43:23,742 - DEBUG - 检查表: order (简称: order)
+2025-12-09 03:43:23,742 - INFO - 替换成功: order -> order_view
+2025-12-09 03:43:23,743 - INFO - 完成: 替换了 2 个表
+2025-12-09 03:43:23,743 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,744 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,744 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,744 - DEBUG - 检查表: orderline (简称: orderline)
+2025-12-09 03:43:23,745 - WARNING - 未找到表: order
+2025-12-09 03:43:23,745 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,745 - INFO - ✅ 直接替换: tpcch.order -> order_view (共1处)
+2025-12-09 03:43:23,745 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,745 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,745 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:43:23,745 - WARNING - 未找到表: order
+2025-12-09 03:43:23,745 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,745 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,745 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,746 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,746 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,746 - WARNING - 未找到表: order
+2025-12-09 03:43:23,746 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,746 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,746 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,747 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,747 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:43:23,747 - WARNING - 未找到表: order
+2025-12-09 03:43:23,747 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,747 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:43:23,747 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:43:23,747 - DEBUG - SQL解析成功
+2025-12-09 03:43:23,747 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:43:23,747 - WARNING - 未找到表: order
+2025-12-09 03:43:23,747 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:43:23,748 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,658 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,662 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,662 - DEBUG - 检查表: warehouse (简称: warehouse)
+2025-12-09 03:44:29,662 - WARNING - 未找到表: order
+2025-12-09 03:44:29,662 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,662 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,663 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,663 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,663 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,663 - WARNING - 未找到表: order
+2025-12-09 03:44:29,663 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,663 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,663 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,664 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,664 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,664 - WARNING - 未找到表: order
+2025-12-09 03:44:29,664 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,664 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,664 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,665 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,665 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,665 - WARNING - 未找到表: order
+2025-12-09 03:44:29,665 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,665 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,665 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,666 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,667 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:44:29,667 - WARNING - 未找到表: order
+2025-12-09 03:44:29,667 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,667 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,667 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,667 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,667 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,667 - WARNING - 未找到表: order
+2025-12-09 03:44:29,667 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,667 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,668 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,668 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,668 - DEBUG - 检查表: district (简称: district)
+2025-12-09 03:44:29,668 - WARNING - 未找到表: order
+2025-12-09 03:44:29,668 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,668 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,668 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,669 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,669 - DEBUG - 检查表: item (简称: item)
+2025-12-09 03:44:29,669 - WARNING - 未找到表: order
+2025-12-09 03:44:29,669 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,669 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,669 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,670 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,670 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:44:29,670 - WARNING - 未找到表: order
+2025-12-09 03:44:29,670 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,670 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,670 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,670 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,670 - DEBUG - 检查表: district (简称: district)
+2025-12-09 03:44:29,670 - WARNING - 未找到表: order
+2025-12-09 03:44:29,670 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,670 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,670 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,671 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,671 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,671 - WARNING - 未找到表: order
+2025-12-09 03:44:29,671 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,671 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,671 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,672 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,672 - DEBUG - 检查表: district (简称: district)
+2025-12-09 03:44:29,672 - WARNING - 未找到表: order
+2025-12-09 03:44:29,672 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,672 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,672 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,673 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,673 - DEBUG - 检查表: orderline (简称: orderline)
+2025-12-09 03:44:29,673 - WARNING - 未找到表: order
+2025-12-09 03:44:29,673 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,673 - INFO - ✅ 直接替换: tpcch.order -> order_view (共1处)
+2025-12-09 03:44:29,673 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,673 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,673 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,673 - WARNING - 未找到表: order
+2025-12-09 03:44:29,673 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,674 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,674 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,675 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,675 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:44:29,675 - WARNING - 未找到表: order
+2025-12-09 03:44:29,675 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,675 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,675 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,676 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,676 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:44:29,676 - WARNING - 未找到表: order
+2025-12-09 03:44:29,676 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,676 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,676 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,676 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,676 - DEBUG - 检查表: orderline (简称: orderline)
+2025-12-09 03:44:29,676 - WARNING - 未找到表: order
+2025-12-09 03:44:29,676 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,677 - INFO - ✅ 直接替换: tpcch.order -> order_view (共1处)
+2025-12-09 03:44:29,677 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,677 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,677 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,677 - WARNING - 未找到表: order
+2025-12-09 03:44:29,677 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,677 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,677 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,678 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,678 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,678 - WARNING - 未找到表: order
+2025-12-09 03:44:29,678 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,678 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,678 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,679 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,679 - DEBUG - 检查表: neworder (简称: neworder)
+2025-12-09 03:44:29,679 - DEBUG - 检查表: neworder (简称: neworder)
+2025-12-09 03:44:29,679 - WARNING - 未找到表: order
+2025-12-09 03:44:29,679 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,679 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,679 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,680 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,680 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:44:29,680 - WARNING - 未找到表: order
+2025-12-09 03:44:29,680 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,680 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,680 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,680 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,680 - DEBUG - 检查表: warehouse (简称: warehouse)
+2025-12-09 03:44:29,680 - WARNING - 未找到表: order
+2025-12-09 03:44:29,680 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,680 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,680 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,681 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,682 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:44:29,682 - WARNING - 未找到表: order
+2025-12-09 03:44:29,682 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,682 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,682 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,683 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,683 - DEBUG - 检查表: order (简称: order)
+2025-12-09 03:44:29,683 - INFO - 替换成功: order -> order_view
+2025-12-09 03:44:29,683 - DEBUG - 检查表: order (简称: order)
+2025-12-09 03:44:29,683 - INFO - 替换成功: order -> order_view
+2025-12-09 03:44:29,684 - INFO - 完成: 替换了 2 个表
+2025-12-09 03:44:29,684 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,685 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,685 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,685 - DEBUG - 检查表: orderline (简称: orderline)
+2025-12-09 03:44:29,685 - WARNING - 未找到表: order
+2025-12-09 03:44:29,685 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,685 - INFO - ✅ 直接替换: tpcch.order -> order_view (共1处)
+2025-12-09 03:44:29,685 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,686 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,686 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:44:29,686 - WARNING - 未找到表: order
+2025-12-09 03:44:29,686 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,686 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,686 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,686 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,687 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,687 - WARNING - 未找到表: order
+2025-12-09 03:44:29,687 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,687 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,687 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,687 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,687 - DEBUG - 检查表: customer (简称: customer)
+2025-12-09 03:44:29,687 - WARNING - 未找到表: order
+2025-12-09 03:44:29,687 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,687 - ERROR - ❌ 未找到表: tpcch.order
+2025-12-09 03:44:29,687 - INFO - 开始替换表名: order -> order_view
+2025-12-09 03:44:29,688 - DEBUG - SQL解析成功
+2025-12-09 03:44:29,688 - DEBUG - 检查表: stock (简称: stock)
+2025-12-09 03:44:29,688 - WARNING - 未找到表: order
+2025-12-09 03:44:29,688 - WARNING - 使用专门的手动替换方法
+2025-12-09 03:44:29,688 - ERROR - ❌ 未找到表: tpcch.order

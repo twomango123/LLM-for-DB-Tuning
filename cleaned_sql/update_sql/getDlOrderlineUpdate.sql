@@ -1,0 +1,1 @@
+update tpcch.orderline set OL_DELIVERY_D=? where OL_W_ID=? and OL_D_ID=? and OL_O_ID=?

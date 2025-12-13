@@ -16,20 +16,63 @@ CC=g++
 CXXFLAGS=-c -std=c++11 -O2 -Wall -g
 LDFLAGS=-lodbc -pthread
 
+# 调试编译标志
+DEBUG_CXXFLAGS=-c -std=c++11 -O0 -Wall -g3 -ggdb -DDEBUG -fno-omit-frame-pointer
+DEBUG_LDFLAGS=-lodbc -pthread -g3 -ggdb
+
 SOURCES=src/AnalyticalStatistic.cpp src/TransactionalStatistic.cpp src/dialect/DialectStrategy.cpp src/Config.cpp src/Log.cpp src/DbcTools.cpp src/DataSource.cpp src/TupleGen.cpp src/Schema.cpp src/Queries.cpp src/Transactions.cpp chBenchmark.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
+DEBUG_OBJECTS=$(SOURCES:.cpp=_debug.o)
 EXECUTABLE=chBenchmark
+DEBUG_EXECUTABLE=chBenchmark_debug
 
 all: $(SOURCES) $(EXECUTABLE)
 	
+# 调试版本目标
+debug: $(DEBUG_EXECUTABLE)
+
+
 $(EXECUTABLE): $(OBJECTS) 
 	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
+
+# 调试版本
+$(DEBUG_EXECUTABLE): $(DEBUG_OBJECTS) 
+	$(CC) $(DEBUG_OBJECTS) -o $@ $(DEBUG_LDFLAGS)
 
 .cpp.o:
 	$(CC) $(CXXFLAGS) $< -o $@ -I/usr/local/unixODBC/include 
 
+# 调试版本对象文件
+%_debug.o: %.cpp
+	$(CC) $(DEBUG_CXXFLAGS) $< -o $@ -I/usr/local/unixODBC/include
+
+# 运行调试版本
+run_debug: debug
+	./$(DEBUG_EXECUTABLE)
+
+# 使用 gdb 运行调试版本
+gdb: debug
+	gdb ./$(DEBUG_EXECUTABLE)
+
+# 使用 valgrind 检查内存
+valgrind: debug
+	valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./$(DEBUG_EXECUTABLE)
+
+# 使用 AddressSanitizer 版本
+asan: CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer
+asan: LDFLAGS += -fsanitize=address
+asan: clean $(EXECUTABLE)
+	@echo "编译完成，使用 ASAN_OPTIONS=detect_leaks=1 ./$(EXECUTABLE) 运行"
+
+
+# 清理
 clean:
-	rm *.o
-	rm src/*.o
-	rm src/dialect/*.o
-	rm chBenchmark
+	rm -f *.o
+	rm -f src/*.o
+	rm -f src/*_debug.o
+	rm -f src/dialect/*.o
+	rm -f src/dialect/*_debug.o
+	rm -f $(EXECUTABLE) $(DEBUG_EXECUTABLE)
+
+# 另外
+.PHONY: all debug run_debug gdb valgrind asan clean install help

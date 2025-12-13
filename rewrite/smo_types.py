@@ -15,8 +15,27 @@ class ColumnCopy(SMO):
 
     def apply_to_sql(self, sql_ast):
         pass
-    def apply_to_data(self, col):
-        pass
+    def apply_to_data(self, data_dict: dict):
+
+        result = data_dict.copy()
+
+        if self.table not in result:
+            raise ValueError(f"[ColumnCopy] 表 {self.table} 不存在")
+
+        df = result[self.table]
+
+        if self.oldcolumn not in df.columns:
+            raise ValueError(
+                f"[ColumnCopy] 列 {self.oldcolumn} 在表 {self.table} 中不存在"
+            )
+
+        # 执行列复制，命名为“副本”
+        df[self.newcolumn] = df[self.oldcolumn].values
+
+        # 写回
+        result[self.table] = df
+
+        return result
     
         
 

@@ -32,25 +32,13 @@ class DatabaseDriver(ABC):
         """执行非查询 SQL 语句，如创建表或导入数据"""
         pass
 
-    @abstractmethod
-    def create_schema(self) -> bool:
-        """创建 TPC-C/H 数据库 schema"""
-        pass
 
     @abstractmethod
     def drop_schema(self) -> bool:
         """删除旧的 schema"""
         pass
 
-    @abstractmethod
-    def import_csv(self, table_name: str, csv_file: str, delimiter: str = '|') -> bool:
-        """将 CSV 导入指定表"""
-        pass
-
-    @abstractmethod
-    def check_data_integrity(self) -> bool:
-        """检查数据是否完整"""
-        pass
+  
 
     # @abstractmethod
     # def _create_thread_connection(self):

@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     g++ \
     make \
+    python3 \
+    python3-pip \
+    python3-dev \
     cmake \
     libodbc1 \
     unixodbc \
@@ -22,6 +25,7 @@ RUN apt-get update && apt-get install -y \
     git \
     vim \
     nano \
+    gdb \
     sudo \
     lsb-release \
     gnupg \
@@ -35,8 +39,7 @@ RUN apt-get update && \
 # 设置 MySQL root 密码
 RUN service mysql start && \
     mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '123!@#200'; FLUSH PRIVILEGES;" && \
-    mysql -uroot -p'123!@#200' -e "CREATE DATABASE IF NOT EXISTS tpcch;" && \
-    service mysql stop
+    mysql -uroot -p'123!@#200' -e "CREATE DATABASE IF NOT EXISTS tpcch;" 
 
 # 配置ODBC 驱动 数据源
 RUN echo "[MySQL ODBC 8.0 Unicode Driver]"        > /etc/odbcinst.ini && \
@@ -52,6 +55,8 @@ echo "Database = tpcch" >> /etc/odbc.ini && \
 echo "User     = root" >> /etc/odbc.ini && \
 echo "Password = 123!@#200" >> /etc/odbc.ini
 
+RUN apt-get update && apt-get install -y valgrind
+
 
 # 创建工作目录
 WORKDIR /LLM-for-DB-Tuning
@@ -59,11 +64,16 @@ WORKDIR /LLM-for-DB-Tuning
 # 将工作目录复制到容器中
 COPY ./LLM-for-DB-Tuning /LLM-for-DB-Tuning
 
+
+RUN service mysql start 
 # 暴露端口
 EXPOSE 3306
 
+# source venv/bin/activate
 
-
+# docker rm -f 73f7dfe2b656
+# docker rmi ch-schema 
+# pip freeze > requirements.txt
 
 # cd ~/SchemaTuning
 # docker build -t schematuning-docker .
@@ -78,7 +88,9 @@ EXPOSE 3306
 # apt-get install -y odbc-mariadb  下载这个
 # isql -U root -P '123!@#200' -S localhost 
 
-# mysql -u root -p
+# mysql -u root -p tpcch
+# describe order_primary_key;
+# drop table order_primary_key;
 # SHOW VARIABLES LIKE 'secure_file_priv';
 
 # ./chBenchmark -csv -wh 1 -pa /var/lib/mysql-files
