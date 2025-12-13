@@ -1,0 +1,1 @@
+select W_TAX from tpcch.warehouse where W_ID=?;

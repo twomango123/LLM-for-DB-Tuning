@@ -326,6 +326,7 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 	DbcTools::resetStatement(noDistrictUpdate);
 	DbcTools::bind(noDistrictUpdate,1,wId);
 	DbcTools::bind(noDistrictUpdate,2,dId);
+
 	if(!DbcTools::executePreparedStatement(noDistrictUpdate)){
 		DbcTools::rollback(hDBC);
 		return 0;

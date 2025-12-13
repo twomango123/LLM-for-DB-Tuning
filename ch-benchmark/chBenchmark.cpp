@@ -410,40 +410,14 @@ int main(int argc, char* argv[]){
 		//create a statement handle for initializing DBS
 		SQLHSTMT hStmt = 0;
 		SQLAllocHandle(SQL_HANDLE_STMT, hDBC, &hStmt);
-
-		//create database schema
-		Log::l2() << Log::tm() << "Schema creation:\n";
-		if(!Schema::createSchema(hStmt)){
-			return 1;
-		}
-
-		//import initial database from csv files
-		Log::l2() << Log::tm() << "CSV import:\n";
-		if(!Schema::importCSV(hStmt)){
-			return 1;
-		}
-
-		//detect warehouse count of loaded initial database
-		if(!Config::warehouseDetection(hStmt)){
-			return 1;
-		}
-
-		//perform a check to ensure that initial database was imported correctly
-		if(!Schema::check(hStmt)){
-			return 1;
-		}
-
-		//fire additional preparation statements
-		Log::l2() << Log::tm() << "Additional Preparation:\n";
-		if(!Schema::additionalPreparation(hStmt)){
-			return 1;
-		}
+		//create a statement handle for initializing DBS
 
 		SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
 		SQLDisconnect(hDBC);
 		SQLFreeHandle(SQL_HANDLE_DBC, hDBC);
 
 		DataSource::initialize();
+
 
 		int runState = 0; //0=dont_run 1=warmup 2=run
 		unsigned int count=Config::getAnalyticalClients()+Config::getTransactionalClients()+1;
@@ -567,8 +541,61 @@ int main(int argc, char* argv[]){
 				"    -td <TEST_DURATION_IN_S>\n"
 				"    -pa <INITIAL_DB_CREATION_PATH>\n"
 				"    -op <OUTPUT_PATH>\n\n";
-	}
-	else{
+	}else if(Config::getType()==4){
+
+		//Initialization
+		Log::l2() << Log::tm() << "Databasesystem:\n-initializing\n";
+
+		//connect to DBS
+		SQLHENV hEnv = 0;
+		DbcTools::setEnv(hEnv);
+		SQLHDBC hDBC = 0;
+		if(!DbcTools::connect(hEnv, hDBC)){
+			return 1;
+		}
+
+		//create a statement handle for initializing DBS
+		SQLHSTMT hStmt = 0;
+		SQLAllocHandle(SQL_HANDLE_STMT, hDBC, &hStmt);
+
+		//create database schema
+		Log::l2() << Log::tm() << "Schema creation:\n";
+		if(!Schema::createSchema(hStmt)){
+			return 1;
+		}
+
+		//import initial database from csv files
+		Log::l2() << Log::tm() << "CSV import:\n";
+		if(!Schema::importCSV(hStmt)){
+			return 1;
+		}
+
+		//detect warehouse count of loaded initial database
+		if(!Config::warehouseDetection(hStmt)){
+			return 1;
+		}
+
+		//perform a check to ensure that initial database was imported correctly
+		if(!Schema::check(hStmt)){
+			return 1;
+		}
+
+		//fire additional preparation statements
+		Log::l2() << Log::tm() << "Additional Preparation:\n";
+		if(!Schema::additionalPreparation(hStmt)){
+			return 1;
+		}
+
+		SQLFreeHandle(SQL_HANDLE_STMT, hStmt);
+		SQLDisconnect(hDBC);
+		SQLFreeHandle(SQL_HANDLE_DBC, hDBC);
+
+		DataSource::initialize();
+
+		
+		Log::l2() << Log::tm() << "-finished\n";
+
+	}else{
 		return 1;
 	}
 

@@ -1,5 +1,3 @@
-# smo/base.py
-
 from abc import ABC, abstractmethod
 
 class SMO(ABC):

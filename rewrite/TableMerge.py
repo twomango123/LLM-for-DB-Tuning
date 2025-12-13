@@ -1,10 +1,10 @@
 import pandas as pd
 from io import StringIO
-import re
-from base import SMO
+import os
+from .base import SMO
 
 class TableMerge(SMO):
-    def __init__(self, old_tables, new_table, old_columns_list):
+    def __init__(self, old_tables, new_table, old_columns_list, sign):
         """
         old_tables: 旧表名列表 [table1, table2]
         new_table: 新表名
@@ -13,535 +13,385 @@ class TableMerge(SMO):
         self.old_tables = old_tables
         self.new_table = new_table
         self.old_columns_list = old_columns_list
-        self.conflict_columns = self._identify_conflict_columns()
+        self.sign = sign #sign==1 不保留原表，==2保留原表建立物化视图
+        
 
-       # 定义列名映射规则
-        self.column_mapping = self._create_column_mapping()
+    def apply_to_schema(self, db):
+        # 旧表不保留
 
-    def apply_to_schema(self, schema):
-        pass
-    def apply_to_data(self, data_dict):
-        """
-        执行两表左连接，处理列名冲突
-        data_dict: 包含表数据的字典 {table_name: dataframe}
-        """
-        if len(self.old_tables) != 2:
-            raise ValueError("需要两个表进行连接")
+        select_columns = []
+        seen_columns = set()
         
-        # 获取两个表的数据
-        left_table = data_dict.get(self.old_tables[0])
-        right_table = data_dict.get(self.old_tables[1])
-        
-        if left_table is None or right_table is None:
-            raise ValueError(f"缺少表数据: {self.old_tables}")
-        
-        # 自动推断连接键
-        join_key = self._infer_join_key(left_table, right_table)
-        if not join_key:
-            raise ValueError("无法推断连接键")
-        
-        # 执行左连接，为冲突列添加后缀
-        merged_data = pd.merge(
-            left_table, 
-            right_table, 
-            on=join_key, 
-            how='left', 
-            suffixes=('_left', '_right')
-        )
-        
-        # 将连接后的数据添加到数据字典
-        data_dict[self.new_table] = merged_data
-        
-        return data_dict
-
-
-    def _identify_conflict_columns(self):
-        """直接通过列名列表识别重复列"""
-        if len(self.old_columns_list) != 2:
-            return set()
-        
-        table1_columns = set(self.old_columns_list[0])
-        table2_columns = set(self.old_columns_list[1])
-        
-        # 找出两个表中都存在的列名
-        conflict_columns = table1_columns.intersection(table2_columns)
-        return conflict_columns
-
-    def _create_column_mapping(self):
-        """创建列名映射规则"""
-        column_mapping = {}
-        
-        # 左表列映射
+        # 处理第一个表的列
         for col in self.old_columns_list[0]:
-            if col in self.conflict_columns:
-                column_mapping[(self.old_tables[0], col)] = f"{col}_left"
+            if col == self.join_key and self.join_key:
+                # 连接键只保留一次
+                select_columns.append(f"COALESCE(t1.{col}, t2.{col}) AS {col}")
             else:
-                column_mapping[(self.old_tables[0], col)] = col
+                select_columns.append(f"t1.{col}")
+            seen_columns.add(col)
         
-        # 右表列映射
+        # 处理第二个表的列，处理重复列名
         for col in self.old_columns_list[1]:
-            if col in self.conflict_columns:
-                column_mapping[(self.old_tables[1], col)] = f"{col}_right"
+            if col == self.join_key and self.join_key:
+                # 连接键已经在第一个表中处理过了，跳过
+                continue
+            elif col in seen_columns:
+                # 重复列名，添加后缀
+                new_col_name = f"{col}_2"
+                select_columns.append(f"t2.{col} AS {new_col_name}")
             else:
-                column_mapping[(self.old_tables[1], col)] = col
+                select_columns.append(f"t2.{col}")
         
-        return column_mapping
+        # 构建连接条件
+        if self.join_key:
+            join_condition = f"t1.{self.join_key} = t2.{self.join_key}"
+        else:
+            join_condition = "1=1"  # 笛卡尔积
+        
+        # 构建MySQL兼容的全外连接SQL语句
+        union_sql = f"""
+        CREATE TABLE {self.new_table} AS
+        SELECT {', '.join(select_columns)}
+        FROM {self.old_tables[0]} t1
+        LEFT JOIN {self.old_tables[1]} t2
+        ON {join_condition}
+        
+        UNION
+        
+        SELECT {', '.join(select_columns)}
+        FROM {self.old_tables[0]} t1
+        RIGHT JOIN {self.old_tables[1]} t2
+        ON {join_condition}
+        WHERE t1.{self.old_columns_list[0][0]} IS NULL
+        """
+        
+        # 执行创建新表的SQL
+        db.execute_statement(union_sql)
+        
+        # 删除旧表
+        for old_table in self.old_tables:
+            drop_sql = f"DROP TABLE {old_table}"
+            db.execute_statement(drop_sql)
+        
 
-    def apply_to_sql(self, sql):
+    def create_physical_view(self, db):
+        # 旧表保留
         """
-        将涉及旧表的SQL重写为基于新大表的查询
-        支持单表查询和多表连接查询
+        创建两个旧表自然连接的物化视图（MySQL中就是创建一个新表）
         """
-        # 1. 分析查询类型（单表还是多表）
-        query_type = self._analyze_query_type(sql)
+        # 找出两个表的公共列（自然连接的连接键）
+        table1_cols = set(self.old_columns_list[0])
+        table2_cols = set(self.old_columns_list[1])
+        common_columns = list(table1_cols.intersection(table2_cols))
         
-        # 2. 解析SQL结构
-        parsed_info = self._parse_sql_structure(sql)
+        if not common_columns:
+            # 如果没有公共列，则使用笛卡尔积（所有行组合）
+            print("警告：两个表没有公共列，将使用笛卡尔积连接")
+            join_condition = "1=1"
+            
+            # 构建SELECT列表，处理重复列名
+            select_columns = []
+            
+            # 第一个表的所有列
+            for col in self.old_columns_list[0]:
+                select_columns.append(f"t1.{col}")
+            
+            # 第二个表的所有列
+            for col in self.old_columns_list[1]:
+                if col in self.old_columns_list[0]:
+                    # 列名重复，添加后缀
+                    select_columns.append(f"t2.{col} AS {col}_2")
+                else:
+                    select_columns.append(f"t2.{col}")
+        else:
+            # 有公共列，使用自然连接
+            # 构建连接条件（多个公共列时使用AND连接）
+            join_conditions = []
+            for col in common_columns:
+                join_conditions.append(f"t1.{col} = t2.{col}")
+            join_condition = " AND ".join(join_conditions)
+            
+            # 构建SELECT列表，公共列只出现一次
+            select_columns = []
+            
+            # 第一个表的所有列
+            for col in self.old_columns_list[0]:
+                select_columns.append(f"t1.{col}")
+            
+            # 第二个表的非公共列
+            for col in self.old_columns_list[1]:
+                if col not in common_columns:
+                    select_columns.append(f"t2.{col}")
         
-        # 3. 替换表名为新表
-        rewritten_sql = self._replace_table_references(sql, parsed_info, query_type)
+        # 构建创建物化视图的SQL（在MySQL中就是创建表）
+        create_sql = f"""
+        CREATE TABLE {self.new_table} AS
+        SELECT {', '.join(select_columns)}
+        FROM {self.old_tables[0]} t1
+        JOIN {self.old_tables[1]} t2
+        ON {join_condition}
+        """
         
-        # 4. 处理列名冲突（基于已知的重复列名）
-        rewritten_sql = self._resolve_column_conflicts(rewritten_sql, parsed_info, query_type)
-        
-        # 5. 处理聚合函数去重（仅多表连接时需要）
-        if query_type == 'multi_table':
-            rewritten_sql = self._handle_aggregation_distinct(rewritten_sql, parsed_info)
-        
-        # 6. 清理多余的JOIN条件（仅多表连接时需要）
-        if query_type == 'multi_table':
-            rewritten_sql = self._cleanup_join_conditions(rewritten_sql)
-        
-        return rewritten_sql
+        # 执行SQL创建物化视图
+        db.execute_statement(create_sql)
+        print(f"已创建物化视图（表）: {self.new_table}")
 
     def apply_to_data(self, data_dict):
-        """
-        应用表合并操作到数据
-        data_dict: 包含旧表数据的字典 {table1: df1, table2: df2}
-        返回合并后的新表数据
-        """
-        if len(self.old_tables) != 2 or len(data_dict) != 2:
-            raise ValueError("需要两个表进行合并")
-        
-        # 获取两个表的数据
-        table1_data = data_dict.get(self.old_tables[0])
-        table2_data = data_dict.get(self.old_tables[1])
-        
-        if table1_data is None or table2_data is None:
-            raise ValueError(f"缺少表数据: {self.old_tables}")
-        
-        # 执行左连接
-        merged_data = self._perform_left_join(table1_data, table2_data)
-        
-        return merged_data
+        pass
 
-    def _perform_left_join(self, left_df, right_df):
-        """
-        执行左连接操作，处理列名冲突
-        """
-        # 识别连接键（自动推断或使用公共列）
-        join_key = self._infer_join_key(left_df, right_df)
-        
-        if not join_key:
-            raise ValueError("无法推断连接键，请明确指定连接条件")
-        
-        print(f"使用连接键: {join_key}")
-        
-        # 执行左连接，为冲突列添加后缀
-        merged_df = pd.merge(
-            left_df, 
-            right_df, 
-            on=join_key, 
-            how='left', 
-            suffixes=('_left', '_right')
-        )
-        
-        return merged_df
 
-    def _infer_join_key(self, left_df, right_df):
-        """
-        自动推断连接键
-        """
-        # 方法1: 查找名称相同的列
-        common_columns = set(left_df.columns).intersection(set(right_df.columns))
-        
-        # 优先选择包含'id'、'key'等关键字的列
-        potential_keys = []
-        for col in common_columns:
-            col_lower = col.lower()
-            if any(keyword in col_lower for keyword in ['id', 'key', 'code', 'num']):
-                potential_keys.append(col)
-        
-        if potential_keys:
-            return potential_keys[0]  # 返回第一个可能的键
-        
-        # 方法2: 如果有多个公共列，选择第一个
-        if common_columns:
-            return list(common_columns)[0]
-        
-        return None
+    def apply_to_sql(self):
+        pass
 
-    def _analyze_query_type(self, sql):
+    def apply_to_readonly_sql(self, sql_path) :
+        # 构建一个表 只保留old_table主属性列
+        # 构建sql语句创建表
+        # 将数据导入数据库表中
+        # primary_key_table_name = f"{self.old_table}_keys"
+        
+        # 创建拆分后表的视图
+        # new_table_name= self.create_logical_view(db, primary_key_table_name)
+
+        # 逐个文件处理sql语句
+        # 解析 替换from后表名为原表名self.old_table的表名为new_table_name
+        output_sqls = self.process_sql_files(sql_path, self.new_table)
+        
+        # 将处理后的sql语句保存到文件中
+        self._save_rewritten_sql(output_sqls, sql_path)
+
+        return True
+    
+    def process_sql_files(self, sql_path, new_table_name):
+        output_sqls = {}
+        
+        if os.path.isdir(sql_path):
+            # 处理文件夹中的所有SQL文件
+            for filename in os.listdir(sql_path):
+                if filename.endswith('.sql'):
+                    file_path = os.path.join(sql_path, filename)
+                    rewritten_sql = self._rewrite_sql_file(file_path, new_table_name)
+                    output_sqls[filename] = rewritten_sql
+        else:
+            # 处理单个SQL文件
+            filename = os.path.basename(sql_path)
+            rewritten_sql = self._rewrite_sql_file(sql_path, new_table_name)
+            output_sqls[filename] = rewritten_sql
+        
+        return output_sqls
+    
+    def _rewrite_sql_file(self, file_path, new_table_name):
+        """重写单个SQL文件
+        
+        假设所有SQL都是 FROM table1, table2 WHERE ... 的自然连接格式
         """
-        分析查询类型：单表查询还是多表连接查询
+        sign = self.sign
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            sql_content = f.read()
+        
+        # 分割SQL语句
+        sql_statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
+        
+        rewritten_statements = []
+        for sql in sql_statements:
+            if sql.upper().startswith('SELECT'):
+                # 根据sign选择不同的替换策略
+                if sign == 1:
+                    rewritten_sql = self._replace_strategy1(sql, new_table_name)
+                elif sign == 2:
+                    rewritten_sql = self._replace_strategy2(sql, new_table_name)
+                else:
+                    rewritten_sql = sql  # 默认不修改
+                rewritten_statements.append(rewritten_sql)
+            else:
+                rewritten_statements.append(sql)
+        
+        return rewritten_statements
+
+    def _replace_strategy1(self, sql, new_table_name):
         """
-        sql_upper = sql.upper()
+        策略1: FROM后包含任一旧表名就替换成新表，删除其他旧表
+        """
+        import re
         
-        # 检查是否包含JOIN关键字
-        has_join = 'JOIN' in sql_upper
+        # 检查是否包含任一旧表名
+        found_tables = []
+        for table in self.old_tables:
+            # 使用单词边界匹配表名
+            pattern = re.compile(rf'\b{table}\b', re.IGNORECASE)
+            if pattern.search(sql):
+                found_tables.append(table)
         
-        # 检查FROM子句中是否有多个表（逗号分隔）
-        from_pattern = r'FROM\s+([^,(]+)(?:\s*,\s*([^,(]+))?'
-        from_match = re.search(from_pattern, sql, re.IGNORECASE)
+        if not found_tables:
+            return sql  # 不包含任何旧表名，不修改
         
-        has_multiple_tables = False
-        if from_match:
-            table2 = from_match.group(2)
-            has_multiple_tables = table2 is not None
+        # 替换逻辑：将找到的第一个表名替换为新表名，删除其他表名
+        new_sql = sql
         
-        # 判断查询类型
-        if has_join or has_multiple_tables:
-            # 检查是否真的涉及多个旧表
-            used_old_tables = []
-            for table in self.old_tables:
-                if re.search(rf'\b{re.escape(table)}\b', sql, re.IGNORECASE):
-                    used_old_tables.append(table)
+        if len(found_tables) >= 1:
+            # 替换第一个找到的表名
+            first_table = found_tables[0]
+            pattern = re.compile(rf'\b{first_table}\b', re.IGNORECASE)
+            new_sql = pattern.sub(new_table_name, new_sql, count=1)
             
-            if len(used_old_tables) >= 2:
-                return 'multi_table'
+            # 删除其他旧表名（以逗号分隔的格式）
+            for table in found_tables[1:]:
+                # 匹配 ", table_name" 模式并删除
+                pattern = re.compile(rf',\s*\b{table}\b', re.IGNORECASE)
+                new_sql = pattern.sub('', new_sql, count=1)
         
-        return 'single_table'
+        return new_sql
 
-    def _parse_sql_structure(self, sql):
-        """
-        解析SQL结构，识别表引用、列引用、聚合函数等
-        """
-        parsed_info = {
-            'table_aliases': {},  # 别名映射
-            'column_references': [],  # 列引用
-            'aggregations': [],  # 聚合函数
-            'join_conditions': [],  # JOIN条件
-            'used_tables': set()  # 使用的表
-        }
+    def _replace_strategy2(self, sql, new_table_name):
+        """策略2: FROM后同时包含两个旧表名才替换"""
+        import re
         
-        # 识别使用的表
-        for table in self.old_tables:
-            if re.search(rf'\b{re.escape(table)}\b', sql, re.IGNORECASE):
-                parsed_info['used_tables'].add(table)
-        
-        # 识别表别名
-        for table in self.old_tables:
-            # 查找 "FROM table alias" 或 "JOIN table alias" 模式
+        # 检查是否同时包含两个表
+        contains_both = True
+        for full_table_name in self.old_tables:
+            if '.' in full_table_name:
+                db_name, table_name = full_table_name.split('.')
+            else:
+                table_name = full_table_name
+            
+            # 检查是否包含表名（各种格式）
             patterns = [
-                rf'FROM\s+{re.escape(table)}\s+(\w+)',
-                rf'JOIN\s+{re.escape(table)}\s+(\w+)',
-                rf',\s*{re.escape(table)}\s+(\w+)'
+                rf'\b{table_name}\b',
+                rf'\b{full_table_name}\b',
+                rf'\b{table_name}\s+(AS\s+)?\w+\b',
+                rf'`{table_name}`'
             ]
-            for pattern in patterns:
-                matches = re.finditer(pattern, sql, re.IGNORECASE)
-                for match in matches:
-                    parsed_info['table_aliases'][match.group(1)] = table
-        
-        # 如果没有别名，使用表名作为别名
-        for table in self.old_tables:
-            if table in parsed_info['used_tables'] and table not in parsed_info['table_aliases'].values():
-                parsed_info['table_aliases'][table] = table
-        
-        # 识别列引用 (table.column 或 alias.column)
-        column_pattern = r'(\w+)\.(\w+)'
-        matches = re.finditer(column_pattern, sql)
-        for match in matches:
-            table_or_alias = match.group(1)
-            column = match.group(2)
-            actual_table = self._get_actual_table(table_or_alias, parsed_info['table_aliases'])
             
-            parsed_info['column_references'].append({
-                'table_or_alias': table_or_alias,
-                'column': column,
-                'full_reference': match.group(0),
-                'is_conflict': column in self.conflict_columns,
-                'actual_table': actual_table,
-                'new_column_name': self._get_new_column_name(actual_table, column)
-            })
-        
-        # 识别无表前缀的列引用（在单表查询中常见）
-        if len(parsed_info['used_tables']) == 1:
-            table_name = list(parsed_info['used_tables'])[0]
-            # 查找没有被表前缀的列名（简单的列名）
-            simple_column_pattern = r'\b(\w+)\b(?=\s*(?:,|FROM|WHERE|GROUP BY|ORDER BY|HAVING|$))'
-            # 排除SQL关键字
-            sql_keywords = {'SELECT', 'FROM', 'WHERE', 'GROUP', 'BY', 'ORDER', 'HAVING', 'AND', 'OR', 'AS'}
+            found = False
+            for pattern_str in patterns:
+                pattern = re.compile(pattern_str, re.IGNORECASE)
+                if pattern.search(sql):
+                    found = True
+                    break
             
-            matches = re.finditer(simple_column_pattern, sql, re.IGNORECASE)
-            for match in matches:
-                column = match.group(1)
-                if (column.upper() not in sql_keywords and 
-                    not column.isdigit() and 
-                    column in self.old_columns_list[0] + self.old_columns_list[1]):
-                    
-                    parsed_info['column_references'].append({
-                        'table_or_alias': None,  # 无表前缀
-                        'column': column,
-                        'full_reference': column,
-                        'is_conflict': column in self.conflict_columns,
-                        'actual_table': table_name,
-                        'new_column_name': self._get_new_column_name(table_name, column)
-                    })
+            if not found:
+                contains_both = False
+                break
         
-        # 识别聚合函数
-        agg_patterns = [
-            (r'COUNT\s*\(\s*(.*?)\s*\)', 'COUNT'),
-            (r'SUM\s*\(\s*(.*?)\s*\)', 'SUM'),
-            (r'AVG\s*\(\s*(.*?)\s*\)', 'AVG'),
-            (r'MIN\s*\(\s*(.*?)\s*\)', 'MIN'),
-            (r'MAX\s*\(\s*(.*?)\s*\)', 'MAX')
-        ]
+        if not contains_both:
+            return sql
         
-        for pattern, func_name in agg_patterns:
-            matches = re.finditer(pattern, sql, re.IGNORECASE)
-            for match in matches:
-                parsed_info['aggregations'].append({
-                    'function': func_name,
-                    'expression': match.group(1),
-                    'full_match': match.group(0)
-                })
+        # 同时包含两个表，替换为新表
+        new_sql = sql
         
-        return parsed_info
-
-    def _get_actual_table(self, table_or_alias, table_aliases):
-        """获取实际的表名"""
-        if table_or_alias in self.old_tables:
-            return table_or_alias
-        elif table_or_alias in table_aliases:
-            return table_aliases[table_or_alias]
-        return None
-
-    def _get_new_column_name(self, table_name, column_name):
-        """获取新表中的列名"""
-        if table_name and column_name:
-            return self.column_mapping.get((table_name, column_name), column_name)
-        return column_name
-
-    def _replace_table_references(self, sql, parsed_info, query_type):
-        """
-        将所有旧表引用替换为新表引用
-        """
-        # 构建表别名映射
-        self.table_aliases_map = parsed_info['table_aliases']
+        # 替换第一个表
+        first_full_name = self.old_tables[0]
+        if '.' in first_full_name:
+            first_db, first_table = first_full_name.split('.')
+        else:
+            first_table = first_full_name
         
-        if query_type == 'single_table':
-            # 单表查询：直接替换表名
-            for table in parsed_info['used_tables']:
-                # 替换FROM子句中的表名
-                from_pattern = rf'FROM\s+{re.escape(table)}(?:\s+(\w+))?'
-                def from_replacer(match):
-                    alias = match.group(1)
-                    if alias:
-                        return f"FROM {self.new_table} {alias}"
-                    else:
-                        return f"FROM {self.new_table}"
-                
-                sql = re.sub(from_pattern, from_replacer, sql, flags=re.IGNORECASE)
-                
-        else:  # multi_table
-            # 多表查询：替换FROM中的第一个表，移除其他表
-            from_pattern = r'FROM\s+([^,\s]+)(?:\s+(\w+))?'
-            def from_replacer(match):
-                table_name = match.group(1)
-                if table_name in self.old_tables:
-                    return f"FROM {self.new_table}"
-                return match.group(0)
-            
-            sql = re.sub(from_pattern, from_replacer, sql, flags=re.IGNORECASE)
-            
-            # 移除其他表引用
-            for table in self.old_tables[1:]:
-                join_pattern = rf'\s+(?:LEFT\s+)?JOIN\s+{re.escape(table)}(?:\s+\w+)?\s+ON\s+[^)]+\)?'
-                sql = re.sub(join_pattern, '', sql, flags=re.IGNORECASE)
-                
-                comma_pattern = rf',\s*{re.escape(table)}(?:\s+\w+)?'
-                sql = re.sub(comma_pattern, '', sql, flags=re.IGNORECASE)
+        # 多种替换尝试
+        replacement_done = False
         
-        return sql
-
-    def _resolve_column_conflicts(self, sql, parsed_info, query_type):
-        """
-        处理列名冲突 - 基于已知的重复列名
-        """
-        # 按照引用长度从长到短排序，避免部分替换
-        column_refs_sorted = sorted(parsed_info['column_references'], 
-                                  key=lambda x: len(x['full_reference']), 
-                                  reverse=True)
+        # 1. 替换完整表名
+        pattern_full = re.compile(rf'\b{first_full_name}\b', re.IGNORECASE)
+        if pattern_full.search(new_sql):
+            new_sql = pattern_full.sub(new_table_name, new_sql, count=1)
+            replacement_done = True
         
-        for ref in column_refs_sorted:
-            old_ref = ref['full_reference']
-            new_column_name = ref['new_column_name']
-            
-            if new_column_name != ref['column']:  # 只有当列名发生变化时才替换
-                if ref['table_or_alias']:  # 有表前缀的列
-                    new_ref = f"{self.new_table}.{new_column_name}"
-                else:  # 无表前缀的列（单表查询）
-                    new_ref = new_column_name
-                
-                # 精确替换，避免部分匹配
-                sql = re.sub(rf'\b{re.escape(old_ref)}\b', new_ref, sql)
+        # 2. 替换简单表名
+        if not replacement_done:
+            pattern_simple = re.compile(rf'\b{first_table}\b', re.IGNORECASE)
+            if pattern_simple.search(new_sql):
+                new_sql = pattern_simple.sub(new_table_name, new_sql, count=1)
+                replacement_done = True
         
-        return sql
-
-    def _handle_aggregation_distinct(self, sql, parsed_info):
-        """
-        处理聚合函数的去重问题（仅多表连接时需要）
-        """
-        def count_replacer(match):
-            full_count = match.group(0)
-            count_expr = match.group(1)
-            
-            if 'DISTINCT' in count_expr.upper():
-                return full_count
-            
-            if count_expr.strip() == '*':
-                return full_count
-            
-            # 对于COUNT(column)，左连接后需要去重
-            involves_right_table = False
-            for table_alias in self.table_aliases_map:
-                if self.table_aliases_map[table_alias] == self.old_tables[1]:
-                    if table_alias in count_expr:
-                        involves_right_table = True
+        second_simple = self.old_tables[1].split('.')[-1]
+        # 2. 删除第二个表名及其前面的逗号
+        print(f"[DEBUG] 开始删除第二个表: {self.old_tables[1]}")
+        
+        # 方法1: 查找并删除 ", self.old_tables[1]" 模式
+        pattern_comma_simple = re.compile(rf',\s*\b{re.escape(second_simple)}\b', re.IGNORECASE)
+        if pattern_comma_simple.search(new_sql):
+            new_sql = pattern_comma_simple.sub('', new_sql, count=1)
+            print(f"[DEBUG] 删除逗号和简单表名: ,{second_simple}")
+        
+        # 方法2: 如果上面没删除成功，尝试完整表名
+        elif '.' in self.old_tables[1]:
+            pattern_comma_full = re.compile(rf',\s*\b{re.escape(self.old_tables[1])}\b', re.IGNORECASE)
+            if pattern_comma_full.search(new_sql):
+                new_sql = pattern_comma_full.sub('', new_sql, count=1)
+                print(f"[DEBUG] 删除逗号和完整表名: ,{self.old_tables[1]}")
+        
+        # 方法3: 如果还没删除，直接查找表名并删除前面的逗号
+        else:
+            # 查找第二个表名的位置
+            pattern_second = re.compile(rf'\b{re.escape(second_simple)}\b', re.IGNORECASE)
+            match = pattern_second.search(new_sql)
+            if match:
+                start = match.start()
+                # 向前查找逗号
+                comma_pos = -1
+                for i in range(start-1, max(-1, start-10), -1):
+                    if new_sql[i] == ',':
+                        comma_pos = i
                         break
-            
-            if involves_right_table or any(col in count_expr for col in self.conflict_columns):
-                return f"COUNT(DISTINCT {count_expr})"
-            else:
-                return full_count
-        
-        sql = re.sub(r'COUNT\s*\(\s*(.*?)\s*\)', count_replacer, sql, flags=re.IGNORECASE)
-        
-        return sql
+                    elif not new_sql[i].isspace():
+                        break
+                
+                if comma_pos != -1:
+                    # 删除从逗号到表名结束的部分
+                    new_sql = new_sql[:comma_pos] + new_sql[match.end():]
+                    print(f"[DEBUG] 查找到并删除: ,{second_simple}")
+                else:
+                    # 没有逗号，直接删除表名
+                    new_sql = new_sql[:start] + new_sql[match.end():]
+                    print(f"[DEBUG] 直接删除表名: {second_simple}")
+        return new_sql
 
-    def _cleanup_join_conditions(self, sql):
-        """
-        清理多余的JOIN条件（仅多表连接时需要）
-        """
-        where_pattern = r'WHERE\s+(.*?)(?=\s+(GROUP BY|ORDER BY|HAVING|LIMIT|\s*$))'
-        
-        def where_cleaner(match):
-            where_clause = match.group(1)
-            
-            join_patterns = [
-                rf'{self.old_tables[0]}\.\w+\s*=\s*{self.old_tables[1]}\.\w+',
-                rf'{self.old_tables[1]}\.\w+\s*=\s*{self.old_tables[0]}\.\w+',
-            ]
-            
-            for pattern in join_patterns:
-                where_clause = re.sub(pattern, '1=1', where_clause)
-            
-            where_clause = re.sub(r'\s+AND\s+1=1', '', where_clause)
-            where_clause = re.sub(r'1=1\s+AND\s+', '', where_clause)
-            where_clause = re.sub(r'^\s*1=1\s*$', '', where_clause)
-            
-            if where_clause.strip() and where_clause.strip() != '1=1':
-                return f"WHERE {where_clause}"
-            else:
-                return ""
-        
-        sql = re.sub(where_pattern, where_cleaner, sql, flags=re.IGNORECASE)
-        
-        return sql
 
-def test_conflict_columns():
-    """
-    专门测试冲突列的处理
-    """
-    print("=== 冲突列处理测试 ===")
+    def _save_rewritten_sql(self, output_sqls, original_path):
+        """保存重写后的SQL语句"""
+        output_dir = os.path.join(os.path.dirname(original_path), "rewritten")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        for filename, sql_statements in output_sqls.items():
+            output_path = os.path.join(output_dir, f"rewritten_{filename}")
+            
+            with open(output_path, 'w', encoding='utf-8') as f:
+                for sql in sql_statements:
+                    f.write(f"{sql};\n")
+            
+            print(f"已保存重写后的SQL到: {output_path}")
+
+
+
+# 测试
+if __name__ == "__main__":
+    print("=== 简单测试 ===")
     
-    # 创建示例数据
-    users_data = """
-    user_id,user_name,city,created_at,status
-    1,张三,北京,2024-01-01,active
-    2,李四,上海,2024-01-02,active  
-    """
-    
-    users_df = pd.read_csv(StringIO(users_data.strip()))
-    users_columns = list(users_df.columns)
-    
-    orders_data = """
-    order_id,user_id,product_name,amount,order_date,status
-    101,1,手机,2999.00,2024-01-15,completed
-    102,1,耳机,399.00,2024-01-16,completed
-    """
-    
-    orders_df = pd.read_csv(StringIO(orders_data.strip()))
-    orders_columns = list(orders_df.columns)
-    
-    # 创建TableMerge实例
-    table_merge = TableMerge(
-        old_tables=['users', 'orders'], 
-        new_table='user_orders_joined',
-        old_columns_list=[users_columns, orders_columns]
+    # 创建实例
+    merger = TableMerge(
+        old_tables=["tpcch.order", "tpcch.orderline"],
+        new_table="merged",
+        old_columns_list=[[], []],
+        sign=1
     )
     
-    print(f"识别出的冲突列: {table_merge.conflict_columns}")
-    print(f"列名映射: {table_merge.column_mapping}")
-    print()
-    
-    # 测试单表查询 - users表
+    # 测试SQL
     test_cases = [
-        {
-            'name': '单表查询 - users表(冲突列status)',
-            'sql': """
-            SELECT 
-                user_id,
-                user_name,
-                status
-            FROM users
-            WHERE status = 'active'
-            """
-        },
-        {
-            'name': '单表查询 - orders表(冲突列status)',
-            'sql': """
-            SELECT 
-                order_id,
-                user_id,
-                status
-            FROM orders
-            WHERE status = 'completed'
-            """
-        },
-        {
-            'name': '单表查询 - users表(无表前缀)',
-            'sql': """
-            SELECT 
-                user_id,
-                user_name,
-                status
-            FROM users
-            WHERE city = '北京'
-            """
-        },
-        {
-            'name': '多表连接查询',
-            'sql': """
-            SELECT 
-                u.user_id,
-                u.status as user_status,
-                o.status as order_status
-            FROM users u
-            LEFT JOIN orders o ON u.user_id = o.user_id
-            """
-        }
+        "SELECT c_last, c_id, o_id, o_entry_d, o_ol_cnt, sum(ol_amount) FROM tpcch.customer, tpcch.order,tpcch.orderline where c_id = o_c_id and c_w_id = o_w_id and c_d_id = o_d_id and ol_w_id = o_w_id group by o_id, o_w_id, o_d_id, c_id, c_last, o_entry_d, o_ol_cnt",
+        "SELECT * FROM employees, departments",
+        "SELECT * FROM departments"
     ]
     
-    for test_case in test_cases:
-        print(f"测试: {test_case['name']}")
-        print("原始SQL:")
-        print(test_case['sql'])
-        
-        rewritten_sql = table_merge.apply_to_sql(test_case['sql'])
-        print("重写后SQL:")
-        print(rewritten_sql)
-        print("-" * 50)
+    print("策略1:")
+    merger.sign = 1
+    for sql in test_cases:
+        result = merger._replace_strategy1(sql, "merged_view")
+        print(f"{sql} -> {result}")
+    
+    print("\n策略2:")
+    merger.sign = 2
+    for sql in test_cases:
+        result = merger._replace_strategy2(sql, "merged_view")
+        print(f"{sql} -> {result}")
 
-if __name__ == "__main__":
-    test_conflict_columns()
+    

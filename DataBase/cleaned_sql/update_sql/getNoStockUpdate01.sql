@@ -1,0 +1,1 @@
+update tpcch.stock set S_YTD=156 where S_I_ID=? and S_W_ID=?

@@ -1,0 +1,1 @@
+select I_PRICE,I_NAME,I_DATA from tpcch.item where I_ID=?;

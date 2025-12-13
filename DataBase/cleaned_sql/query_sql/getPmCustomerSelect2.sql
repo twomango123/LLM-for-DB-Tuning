@@ -1,0 +1,1 @@
+select C_ID, C_FIRST, C_MIDDLE, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE from tpcch.customer where C_LAST=? and C_D_ID=? and C_W_ID=? order by C_FIRST asc

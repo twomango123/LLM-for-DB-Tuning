@@ -1,0 +1,1 @@
+update tpcch.warehouse set W_YTD=W_YTD+? where W_ID=?

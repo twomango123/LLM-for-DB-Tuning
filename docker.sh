@@ -2,6 +2,6 @@
 
 mv Dockerfile ../
 cd ..
-docker build -t ch-schema .
-docker run -it ch-schema bash
+docker build -t new-ch-schema .
+docker run -it new-ch-schema bash
 
