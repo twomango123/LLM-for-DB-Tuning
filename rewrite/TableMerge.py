@@ -210,141 +210,73 @@ class TableMerge(SMO):
         return rewritten_statements
 
     def _replace_strategy1(self, sql, new_table_name):
-        """
-        策略1: FROM后包含任一旧表名就替换成新表，删除其他旧表
-        """
         import re
-        
-        # 检查是否包含任一旧表名
-        found_tables = []
-        for table in self.old_tables:
-            # 使用单词边界匹配表名
-            pattern = re.compile(rf'\b{table}\b', re.IGNORECASE)
-            if pattern.search(sql):
-                found_tables.append(table)
-        
-        if not found_tables:
-            return sql  # 不包含任何旧表名，不修改
-        
-        # 替换逻辑：将找到的第一个表名替换为新表名，删除其他表名
-        new_sql = sql
-        
-        if len(found_tables) >= 1:
-            # 替换第一个找到的表名
-            first_table = found_tables[0]
-            pattern = re.compile(rf'\b{first_table}\b', re.IGNORECASE)
-            new_sql = pattern.sub(new_table_name, new_sql, count=1)
-            
-            # 删除其他旧表名（以逗号分隔的格式）
-            for table in found_tables[1:]:
-                # 匹配 ", table_name" 模式并删除
-                pattern = re.compile(rf',\s*\b{table}\b', re.IGNORECASE)
-                new_sql = pattern.sub('', new_sql, count=1)
-        
-        return new_sql
+        old_tables = set(self.old_tables)
+
+        # 匹配每一个 from ...（直到 where / group / order / union / ) / 结尾）
+        pattern = re.compile(
+            r'(from\s+)([^;]+?)(?=\s+where|\s+group|\s+order|\s+union|\)|$)',
+            re.IGNORECASE | re.DOTALL
+        )
+
+        def replace_from(match):
+            prefix = match.group(1)
+            tables_part = match.group(2)
+
+            tables = [t.strip() for t in tables_part.split(',')]
+            new_tables = []
+            replaced = False
+
+            for t in tables:
+                base_table = t.split()[0]
+                if base_table in old_tables:
+                    if not replaced:
+                        new_tables.append(t.replace(base_table, new_table_name, 1))
+                        replaced = True
+                    # 其余 old_table 表直接丢弃
+                else:
+                    new_tables.append(t)
+
+            return prefix + ', '.join(new_tables)
+
+        return pattern.sub(replace_from, sql)
 
     def _replace_strategy2(self, sql, new_table_name):
-        """策略2: FROM后同时包含两个旧表名才替换"""
         import re
-        
-        # 检查是否同时包含两个表
-        contains_both = True
-        for full_table_name in self.old_tables:
-            if '.' in full_table_name:
-                db_name, table_name = full_table_name.split('.')
-            else:
-                table_name = full_table_name
-            
-            # 检查是否包含表名（各种格式）
-            patterns = [
-                rf'\b{table_name}\b',
-                rf'\b{full_table_name}\b',
-                rf'\b{table_name}\s+(AS\s+)?\w+\b',
-                rf'`{table_name}`'
-            ]
-            
-            found = False
-            for pattern_str in patterns:
-                pattern = re.compile(pattern_str, re.IGNORECASE)
-                if pattern.search(sql):
-                    found = True
-                    break
-            
-            if not found:
-                contains_both = False
-                break
-        
-        if not contains_both:
-            return sql
-        
-        # 同时包含两个表，替换为新表
-        new_sql = sql
-        
-        # 替换第一个表
-        first_full_name = self.old_tables[0]
-        if '.' in first_full_name:
-            first_db, first_table = first_full_name.split('.')
-        else:
-            first_table = first_full_name
-        
-        # 多种替换尝试
-        replacement_done = False
-        
-        # 1. 替换完整表名
-        pattern_full = re.compile(rf'\b{first_full_name}\b', re.IGNORECASE)
-        if pattern_full.search(new_sql):
-            new_sql = pattern_full.sub(new_table_name, new_sql, count=1)
-            replacement_done = True
-        
-        # 2. 替换简单表名
-        if not replacement_done:
-            pattern_simple = re.compile(rf'\b{first_table}\b', re.IGNORECASE)
-            if pattern_simple.search(new_sql):
-                new_sql = pattern_simple.sub(new_table_name, new_sql, count=1)
-                replacement_done = True
-        
-        second_simple = self.old_tables[1].split('.')[-1]
-        # 2. 删除第二个表名及其前面的逗号
-        print(f"[DEBUG] 开始删除第二个表: {self.old_tables[1]}")
-        
-        # 方法1: 查找并删除 ", self.old_tables[1]" 模式
-        pattern_comma_simple = re.compile(rf',\s*\b{re.escape(second_simple)}\b', re.IGNORECASE)
-        if pattern_comma_simple.search(new_sql):
-            new_sql = pattern_comma_simple.sub('', new_sql, count=1)
-            print(f"[DEBUG] 删除逗号和简单表名: ,{second_simple}")
-        
-        # 方法2: 如果上面没删除成功，尝试完整表名
-        elif '.' in self.old_tables[1]:
-            pattern_comma_full = re.compile(rf',\s*\b{re.escape(self.old_tables[1])}\b', re.IGNORECASE)
-            if pattern_comma_full.search(new_sql):
-                new_sql = pattern_comma_full.sub('', new_sql, count=1)
-                print(f"[DEBUG] 删除逗号和完整表名: ,{self.old_tables[1]}")
-        
-        # 方法3: 如果还没删除，直接查找表名并删除前面的逗号
-        else:
-            # 查找第二个表名的位置
-            pattern_second = re.compile(rf'\b{re.escape(second_simple)}\b', re.IGNORECASE)
-            match = pattern_second.search(new_sql)
-            if match:
-                start = match.start()
-                # 向前查找逗号
-                comma_pos = -1
-                for i in range(start-1, max(-1, start-10), -1):
-                    if new_sql[i] == ',':
-                        comma_pos = i
-                        break
-                    elif not new_sql[i].isspace():
-                        break
-                
-                if comma_pos != -1:
-                    # 删除从逗号到表名结束的部分
-                    new_sql = new_sql[:comma_pos] + new_sql[match.end():]
-                    print(f"[DEBUG] 查找到并删除: ,{second_simple}")
+        old_tables = set(self.old_tables)
+
+        pattern = re.compile(
+            r'(from\s+)([^;]+?)(?=\s+where|\s+group|\s+order|\s+union|\)|$)',
+            re.IGNORECASE | re.DOTALL
+        )
+
+        def replace_from(match):
+            prefix = match.group(1)
+            tables_part = match.group(2)
+
+            tables = [t.strip() for t in tables_part.split(',')]
+            base_tables = {t.split()[0] for t in tables}
+
+            # 必须同时包含 old_tables 中的所有表
+            if not old_tables.issubset(base_tables):
+                return match.group(0)
+
+            new_tables = []
+            replaced = False
+
+            for t in tables:
+                base_table = t.split()[0]
+                if base_table in old_tables:
+                    if not replaced:
+                        new_tables.append(new_table_name)
+                        replaced = True
+                    # 其余 old_table 表删除
                 else:
-                    # 没有逗号，直接删除表名
-                    new_sql = new_sql[:start] + new_sql[match.end():]
-                    print(f"[DEBUG] 直接删除表名: {second_simple}")
-        return new_sql
+                    new_tables.append(t)
+
+            return prefix + ', '.join(new_tables)
+
+        return pattern.sub(replace_from, sql)
 
 
     def _save_rewritten_sql(self, output_sqls, original_path):

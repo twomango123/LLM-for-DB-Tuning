@@ -1,9 +1,7 @@
--- TPC-H Query 21
--- ========================================
 select
 	su_name, count(*) as numwait
 from
-	tpcch.supplier, tpcch.orderline l1, tpcch.order, tpcch.stock, tpcch.nation
+	tpcch.supplier, tpcch.orderline l1, tpcch.orders, tpcch.stock, tpcch.nation
 where
 		ol_o_id = o_id
 	and ol_w_id = o_w_id

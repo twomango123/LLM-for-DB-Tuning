@@ -1,10 +1,8 @@
--- TPC-H Query 8
--- ========================================
 select
 	extract(year from o_entry_d) as l_year,
 	sum(case when n2.n_name = 'GERMANY' then ol_amount else 0 end) / sum(ol_amount) as mkt_share
 from
-	tpcch.item, tpcch.supplier, tpcch.stock, tpcch.orderline, tpcch.order, tpcch.customer, tpcch.nation n1, tpcch.nation n2, tpcch.region
+	tpcch.item, tpcch.supplier, tpcch.stock, tpcch.orderline, tpcch.orders, tpcch.customer, tpcch.nation n1, tpcch.nation n2, tpcch.region
 where
 		i_id = s_i_id
 	and ol_i_id = s_i_id

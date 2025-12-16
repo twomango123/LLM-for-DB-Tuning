@@ -1,5 +1,3 @@
--- TPC-H Query 16
--- ========================================
 select
 	i_name,
 	substr(i_data, 1, 3) as brand,

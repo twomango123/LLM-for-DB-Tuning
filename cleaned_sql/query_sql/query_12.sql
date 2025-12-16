@@ -1,11 +1,9 @@
--- TPC-H Query 12
--- ========================================
 select
 	o_ol_cnt,
 	sum(case when o_carrier_id = 1 or o_carrier_id = 2 then 1 else 0 end) as high_line_count,
 	sum(case when o_carrier_id <> 1 and o_carrier_id <> 2 then 1 else 0 end) as low_line_count
 from
-	tpcch.order, tpcch.orderline
+	tpcch.orders, tpcch.orderline
 where
 		ol_w_id = o_w_id
 	and ol_d_id = o_d_id

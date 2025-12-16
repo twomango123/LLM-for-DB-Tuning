@@ -31,6 +31,8 @@ class MySqlDialect : public Dialect {
     std::vector<const char*> dropExistingSchemaStatements = {
         "DROP DATABASE IF EXISTS tpcch"};
 
+    
+
     std::vector<const char*> createSchemaStatements = {
         "CREATE DATABASE tpcch",
 
@@ -117,7 +119,7 @@ class MySqlDialect : public Dialect {
         "	PRIMARY KEY (no_w_id, no_d_id, no_o_id)\n"
         ")",
 
-        "CREATE TABLE tpcch.order (\n"
+        "CREATE TABLE tpcch.orders (\n"
         "	o_id integer,\n"
         "	o_d_id tinyint,\n"
         "	o_w_id integer,\n"
@@ -129,7 +131,7 @@ class MySqlDialect : public Dialect {
         "	PRIMARY KEY (o_w_id, o_d_id, o_id)\n"
         ")",
 
-        "CREATE INDEX fk_order_customer ON tpcch.order "
+        "CREATE INDEX fk_order_customer ON tpcch.orders "
         "(o_w_id ASC, o_d_id ASC, o_c_id ASC)",
 
         "CREATE TABLE tpcch.orderline (\n"
@@ -227,7 +229,7 @@ class MySqlDialect : public Dialect {
         "/customer.tbl' INTO TABLE tpcch.customer FIELDS TERMINATED BY '|'",
         "/history.tbl' INTO TABLE tpcch.history FIELDS TERMINATED BY '|'",
         "/neworder.tbl' INTO TABLE tpcch.neworder FIELDS TERMINATED BY '|'",
-        "/order.tbl' INTO TABLE tpcch.order FIELDS TERMINATED BY '|' "
+        "/order.tbl' INTO TABLE tpcch.orders FIELDS TERMINATED BY '|' "
         "  (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, @x, o_ol_cnt, o_all_local) "
         "  SET o_carrier_id = IF(@x = '', NULL, @x)",
         "/orderline.tbl' INTO TABLE tpcch.orderline FIELDS TERMINATED BY '|'"
@@ -265,517 +267,105 @@ class MySqlDialect : public Dialect {
         "/LLM-for-DB-Tuning/DataBase/cleaned_sql/query_sql/query_22.sql"
     };
 
-    // std::vector<const char*> tpchQueryStrings = {
-    //     // TPC-H-Query 1
-    //     "select\n"
-    //     "	ol_number,\n"
-    //     "	sum(ol_quantity) as sum_qty,\n"
-    //     "	sum(ol_amount) as sum_amount,\n"
-    //     "	avg(ol_quantity) as avg_qty,"
-    //     "	avg(ol_amount) as avg_amount,\n"
-    //     "	count(*) as count_order\n"
-    //     "from\n"
-    //     "	tpcch.orderline\n"
-    //     "where\n"
-    //     "	ol_delivery_d > '2007-01-02 00:00:00.000000'\n"
-    //     "group by\n"
-    //     "	ol_number\n"
-    //     "order by\n"
-    //     "	ol_number",
-
-    //     // TPC-H-Query 2
-    //     "select\n"
-    //     "	su_suppkey, su_name, n_name, i_id, i_name, su_address, su_phone, su_comment\n"
-    //     "from\n"
-    //     "	tpcch.item, tpcch.supplier, tpcch.stock, tpcch.nation, tpcch.region,\n"
-    //     "	(	select\n"
-    //     "			s_i_id as m_i_id,\n"
-    //     " 			min(s_quantity) as m_s_quantity\n"
-    //     "		from\n"
-    //     "			tpcch.stock, tpcch.supplier, tpcch.nation, tpcch.region\n"
-    //     "		where\n"
-    //     "				s_su_suppkey = su_suppkey\n"
-    //     "			and su_nationkey = n_nationkey\n"
-    //     "			and n_regionkey = r_regionkey\n"
-    //     "			and r_name like 'EUROP%'\n"
-    //     "		group by\n"
-    //     "			s_i_id\n"
-    //     "	) m\n"
-    //     "where\n"
-    //     "		i_id = s_i_id\n"
-    //     "	and s_su_suppkey = su_suppkey\n"
-    //     "	and su_nationkey = n_nationkey\n"
-    //     "	and n_regionkey = r_regionkey\n"
-    //     "	and i_data like '%b'\n"
-    //     "	and r_name like 'EUROP%'\n"
-    //     "	and i_id = m_i_id\n"
-    //     "	and s_quantity = m_s_quantity\n"
-    //     "order by\n"
-    //     "	n_name, su_name, i_id",
-
-    //     // TPC-H-Query 3
-    //     "select\n"
-    //     "	ol_o_id, ol_w_id, ol_d_id,\n"
-    //     "	sum(ol_amount) as revenue, o_entry_d\n"
-    //     "from\n"
-    //     "	tpcch.customer, tpcch.neworder, tpcch.order, tpcch.orderline\n"
-    //     "where\n"
-    //     "		c_state like 'A%'\n"
-    //     "	and c_id = o_c_id\n"
-    //     "	and c_w_id = o_w_id\n"
-    //     "	and c_d_id = o_d_id\n"
-    //     "	and no_w_id = o_w_id\n"
-    //     "	and no_d_id = o_d_id\n"
-    //     "	and no_o_id = o_id\n"
-    //     "	and ol_w_id = o_w_id\n"
-    //     "	and ol_d_id = o_d_id\n"
-    //     "	and ol_o_id = o_id\n"
-    //     "	and o_entry_d > '2007-01-02 00:00:00.000000'\n"
-    //     "group by\n"
-    //     "	ol_o_id, ol_w_id, ol_d_id, o_entry_d\n"
-    //     "order by\n"
-    //     "	revenue desc, o_entry_d",
-
-    //     // TPC-H-Query 4
-    //     "select\n"
-    //     "	o_ol_cnt, count(*) as order_count\n"
-    //     "from\n"
-    //     "	tpcch.order\n"
-    //     "where\n"
-    //     "		o_entry_d >= '2007-01-02 00:00:00.000000'\n"
-    //     "	and o_entry_d < '2012-01-02 00:00:00.000000'\n"
-    //     "	and exists \n"
-    //     "		(	select *\n"
-    //     "			from tpcch.orderline\n"
-    //     "			where 	o_id = ol_o_id\n"
-    //     "	    		and o_w_id = ol_w_id\n"
-    //     "	    		and o_d_id = ol_d_id\n"
-    //     "	    		and ol_delivery_d >= o_entry_d)\n"
-    //     "group by\n"
-    //     "	o_ol_cnt\n"
-    //     "order by\n"
-    //     "	o_ol_cnt",
-
-    //     // TPC-H-Query 5
-    //     "select\n"
-    //     "	n_name,\n"
-    //     "	sum(ol_amount) as revenue\n"
-    //     "from\n"
-    //     "	tpcch.customer, tpcch.order, tpcch.orderline, tpcch.stock, tpcch.supplier, tpcch.nation, tpcch.region\n"
-    //     "where\n"
-    //     "		c_id = o_c_id\n"
-    //     "	and c_w_id = o_w_id\n"
-    //     "	and c_d_id = o_d_id\n"
-    //     "	and ol_o_id = o_id\n"
-    //     "	and ol_w_id = o_w_id\n"
-    //     "	and ol_d_id=o_d_id\n"
-    //     "	and ol_w_id = s_w_id\n"
-    //     "	and ol_i_id = s_i_id\n"
-    //     "	and s_su_suppkey = su_suppkey\n"
-    //     "	and c_n_nationkey = su_nationkey\n"
-    //     "	and su_nationkey = n_nationkey\n"
-    //     "	and n_regionkey = r_regionkey\n"
-    //     "	and r_name = 'EUROPE'\n"
-    //     "	and o_entry_d >= '2007-01-02 00:00:00.000000'\n"
-    //     "group by\n"
-    //     "		n_name\n"
-    //     "order by\n"
-    //     "	revenue desc",
-
-    //     // TPC-H-Query 6
-    //     "select\n"
-    //     "	sum(ol_amount) as revenue\n"
-    //     "from\n"
-    //     "	tpcch.orderline\n"
-    //     "where\n"
-    //     "		ol_delivery_d >= '1999-01-01 00:00:00.000000'\n"
-    //     "	and ol_delivery_d < '2020-01-01 00:00:00.000000'\n"
-    //     "	and ol_quantity between 1 and 100000",
-
-    //     // TPC-H-Query 7
-    //     "select\n"
-    //     "	su_nationkey as supp_nation,\n"
-    //     "	substr(c_state,1,1) as cust_nation,\n"
-    //     "	extract(year from o_entry_d) as l_year,\n"
-    //     "	sum(ol_amount) as revenue\n"
-    //     "from\n"
-    //     "	tpcch.supplier, tpcch.stock, tpcch.orderline, tpcch.order, tpcch.customer, tpcch.nation n1, tpcch.nation n2\n"
-    //     "where\n"
-    //     "		ol_supply_w_id = s_w_id\n"
-    //     "	and ol_i_id = s_i_id\n"
-    //     "	and s_su_suppkey = su_suppkey\n"
-    //     "	and ol_w_id = o_w_id\n"
-    //     "	and ol_d_id = o_d_id\n"
-    //     "	and ol_o_id = o_id\n"
-    //     "	and c_id = o_c_id\n"
-    //     "	and c_w_id = o_w_id\n"
-    //     "	and c_d_id = o_d_id\n"
-    //     "	and su_nationkey = n1.n_nationkey\n"
-    //     "	and c_n_nationkey = n2.n_nationkey\n"
-    //     "	and (\n"
-    //     "		(n1.n_name = 'GERMANY' and n2.n_name = 'CAMBODIA')\n"
-    //     "		or\n"
-    //     "		(n1.n_name = 'CAMBODIA' and n2.n_name = 'GERMANY')\n"
-    //     "		)\n"
-    //     "	and ol_delivery_d between '2007-01-02 00:00:00.000000' and '2012-01-02 00:00:00.000000'\n"
-    //     "group by\n"
-    //     "	su_nationkey, substr(c_state,1,1), extract(year from o_entry_d)\n"
-    //     "order by\n"
-    //     "	su_nationkey, cust_nation, l_year",
-
-    //     // TPC-H-Query 8
-    //     "select\n"
-    //     "	extract(year from o_entry_d) as l_year,\n"
-    //     "	sum(case when n2.n_name = 'GERMANY' then ol_amount else 0 end) / sum(ol_amount) as mkt_share\n"
-    //     "from\n"
-    //     "	tpcch.item, tpcch.supplier, tpcch.stock, tpcch.orderline, tpcch.order, tpcch.customer, tpcch.nation n1, tpcch.nation n2, tpcch.region\n"
-    //     "where\n"
-    //     "		i_id = s_i_id\n"
-    //     "	and ol_i_id = s_i_id\n"
-    //     "	and ol_supply_w_id = s_w_id\n"
-    //     "	and s_su_suppkey = su_suppkey\n"
-    //     "	and ol_w_id = o_w_id\n"
-    //     "	and ol_d_id = o_d_id\n"
-    //     "	and ol_o_id = o_id\n"
-    //     "	and c_id = o_c_id\n"
-    //     "	and c_w_id = o_w_id\n"
-    //     "	and c_d_id = o_d_id\n"
-    //     "	and n1.n_nationkey = c_n_nationkey\n"
-    //     "	and n1.n_regionkey = r_regionkey\n"
-    //     "	and ol_i_id < 1000\n"
-    //     "	and r_name = 'EUROPE'\n"
-    //     "	and su_nationkey = n2.n_nationkey\n"
-    //     "	and o_entry_d between '2007-01-02 00:00:00.000000' and '2012-01-02 00:00:00.000000'\n"
-    //     "	and i_data like '%b'\n"
-    //     "	and i_id = ol_i_id\n"
-    //     "group by\n"
-    //     "	extract(year from o_entry_d)\n"
-    //     "order by\n"
-    //     "	l_year",
-
-    //     // TPC-H-Query 9
-    //     "select\n"
-    //     "	n_name, extract(year from o_entry_d) as l_year, sum(ol_amount) as sum_profit\n"
-    //     "from\n"
-    //     "	tpcch.item, tpcch.stock, tpcch.supplier, tpcch.orderline, tpcch.order, tpcch.nation\n"
-    //     "where\n"
-    //     "		ol_i_id = s_i_id\n"
-    //     "	and ol_supply_w_id = s_w_id\n"
-    //     "	and s_su_suppkey = su_suppkey\n"
-    //     "	and ol_w_id = o_w_id\n"
-    //     "	and ol_d_id = o_d_id\n"
-    //     "	and ol_o_id = o_id\n"
-    //     "	and ol_i_id = i_id\n"
-    //     "	and su_nationkey = n_nationkey\n"
-    //     "	and i_data like '%BB'\n"
-    //     "group by\n"
-    //     "	n_name, extract(year from o_entry_d)\n"
-    //     "order by\n"
-    //     "	n_name, l_year desc",
-
-    //     // TPC-H-Query 10
-    //     "select\n"
-    //     "	c_id, c_last, sum(ol_amount) as revenue, c_city, c_phone, n_name\n"
-    //     "from\n"
-    //     "	tpcch.customer, tpcch.order, tpcch.orderline, tpcch.nation\n"
-    //     "where\n"
-    //     "		c_id = o_c_id\n"
-    //     "	and c_w_id = o_w_id\n"
-    //     "	and c_d_id = o_d_id\n"
-    //     "	and ol_w_id = o_w_id\n"
-    //     "	and ol_d_id = o_d_id\n"
-    //     "	and ol_o_id = o_id\n"
-    //     "	and o_entry_d >= '2007-01-02 00:00:00.000000'\n"
-    //     "	and o_entry_d <= ol_delivery_d\n"
-    //     "	and n_nationkey = c_n_nationkey\n"
-    //     "group by\n"
-    //     "	c_id, c_last, c_city, c_phone, n_name\n"
-    //     "order by\n"
-    //     "	revenue desc",
-
-    //     // TPC-H-Query 11
-    //     "select\n"
-    //     "	s_i_id, sum(s_order_cnt) as ordercount\n"
-    //     "from\n"
-    //     "	tpcch.stock, tpcch.supplier, tpcch.nation\n"
-    //     "where\n"
-    //     "		s_su_suppkey = su_suppkey\n"
-    //     "	and su_nationkey = n_nationkey\n"
-    //     "	and n_name = 'GERMANY'\n"
-    //     "group by\n"
-    //     "	s_i_id\n"
-    //     "having \n"
-    //     "	sum(s_order_cnt) > (\n"
-    //     "		select\n"
-    //     "			sum(s_order_cnt) * .005\n"
-    //     "		from\n"
-    //     "			tpcch.stock, tpcch.supplier, tpcch.nation\n"
-    //     "		where\n"
-    //     "				s_su_suppkey = su_suppkey\n"
-    //     "			and su_nationkey = n_nationkey\n"
-    //     "			and n_name = 'GERMANY')\n"
-    //     "order by\n"
-    //     "	ordercount desc",
-
-    //     // TPC-H-Query 12
-    //     "select\n"
-    //     "	o_ol_cnt,\n"
-    //     "	sum(case when o_carrier_id = 1 or o_carrier_id = 2 then 1 else 0 end) as high_line_count,\n"
-    //     "	sum(case when o_carrier_id <> 1 and o_carrier_id <> 2 then 1 else 0 end) as low_line_count\n"
-    //     "from\n"
-    //     "	tpcch.order, tpcch.orderline\n"
-    //     "where\n"
-    //     "		ol_w_id = o_w_id\n"
-    //     "	and ol_d_id = o_d_id\n"
-    //     "	and ol_o_id = o_id\n"
-    //     "	and o_entry_d <= ol_delivery_d\n"
-    //     "	and ol_delivery_d < '2020-01-01 00:00:00.000000'\n"
-    //     "group by\n"
-    //     "	o_ol_cnt\n"
-    //     "order by\n"
-    //     "	o_ol_cnt",
-
-    //     // TPC-H-Query 13
-    //     "select\n"
-    //     "	c_count, count(*) as custdist\n"
-    //     "from\n"
-    //     "	(	select\n"
-    //     "			c_id, count(o_id) as c_count\n"
-    //     "		from\n"
-    //     "			tpcch.customer left outer join tpcch.order on (\n"
-    //     "				c_w_id = o_w_id\n"
-    //     "			and c_d_id = o_d_id\n"
-    //     "			and c_id = o_c_id\n"
-    //     "			and o_carrier_id > 8)\n"
-    //     "	 	group by\n"
-    //     "	 		c_id\n"
-    //     "	 ) as c_orders\n"
-    //     "group by\n"
-    //     "	c_count\n"
-    //     "order by\n"
-    //     "	custdist desc, c_count desc",
-
-    //     // TPC-H-Query 14
-    //     "select\n"
-    //     "	100.00 * sum(case when i_data like 'PR%' then ol_amount else 0 end) / (1+sum(ol_amount)) as promo_revenue\n"
-    //     "from\n"
-    //     "	tpcch.orderline, tpcch.item\n"
-    //     "where\n"
-    //     "		ol_i_id = i_id\n"
-    //     "	and ol_delivery_d >= '2007-01-02 00:00:00.000000'\n"
-    //     "	and ol_delivery_d < '2020-01-02 00:00:00.000000'",
-
-    //     // TPC-H-Query 15
-    //     "select\n"
-    //     "	su_suppkey, su_name, su_address, su_phone, total_revenue\n"
-    //     "from\n"
-    //     "	tpcch.supplier,\n"
-    //     "		(select\n"
-    //     "			s_su_suppkey as supplier_no,\n"
-    //     "			sum(ol_amount) as total_revenue\n"
-    //     "	 	from\n"
-    //     "	 		tpcch.orderline, tpcch.stock\n"
-    //     "		where\n"
-    //     "				ol_i_id = s_i_id\n"
-    //     "			and ol_supply_w_id = s_w_id\n"
-    //     "			and ol_delivery_d >= '2007-01-02 00:00:00.000000'\n"
-    //     "	 	group by\n"
-    //     "	 		s_su_suppkey\n"
-    //     "		) as revenue\n"
-    //     "where\n"
-    //     "		su_suppkey = supplier_no\n"
-    //     "	and total_revenue = (\n"
-    //     "		select max(total_revenue)\n"
-    //     "		from\n"
-    //     "			(select\n"
-    //     "				s_su_suppkey as supplier_no,\n"
-    //     "				sum(ol_amount) as total_revenue\n"
-    //     "	 		from\n"
-    //     "	 			tpcch.orderline, tpcch.stock\n"
-    //     "			where\n"
-    //     "					ol_i_id = s_i_id\n"
-    //     "				and ol_supply_w_id = s_w_id\n"
-    //     "				and ol_delivery_d >= '2007-01-02 00:00:00.000000'\n"
-    //     "	 		group by\n"
-    //     "	 			s_su_suppkey\n"
-    //     "		) as revenue\n"
-    //     "	)\n"
-    //     "order by\n"
-    //     "	su_suppkey",
-
-    //     // TPC-H-Query 16
-    //     "select\n"
-    //     "	i_name,\n"
-    //     "	substr(i_data, 1, 3) as brand,\n"
-    //     "	i_price,\n"
-    //     "	count(distinct s_su_suppkey) as supplier_cnt\n"
-    //     "from\n"
-    //     "	tpcch.stock, tpcch.item\n"
-    //     "where\n"
-    //     "		i_id = s_i_id\n"
-    //     "	and i_data not like 'zz%'\n"
-    //     "	and (s_su_suppkey not in\n"
-    //     "		(	select\n"
-    //     "				su_suppkey\n"
-    //     "		 	from\n"
-    //     "		 		tpcch.supplier\n"
-    //     "		 	where\n"
-    //     "		 su_comment like '%bad%')\n"
-    //     "		)\n"
-    //     "group by\n"
-    //     "	i_name, substr(i_data, 1, 3), i_price\n"
-    //     "order by\n"
-    //     "	supplier_cnt desc",
-
-    //     // TPC-H-Query 17
-    //     "select\n"
-    //     "	sum(ol_amount) / 2.0 as avg_yearly\n"
-    //     "from\n"
-    //     "	tpcch.orderline,\n"
-    //     "	(	select\n"
-    //     "			i_id, avg(ol_quantity) as a\n"
-    //     "		from\n"
-    //     "			tpcch.item, tpcch.orderline\n"
-    //     "		    where\n"
-    //     "		    		i_data like '%b'\n"
-    //     "				and ol_i_id = i_id\n"
-    //     "		    group by\n"
-    //     "		    	i_id\n"
-    //     "	) t\n"
-    //     "where\n"
-    //     "		ol_i_id = t.i_id\n"
-    //     "	and ol_quantity < t.a",
-
-    //     // TPC-H-Query 18
-    //     "select\n"
-    //     "	c_last, c_id, o_id, o_entry_d, o_ol_cnt, sum(ol_amount)\n"
-    //     "from\n"
-    //     "	tpcch.customer, tpcch.order, tpcch.orderline\n"
-    //     "where\n"
-    //     "		c_id = o_c_id\n"
-    //     "	and c_w_id = o_w_id\n"
-    //     "	and c_d_id = o_d_id\n"
-    //     "	and ol_w_id = o_w_id\n"
-    //     "	and ol_d_id = o_d_id\n"
-    //     "	and ol_o_id = o_id\n"
-    //     "group by\n"
-    //     "	o_id, o_w_id, o_d_id, c_id, c_last, o_entry_d, o_ol_cnt\n"
-    //     "having\n"
-    //     "	sum(ol_amount) > 200\n"
-    //     "order by\n"
-    //     "	sum(ol_amount) desc, o_entry_d",
-
-    //     // TPC-H-Query 19
-    //     "select\n"
-    //     "	sum(ol_amount) as revenue\n"
-    //     "from\n"
-    //     "	tpcch.orderline, tpcch.item\n"
-    //     "where\n"
-    //     "	(\n"
-    //     "		ol_i_id = i_id\n"
-    //     "	and i_data like '%a'\n"
-    //     "	and ol_quantity >= 1\n"
-    //     "	and ol_quantity <= 10\n"
-    //     "	and i_price between 1 and 400000\n"
-    //     "	and ol_w_id in (1,2,3)\n"
-    //     "	) or (\n"
-    //     "		ol_i_id = i_id\n"
-    //     "	and i_data like '%b'\n"
-    //     "	and ol_quantity >= 1\n"
-    //     "	and ol_quantity <= 10\n"
-    //     "	and i_price between 1 and 400000\n"
-    //     "	and ol_w_id in (1,2,4)\n"
-    //     "	) or (\n"
-    //     "		ol_i_id = i_id\n"
-    //     "	and i_data like '%c'\n"
-    //     "	and ol_quantity >= 1\n"
-    //     "	and ol_quantity <= 10\n"
-    //     "	and i_price between 1 and 400000\n"
-    //     "	and ol_w_id in (1,5,3)\n"
-    //     "	)",
-
-    //     // TPC-H-Query 20
-    //     "select	 su_name, su_address\n"
-    //     "from	 tpcch.supplier, tpcch.nation\n"
-    //     "where	 su_suppkey in\n"
-    //     "		(select  mod(s_i_id * s_w_id, 10000)\n"
-    //     "		from     tpcch.stock, tpcch.orderline\n"
-    //     "		where    s_i_id in\n"
-    //     "				(select i_id\n"
-    //     "				 from tpcch.item\n"
-    //     "				 where i_data like 'co%')\n"
-    //     "			 and ol_i_id=s_i_id\n"
-    //     "			 and ol_delivery_d > '2010-05-23 12:00:00'\n"
-    //     "		group by s_i_id, s_w_id, s_quantity\n"
-    //     "		having   2*s_quantity > sum(ol_quantity))\n"
-    //     "	 and su_nationkey = n_nationkey\n"
-    //     "	 and n_name = 'GERMANY'\n"
-    //     "order by su_name",
-
-    //     // TPC-H-Query 21
-    //     "select\n"
-    //     "	su_name, count(*) as numwait\n"
-    //     "from\n"
-    //     "	tpcch.supplier, tpcch.orderline l1, tpcch.order, tpcch.stock, tpcch.nation\n"
-    //     "where\n"
-    //     "		ol_o_id = o_id\n"
-    //     "	and ol_w_id = o_w_id\n"
-    //     "	and ol_d_id = o_d_id\n"
-    //     "	and ol_w_id = s_w_id\n"
-    //     "	and ol_i_id = s_i_id\n"
-    //     "	and s_su_suppkey = su_suppkey\n"
-    //     "	and l1.ol_delivery_d > o_entry_d\n"
-    //     "	and not exists (\n"
-    //     "		select *\n"
-    //     "		from\n"
-    //     "			tpcch.orderline l2\n"
-    //     "		where\n"
-    //     "				l2.ol_o_id = l1.ol_o_id\n"
-    //     "			and l2.ol_w_id = l1.ol_w_id\n"
-    //     "			and l2.ol_d_id = l1.ol_d_id\n"
-    //     "			and l2.ol_delivery_d > l1.ol_delivery_d\n"
-    //     "		)\n"
-    //     "	and su_nationkey = n_nationkey\n"
-    //     "	and n_name = 'GERMANY'\n"
-    //     "group by\n"
-    //     "	su_name\n"
-    //     "order by\n"
-    //     "	numwait desc, su_name",
-
-    //     // TPC-H-Query 22
-    //     "select\n"
-    //     "	substr(c_state,1,1) as country,\n"
-    //     "	count(*) as numcust,\n"
-    //     "	sum(c_balance) as totacctbal\n"
-    //     "from\n"
-    //     "	tpcch.customer\n"
-    //     "where\n"
-    //     "		substr(c_phone,1,1) in ('1','2','3','4','5','6','7')\n"
-    //     "	and c_balance > (\n"
-    //     "		select\n"
-    //     "			avg(c_BALANCE)\n"
-    //     "		from\n"
-    //     "			tpcch.customer\n"
-    //     "		where\n"
-    //     "				c_balance > 0.00\n"
-    //     "			and substr(c_phone,1,1) in ('1','2','3','4','5','6','7')\n"
-    //     "	)\n"
-    //     "	and not exists (\n"
-    //     "		select *\n"
-    //     "		from\n"
-    //     "			tpcch.order\n"
-    //     "		where\n"
-    //     "				o_c_id = c_id\n"
-    //     "			and o_w_id = c_w_id\n"
-    //     "			and o_d_id = c_d_id\n"
-    //     "	)\n"
-    //     "group by\n"
-    //     "	substr(c_state,1,1)\n"
-    //     "order by\n"
-    //     "	substr(c_state,1,1)"};
 
   public:
-    
+    std::string getSelectCountWarehouseString;
+    std::string getSelectCountDistrictString;
+    std::string getSelectCountCustomerString;
+    std::string getSelectCountOrderString;
+    std::string getSelectCountOrderlineString;
+    std::string getSelectCountNeworderString;
+    std::string getSelectCountHistoryString;
+    std::string getSelectCountStockString;
+    std::string getSelectCountItemString;
+    std::string getSelectCountSupplierString;
+    std::string getSelectCountNationString;
+    std::string getSelectCountRegionString;
+    std::string getNoWarehouseSelectString;
+    std::string getNoDistrictSelectString;
+    std::string getNoCustomerSelectString;
+    std::string getNoItemSelectString;
+    std::string getNoStockSelect01String;
+    std::string getNoStockSelect02String;
+    std::string getNoStockSelect03String;
+    std::string getNoStockSelect04String;
+    std::string getNoStockSelect05String;
+    std::string getNoStockSelect06String;
+    std::string getNoStockSelect07String;
+    std::string getNoStockSelect08String;
+    std::string getNoStockSelect09String;
+    std::string getNoStockSelect10String;
+    std::string getPmWarehouseSelectString;
+    std::string getPmDistrictSelectString;
+    std::string getPmCustomerSelect1String;
+    std::string getPmCustomerSelect2String;
+    std::string getPmCustomerSelect3String;
+    std::string getPmCustomerSelect4String;
+    std::string getOsCustomerSelect1String;
+    std::string getOsCustomerSelect2String;
+    std::string getOsCustomerSelect3String;
+    std::string getOsOrderSelectString;
+    std::string getOsOrderlineSelectString;
+    std::string getDlNewOrderSelectString;
+    std::string getDlOrderSelectString;
+    std::string getDlOrderlineSelectString;
+    std::string getSlDistrictSelectString;
+    std::string getSlStockSelectString;
+
+    bool init(){
+        
+        std::string getSelectCountWarehouseString;
+        std::string getSelectCountDistrictString;
+        std::string getSelectCountCustomerString;
+        std::string getSelectCountOrderString;
+        std::string getSelectCountOrderlineString;
+        std::string getSelectCountNeworderString;
+        std::string getSelectCountHistoryString;
+        std::string getSelectCountStockString;
+        std::string getSelectCountItemString;
+        std::string getSelectCountSupplierString;
+        std::string getSelectCountNationString;
+        std::string getSelectCountRegionString;
+        std::string getNoWarehouseSelectString;
+        std::string getNoDistrictSelectString;
+        std::string getNoCustomerSelectString;
+        std::string getNoItemSelectString;
+        std::string getNoStockSelect01String;
+        std::string getNoStockSelect02String;
+        std::string getNoStockSelect03String;
+        std::string getNoStockSelect04String;
+        std::string getNoStockSelect05String;
+        std::string getNoStockSelect06String;
+        std::string getNoStockSelect07String;
+        std::string getNoStockSelect08String;
+        std::string getNoStockSelect09String;
+        std::string getNoStockSelect10String;
+        std::string getPmWarehouseSelectString;
+        std::string getPmDistrictSelectString;
+        std::string getPmCustomerSelect1String;
+        std::string getPmCustomerSelect2String;
+        std::string getPmCustomerSelect3String;
+        std::string getPmCustomerSelect4String;
+        std::string getOsCustomerSelect1String;
+        std::string getOsCustomerSelect2String;
+        std::string getOsCustomerSelect3String;
+        std::string getOsOrderSelectString;
+        std::string getOsOrderlineSelectString;
+        std::string getDlNewOrderSelectString;
+        std::string getDlOrderSelectString;
+        std::string getDlOrderlineSelectString;
+        std::string getSlDistrictSelectString;
+        std::string getSlStockSelectString;
+
+
+        getNoWarehouseSelectString = loadSQLFile("/LLM-for-DB-Tuning/DataBase/cleaned_sql/query_sql/getNoWarehouseSelect.sql");
+        
+        getNoWarehouseSelectString = loadString.c_str();
+
+
+    loadString = loadSQLFile("/LLM-for-DB-Tuning/DataBase/cleaned_sql/query_sql/getNoDistrictSelect.sql");
+    const char * getNoDistrictSelectString = loadSQLFile("/LLM-for-DB-Tuning/DataBase/cleaned_sql/query_sql/getNoDistrictSelect.sql");
+    }
     // Strings to create initial database
     virtual std::vector<const char*>& getDropExistingSchemaStatements() {
         return dropExistingSchemaStatements;
@@ -814,15 +404,20 @@ class MySqlDialect : public Dialect {
         
         return queries;
     }
-    std::string loadSQLFile(const std::string& path) {
+    const char* loadSQLFile(const std::string& path) {
+        static std::string cache;  // 静态变量，生命周期长
+        
         std::ifstream file(path);
         if (!file.is_open()) {
-            return "";  // 文件不存在，返回空字符串
+            cache.clear();
+            return nullptr;
         }
         
         std::stringstream buffer;
         buffer << file.rdbuf();
-        return buffer.str();
+        cache = buffer.str();
+        
+        return cache.c_str();  // 指向静态变量，安全
     }
 
     // 22 adjusted TPC-H OLAP query strings
@@ -856,61 +451,61 @@ class MySqlDialect : public Dialect {
 
     // Strings for database check
     virtual const char* getSelectCountWarehouse() {
-        return "select count(*) from tpcch.warehouse";
+        return getSelectCountWarehouseString.c_str();
     }
 
     virtual const char* getSelectCountDistrict() {
-        return "select count(*) from tpcch.district";
+        return getSelectCountDistrictString.c_str();
     }
 
     virtual const char* getSelectCountCustomer() {
-        return "select count(*) from tpcch.customer";
+        return getSelectCountCustomerString.c_str();
     }
 
     virtual const char* getSelectCountOrder() {
-        return "select count(*) from tpcch.order";
+        return getSelectCountOrderString.c_str();
     }
 
     virtual const char* getSelectCountOrderline() {
-        return "select count(*) from tpcch.orderline";
+        return getSelectCountOrderlineString.c_str();
     }
 
     virtual const char* getSelectCountNeworder() {
-        return "select count(*) from tpcch.neworder";
+        return getSelectCountNeworderString.c_str();
     }
 
     virtual const char* getSelectCountHistory() {
-        return "select count(*) from tpcch.history";
+        return getSelectCountHistoryString.c_str();
     }
 
     virtual const char* getSelectCountStock() {
-        return "select count(*) from tpcch.stock";
+        return     std::string getSelectCountStockString.c_str();
     }
 
     virtual const char* getSelectCountItem() {
-        return "select count(*) from tpcch.item";
+        return getSelectCountItemString.c_str();
     }
 
     virtual const char* getSelectCountSupplier() {
-        return "select count(*) from tpcch.supplier";
+        return getSelectCountSupplierString.c_str();
     }
 
     virtual const char* getSelectCountNation() {
-        return "select count(*) from tpcch.nation";
+        return getSelectCountNationString.c_str();
     }
 
     virtual const char* getSelectCountRegion() {
-        return "select count(*) from tpcch.region";
+        return getSelectCountRegionString.c_str();
     }
 
     // // TPC-C transaction strings
     // // NewOrder:
     virtual const char* getNoWarehouseSelect() {
-        return "select W_TAX from tpcch.warehouse where W_ID=?";
+        return getNoWarehouseSelectString.c_str();
     }
 
     virtual const char* getNoDistrictSelect() {
-        return "select D_TAX, D_NEXT_O_ID from tpcch.district where D_W_ID=? and D_ID=?";
+        return getNoDistrictSelectString.c_str();
     }
 
     virtual const char* getNoDistrictUpdate() {
@@ -918,7 +513,7 @@ class MySqlDialect : public Dialect {
     }
 
     virtual const char* getNoCustomerSelect() {
-        return "select C_DISCOUNT,C_LAST,C_CREDIT from tpcch.customer where C_W_ID=? and C_D_ID=? and C_ID=?";
+        return getNoCustomerSelectString.c_str();
     }
 
     virtual const char* getNoOrderInsert() {
@@ -930,47 +525,47 @@ class MySqlDialect : public Dialect {
     }
 
     virtual const char* getNoItemSelect() {
-        return "select I_PRICE,I_NAME,I_DATA from tpcch.item where I_ID=?";
+        return getNoItemSelectString.c_str();
     }
 
     virtual const char* getNoStockSelect01() {
-        return "select S_QUANTITY,S_DIST_01,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect01String.c_str();
     }
 
     virtual const char* getNoStockSelect02() {
-        return "select S_QUANTITY,S_DIST_02,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect02String.c_str();
     }
 
     virtual const char* getNoStockSelect03() {
-        return "select S_QUANTITY,S_DIST_03,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect03String.c_str();
     }
 
     virtual const char* getNoStockSelect04() {
-        return "select S_QUANTITY,S_DIST_04,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect04String.c_str();
     }
 
     virtual const char* getNoStockSelect05() {
-        return "select S_QUANTITY,S_DIST_05,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect05String.c_str();
     }
 
     virtual const char* getNoStockSelect06() {
-        return "select S_QUANTITY,S_DIST_06,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect06String.c_str();
     }
 
     virtual const char* getNoStockSelect07() {
-        return "select S_QUANTITY,S_DIST_07,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect07String.c_str();
     }
 
     virtual const char* getNoStockSelect08() {
-        return "select S_QUANTITY,S_DIST_08,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect08String.c_str();
     }
 
     virtual const char* getNoStockSelect09() {
-        return "select S_QUANTITY,S_DIST_09,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect09String.c_str();
     }
 
     virtual const char* getNoStockSelect10() {
-        return "select S_QUANTITY,S_DIST_10,S_DATA from tpcch.stock where S_I_ID=? and S_W_ID=?";
+        return getNoStockSelect10String.c_str();
     }
 
     virtual const char* getNoStockUpdate01() {
@@ -987,7 +582,7 @@ class MySqlDialect : public Dialect {
 
     // Payment:
     virtual const char* getPmWarehouseSelect() {
-        return "select W_NAME, W_STREET_1, W_STREET_2, W_CITY, W_STATE, W_ZIP from tpcch.warehouse where W_ID=?";
+        return getPmWarehouseSelectString.c_str();
     }
 
     virtual const char* getPmWarehouseUpdate() {
@@ -995,7 +590,7 @@ class MySqlDialect : public Dialect {
     }
 
     virtual const char* getPmDistrictSelect() {
-        return "select D_NAME, D_STREET_1, D_STREET_2, D_CITY, D_STATE, D_ZIP from tpcch.district where D_W_ID=? and D_ID=?";
+        return getPmDistrictSelectString.c_str();
     }
 
     virtual const char* getPmDistrictUpdate() {
@@ -1003,15 +598,15 @@ class MySqlDialect : public Dialect {
     }
 
     virtual const char* getPmCustomerSelect1() {
-        return "select count(*) from tpcch.customer where C_LAST=? and C_D_ID=? and C_W_ID=?";
+        return getPmCustomerSelect1String.c_str();
     }
 
     virtual const char* getPmCustomerSelect2() {
-        return "select C_ID, C_FIRST, C_MIDDLE, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE from tpcch.customer where C_LAST=? and C_D_ID=? and C_W_ID=? order by C_FIRST asc";
+        return getPmCustomerSelect2String.c_str();
     }
 
     virtual const char* getPmCustomerSelect3() {
-        return "select C_FIRST, C_MIDDLE, C_LAST, C_STREET_1, C_STREET_2, C_CITY, C_STATE, C_ZIP, C_PHONE, C_SINCE, C_CREDIT, C_CREDIT_LIM, C_DISCOUNT, C_BALANCE from tpcch.customer where C_ID=? and C_D_ID=? and C_W_ID=?";
+        return getPmCustomerSelect3String.c_str();
     }
 
     virtual const char* getPmCustomerUpdate1() {
@@ -1019,7 +614,7 @@ class MySqlDialect : public Dialect {
     }
 
     virtual const char* getPmCustomerSelect4() {
-        return "select C_DATA from tpcch.customer where C_ID=? and C_D_ID=? and C_W_ID=?";
+        return getPmCustomerSelect4String.c_str();
     }
 
     virtual const char* getPmCustomerUpdate2() {
@@ -1032,28 +627,28 @@ class MySqlDialect : public Dialect {
 
     // OrderStatus:
     virtual const char* getOsCustomerSelect1() {
-        return "select count(*) from tpcch.customer where C_LAST=? and C_D_ID=? and C_W_ID=?";
+        return getOsCustomerSelect1String.c_str();
     }
 
     virtual const char* getOsCustomerSelect2() {
-        return "select C_ID, C_BALANCE, C_FIRST, C_MIDDLE, C_LAST from tpcch.customer where C_LAST=? and C_D_ID=? and C_W_ID=? order by C_FIRST asc";
+        return getOsCustomerSelect2String.c_str();
     }
 
     virtual const char* getOsCustomerSelect3() {
-        return "select C_BALANCE, C_FIRST, C_MIDDLE, C_LAST from tpcch.customer where C_ID=? and C_D_ID=? and C_W_ID=?";
+        return getOsCustomerSelect3String.c_str();
     }
 
     virtual const char* getOsOrderSelect() {
-        return "select O_ID, O_ENTRY_D, O_CARRIER_ID from tpcch.order where O_W_ID=? and O_D_ID=? and O_C_ID=? and O_ID=(select max(O_ID) from tpcch.order where O_W_ID=? and O_D_ID=? and O_C_ID=?)";
+        return getOsOrderSelectString.c_str();
     }
 
     virtual const char* getOsOrderlineSelect() {
-        return "select OL_I_ID, OL_SUPPLY_W_ID, OL_QUANTITY, OL_AMOUNT, OL_DELIVERY_D from tpcch.orderline where OL_W_ID=? and OL_D_ID=? and OL_O_ID=?";
+        return getOsOrderlineSelectString.c_str();
     }
 
     // Delivery:
     virtual const char* getDlNewOrderSelect() {
-        return "select NO_O_ID from tpcch.neworder where NO_W_ID=? and NO_D_ID=? and NO_O_ID=(select min(NO_O_ID) from tpcch.neworder where NO_W_ID=? and NO_D_ID=?)";
+        return getDlNewOrderSelectString.c_str();
     }
 
     virtual const char* getDlNewOrderDelete() {
@@ -1061,11 +656,11 @@ class MySqlDialect : public Dialect {
     }
 
     virtual const char* getDlOrderSelect() {
-        return "select O_C_ID from tpcch.order where O_W_ID=? and O_D_ID=? and O_ID=?";
+        return getDlOrderSelectString.c_str();
     }
 
     virtual const char* getDlOrderUpdate() {
-        return "update tpcch.order set O_CARRIER_ID=? where O_W_ID=? and O_D_ID=? and O_ID=?";
+        return "update tpcch.orders set O_CARRIER_ID=? where O_W_ID=? and O_D_ID=? and O_ID=?";
     }
 
     virtual const char* getDlOrderlineUpdate() {
@@ -1073,7 +668,7 @@ class MySqlDialect : public Dialect {
     }
 
     virtual const char* getDlOrderlineSelect() {
-        return "select sum(OL_AMOUNT) from tpcch.orderline where OL_W_ID=? and OL_D_ID=? and OL_O_ID=?";
+        return getDlOrderlineSelectString.c_str();
     }
 
     virtual const char* getDlCustomerUpdate() {
@@ -1082,11 +677,11 @@ class MySqlDialect : public Dialect {
 
     // StockLevel:
     virtual const char* getSlDistrictSelect() {
-        return "select D_NEXT_O_ID from tpcch.district where D_W_ID=? and D_ID=?";
+        return getSlDistrictSelectString.c_str();
     }
 
     virtual const char* getSlStockSelect() {
-        return "select count(*) from tpcch.stock,(select distinct OL_I_ID from tpcch.orderline where OL_W_ID=? and OL_D_ID=? and OL_O_ID<? and OL_O_ID>=?) _ where S_I_ID=OL_I_ID and S_W_ID=? and S_QUANTITY<?";
+        return getSlStockSelectString.c_str();
     }
 };
 

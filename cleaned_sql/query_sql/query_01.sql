@@ -1,5 +1,3 @@
--- TPC-H Query 1
--- ========================================
 select
 	ol_number,
 	sum(ol_quantity) as sum_qty,

@@ -1,5 +1,3 @@
--- TPC-H Query 11
--- ========================================
 select
 	s_i_id, sum(s_order_cnt) as ordercount
 from

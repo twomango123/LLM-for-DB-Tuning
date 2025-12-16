@@ -1,10 +1,8 @@
--- TPC-H Query 3
--- ========================================
 select
 	ol_o_id, ol_w_id, ol_d_id,
 	sum(ol_amount) as revenue, o_entry_d
 from
-	tpcch.customer, tpcch.neworder, tpcch.order, tpcch.orderline
+	tpcch.customer, tpcch.neworder, tpcch.orders, tpcch.orderline
 where
 		c_state like 'A%'
 	and c_id = o_c_id

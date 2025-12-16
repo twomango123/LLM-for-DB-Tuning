@@ -1,5 +1,3 @@
--- TPC-H Query 17
--- ========================================
 select
 	sum(ol_amount) / 2.0 as avg_yearly
 from

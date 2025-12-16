@@ -1,5 +1,3 @@
--- TPC-H Query 6
--- ========================================
 select
 	sum(ol_amount) as revenue
 from

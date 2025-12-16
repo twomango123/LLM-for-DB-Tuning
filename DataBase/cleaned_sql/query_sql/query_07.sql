@@ -1,12 +1,10 @@
--- TPC-H Query 7
--- ========================================
 select
 	su_nationkey as supp_nation,
 	substr(c_state,1,1) as cust_nation,
 	extract(year from o_entry_d) as l_year,
 	sum(ol_amount) as revenue
 from
-	tpcch.supplier, tpcch.stock, tpcch.orderline, tpcch.order, tpcch.customer, tpcch.nation n1, tpcch.nation n2
+	tpcch.supplier, tpcch.stock, tpcch.orderline, tpcch.orders, tpcch.customer, tpcch.nation n1, tpcch.nation n2
 where
 		ol_supply_w_id = s_w_id
 	and ol_i_id = s_i_id

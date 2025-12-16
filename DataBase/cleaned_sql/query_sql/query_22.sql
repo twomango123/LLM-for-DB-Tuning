@@ -1,5 +1,3 @@
--- TPC-H Query 22
--- ========================================
 select
 	substr(c_state,1,1) as country,
 	count(*) as numcust,
@@ -20,7 +18,7 @@ where
 	and not exists (
 		select *
 		from
-			tpcch.order
+			tpcch.orders
 		where
 				o_c_id = c_id
 			and o_w_id = c_w_id

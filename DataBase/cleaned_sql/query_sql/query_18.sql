@@ -1,9 +1,7 @@
--- TPC-H Query 18
--- ========================================
 select
 	c_last, c_id, o_id, o_entry_d, o_ol_cnt, sum(ol_amount)
 from
-	tpcch.customer, tpcch.order, tpcch.orderline
+	tpcch.customer, tpcch.orders, tpcch.orderline
 where
 		c_id = o_c_id
 	and c_w_id = o_w_id

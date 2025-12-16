@@ -14,7 +14,7 @@ driver = mysql(db_config)
 # driver.connect()
 
 table_split = ts.TableSplit(
-    old_table="order",
+    old_table="orders",
     new_tables=["order_header", "order_detail"],
     primary_keys_dict={
         "order_header": ["o_w_id", "o_d_id", "o_id"],

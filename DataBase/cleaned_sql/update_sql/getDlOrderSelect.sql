@@ -1,1 +1,0 @@
-select O_C_ID from tpcch.order where O_W_ID=? and O_D_ID=? and O_ID=?
