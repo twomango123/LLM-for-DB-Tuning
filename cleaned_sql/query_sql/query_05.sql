@@ -1,10 +1,8 @@
--- TPC-H Query 5
--- ========================================
 select
 	n_name,
 	sum(ol_amount) as revenue
 from
-	tpcch.customer, tpcch.order, tpcch.orderline, tpcch.stock, tpcch.supplier, tpcch.nation, tpcch.region
+	tpcch.customer, tpcch.orders, tpcch.orderline, tpcch.stock, tpcch.supplier, tpcch.nation, tpcch.region
 where
 		c_id = o_c_id
 	and c_w_id = o_w_id

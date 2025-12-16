@@ -1,5 +1,3 @@
--- TPC-H Query 20
--- ========================================
 select	 su_name, su_address
 from	 tpcch.supplier, tpcch.nation
 where	 su_suppkey in

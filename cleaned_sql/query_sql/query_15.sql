@@ -1,5 +1,3 @@
--- TPC-H Query 15
--- ========================================
 select
 	su_suppkey, su_name, su_address, su_phone, total_revenue
 from

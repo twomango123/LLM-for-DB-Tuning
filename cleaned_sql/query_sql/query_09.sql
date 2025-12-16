@@ -1,9 +1,7 @@
--- TPC-H Query 9
--- ========================================
 select
 	n_name, extract(year from o_entry_d) as l_year, sum(ol_amount) as sum_profit
 from
-	tpcch.item, tpcch.stock, tpcch.supplier, tpcch.orderline, tpcch.order, tpcch.nation
+	tpcch.item, tpcch.stock, tpcch.supplier, tpcch.orderline, tpcch.orders, tpcch.nation
 where
 		ol_i_id = s_i_id
 	and ol_supply_w_id = s_w_id

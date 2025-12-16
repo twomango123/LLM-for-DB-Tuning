@@ -1,9 +1,7 @@
--- TPC-H Query 4
--- ========================================
 select
 	o_ol_cnt, count(*) as order_count
 from
-	tpcch.order
+	tpcch.orders
 where
 		o_entry_d >= '2007-01-02 00:00:00.000000'
 	and o_entry_d < '2012-01-02 00:00:00.000000'

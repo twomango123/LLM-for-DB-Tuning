@@ -26,7 +26,7 @@ table_merge = tm.TableMerge(
     old_tables=old_tables,
     new_table=new_table,
     old_columns_list=old_columns_list,
-    sign=2
+    sign=1
 )
 
 # 测试1: 创建物化视图（新表）
@@ -45,7 +45,8 @@ except Exception as e:
 print("\n=== 测试2: 重写SQL文件 ===")
 
 success = table_merge.apply_to_readonly_sql("./DataBase/cleaned_sql/query_sql")
-
+sql = "select count(*) from tpcch.orderline"
+print(table_merge._replace_strategy1(sql, new_table))
 if success:
     print("重写成功")
 else:

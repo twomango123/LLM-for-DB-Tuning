@@ -1,5 +1,3 @@
--- TPC-H Query 14
--- ========================================
 select
 	100.00 * sum(case when i_data like 'PR%' then ol_amount else 0 end) / (1+sum(ol_amount)) as promo_revenue
 from

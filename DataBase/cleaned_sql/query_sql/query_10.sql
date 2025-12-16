@@ -1,9 +1,7 @@
--- TPC-H Query 10
--- ========================================
 select
 	c_id, c_last, sum(ol_amount) as revenue, c_city, c_phone, n_name
 from
-	tpcch.customer, tpcch.order, tpcch.orderline, tpcch.nation
+	tpcch.customer, tpcch.orders, tpcch.orderline, tpcch.nation
 where
 		c_id = o_c_id
 	and c_w_id = o_w_id

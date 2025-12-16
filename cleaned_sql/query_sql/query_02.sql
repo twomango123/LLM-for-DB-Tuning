@@ -1,5 +1,3 @@
--- TPC-H Query 2
--- ========================================
 select
 	su_suppkey, su_name, n_name, i_id, i_name, su_address, su_phone, su_comment
 from

@@ -24,6 +24,7 @@ limitations under the License.
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <map>
 
 using namespace std;
 
@@ -303,6 +304,7 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 	SQLCHAR buf[1024] = {0};
 
 	//BEGIN TRANSACTION
+	// 查找对应warehouse（已经改写替换好的select）
 	DbcTools::resetStatement(noWarehouseSelect);
 	DbcTools::bind(noWarehouseSelect,1,wId);
 	if(!DbcTools::executePreparedStatement(noWarehouseSelect)){
@@ -310,6 +312,7 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 		return 0;
 	}
 
+	// 查找对应district（已经改写替换好的select）
 	DbcTools::resetStatement(noDistrictSelect);
 	DbcTools::bind(noDistrictSelect,1,wId);
 	DbcTools::bind(noDistrictSelect,2,dId);
@@ -322,15 +325,138 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 		DbcTools::rollback(hDBC);
 		return 0;
 	}
+	// 更新district：update tpcch.district set D_NEXT_O_ID=D_NEXT_O_ID+1 where D_W_ID=? and D_ID=?
 
+	// 清除之前绑定的参数
 	DbcTools::resetStatement(noDistrictUpdate);
-	DbcTools::bind(noDistrictUpdate,1,wId);
-	DbcTools::bind(noDistrictUpdate,2,dId);
+	// 这里是新增加检测逻辑
+	// old2new是执行程序时就创建一个映射关系，全局变量，各事务线程只读
+	// 默认拆分合并前后列名一致
+    std::map<std::string, std::vector<std::string>> old2new = Config::getOld2New();
+	
+	// newTableColumns是新表包含的列
+	std::map<std::string, std::vector<std::string>> newTableColumns = Config::getnewTableColumns();
+	// 以下是一个表拆分映射关系例子,记录可能越拆越少
+    // old2new["orders"] = {"orders1", "orders2"};
+    // old2new["orderline"] = {"orderline1", "orderline2"};
 
-	if(!DbcTools::executePreparedStatement(noDistrictUpdate)){
-		DbcTools::rollback(hDBC);
-		return 0;
-	}
+	// 以下是一个表合并映射关系例子
+	// old2new["district"] = {"district_orders"};
+    // old2new["orders"] = {"district_orders"};
+	// 以下是一个表合并映射关系例子,记录可能越合越多
+	// old2new["orders"] = {"orders_orderline"};
+    // old2new["orderline"] = {"orders_orderline"};
+
+	// 这是一个newTableColumns例子
+	// newTableColumns["district1"] = {"d_id", ""};
+	// newTableColumns["district2"] = {"d_w_id", ""};
+	// newTableColumns["district3"] = {"d_id", "d_w_id", "d_next_o_id"};
+
+	// 检查district是否包含在old2new映射关系的key中
+	// 在 就进入rewrite 按照列映射重新构造新update sql
+	// 如果是insert 可能存在重复插入的问题，需要检查
+    auto it = old2new.find("district");
+
+    if (it != old2new.end()) {
+		// 存在
+		// 识别表拆分, 映射到多个新表
+		if(old2new["district"].size() >= 2){
+			const auto& newTables = old2new["district"];
+			const auto& newSqls;
+			const auto& parameters;
+			// 一个位置参数映射到多个位置怎么办
+			int parameterCount = [[table, ], ];
+			for (const auto& table : newTables) {
+				// 每个表中的列
+				int _parameter_count = 1;
+				// 检查sql中set关键字后面的列
+				for(const auto& setcolumn : sqlparser(getnoDistrictUpdate()).getSetColumn()){
+					if(setcolumn in newTableColumns[table].value){
+						
+						if(_parameter_count == 1){
+							// 首次处理set
+							newSqls[table] = "update " + table + " set " + sqltext + ",";
+							if(sqltext.contain("?")){
+								// 如果这段text存在“？”,要加入维护参数位置的映射关系
+							}
+						}
+						else{
+							// set关键词后面的构建
+							newSqls[table] = newSqls[table] + sqltext + ",";
+						}
+						 
+					}
+					else{
+						// 查看下一个sql语句中涉及的列
+						
+					}
+				}
+
+				// 检查sql中where关键字后面的列
+				int where_count = 0;
+				for(const auto& wherecolumn : sqlparser(getnoDistrictUpdate()).getWhereColumn()){
+					if(wherecolumn in newTableColumns[table].value){
+						if(where_count == 0){
+							newSqls[table] = newSqls[table] + " where " + sqltext + " and ";
+						}
+						else{
+							// set关键词后面的构建
+							newSqls[table] = newSqls[table] + sqltext + " and ";
+						}
+					}
+					else{
+						// 查看下一个列
+					}
+				}
+				allocAndPrepareStmt(hDBC, newsqlHstmt, newSqls[0-2]);
+				execute(newsqlHstmt)
+        }
+		}
+        // 识别表合并
+		if(old2new["district"].size() == 1){
+			// 如果原表使用，继续原逻辑
+			// 原表不使用，更新 连接的大表
+			// 记录可能变多，原来插入或者更新order_id == pk 
+			// order更新一条 orderline更新n条
+			// 表连接后order更新n条，但一句sql where order_id == pk 
+			// 自动更新n条记录
+			// 问题在于 order处和orderline处重复更新两遍
+
+			// 这里如果是insert
+			order insert 1条
+			orderlines insert n条  (col1 , )
+			orderline1 insert n条(ol_id, col2, ol_o_id)
+			insert into tpcch.neworder values(?,?,?)
+			orderline2 insert 1条(o_id, col5) 只能全连接 where o_id = ol_o_id
+			
+			for i : olCount
+
+			insert into tpcch.orderline values (?,?,?,?,?,?,NULL,?,?,?,  ?,?)
+
+			{
+				orderline1
+				orderline2
+				orderline3
+			}
+		}
+        
+    } else {
+		// 不存在，不涉及表拆分合并变化
+        // 继续原逻辑
+
+		// 绑定参数 wId dId
+		DbcTools::bind(noDistrictUpdate,1,wId);
+		newsql[0], 3, wId
+		DbcTools::bind(noDistrictUpdate,2,dId);
+
+		// 执行预编译好的update sql, 不成功就回滚
+		if(!DbcTools::executePreparedStatement(noDistrictUpdate)){
+			DbcTools::rollback(hDBC);
+			return 0;
+		}
+
+    }
+	
 
 	DbcTools::resetStatement(noCustomerSelect);
 	DbcTools::bind(noCustomerSelect,1,wId);
@@ -367,6 +493,9 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 	int sQuantity;
 	string sDist;
 	double tmp2;
+
+	// 进入for 先创建一个id_set
+
 	for(int i=0; i<olCount; i++){
 
 		DbcTools::resetStatement(noItemSelect);
@@ -439,6 +568,10 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 			return 0;
 		}
 
+		// 插入orderline
+		// 这里可能涉及到表拆分，重复插入 检查
+		// 这里可能涉及到表合并
+		// 先判断是否是变化的表
 		DbcTools::resetStatement(noOrderlineInsert);
 		DbcTools::bind(noOrderlineInsert,1,dNextOId);
 		DbcTools::bind(noOrderlineInsert,2,dId);
