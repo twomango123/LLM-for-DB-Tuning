@@ -1,12 +1,21 @@
-from .base import SMO
-# from ColumnMove import ColumnMove
-# from ColumnCopy import ColumnCopy
-# from ColumnRename import ColumnRename  
-import pandas as pd
+try:
+    from .base import SMO, MySQLConstraintHelper
+except Exception:  
+    from base import SMO, MySQLConstraintHelper
+
+try:
+    import pandas as pd
+except Exception:
+    pd = None
 import os
 import sqlglot
 from sqlglot import expressions as exp
-from log_info.log_info import get_logger
+try:
+    from log_info.log_info import get_logger
+except Exception:
+    import sys as _sys, os as _os
+    _sys.path.append(_os.path.dirname(_os.path.dirname(__file__)))
+    from log_info.log_info import get_logger
 
 logger = get_logger()
 
@@ -20,112 +29,126 @@ class TableSplit(SMO):
         self.new_view = new_view
 
     def apply_to_schema(self, db):
-        
-        print("=" * 60)
-        print("🔍 开始表拆分操作")
-        print(f"原表: {self.old_table}")
-        print(f"新表: {self.new_tables}")
-        print(f"主键字典: {self.primary_keys_dict}")
-        print(f"业务列字典: {self.columnList}")
-        
-        # 收集所有主键列
-        all_primary_keys = set()
-        for table_name, pk_columns in self.primary_keys_dict.items():
-            print(f"  {table_name} 的主键: {pk_columns}")
-            all_primary_keys.update(pk_columns)
-        
-        print(f"所有主键列: {sorted(all_primary_keys)}")
-        
-        sql_statements = []
-        
-        # 1. 创建主键表
-        pk_table_name = f"{self.old_table}_keys"
+        logger.info("开始表拆分（不保留原表）: %s -> %s", self.old_table, ", ".join(self.new_tables))
+
         old_table_quoted = f"`{self.old_table}`"
-        pk_columns_str = ", ".join(sorted(all_primary_keys))
-        
-        sql1 = f"""CREATE TABLE `{pk_table_name}` AS
-    SELECT DISTINCT {pk_columns_str}
-    FROM {old_table_quoted};"""
-        
-        print(f"\n📝 SQL 1 - 创建主键表 '{pk_table_name}':")
-        print(sql1)
-        sql_statements.append(sql1)
-        
-        # 添加主键约束
-        if all_primary_keys:
-            sql2 = f"""ALTER TABLE `{pk_table_name}`
-    ADD PRIMARY KEY ({pk_columns_str});"""
-            
-            print(f"\n📝 SQL 2 - 添加主键约束:")
-            print(sql2)
-            sql_statements.append(sql2)
-        
-        # 2. 创建业务表
-        print(f"\n🔨 创建业务表:")
+        helper = MySQLConstraintHelper(db)
+        cons = helper.fetch_constraints(self.old_table)
+        orig_pk = (cons.get('primary_key') or {}).get('columns') or []
+        if not orig_pk:
+            logger.warning("原表未检测到主键，建议设置主键后再执行拆分")
+
+        # 规则检查：外键不得被拆在不同子表
+        # 这里的策略：若某个外键引用列集合无法完全落在某个子表的列集合中，直接报错
+        # 同时，后续仅在“第一个满足条件的子表”上重建该外键，避免一条外键被复制到多个子表
+
+        # 构造每个子表应包含的列集合（原表主键 + 业务列）
+        child_include_cols = {}
+        for t in self.new_tables:
+            bcols = list(dict.fromkeys(self.columnList.get(t, [])))
+            # 去重并前置原表主键
+            include = list(dict.fromkeys(orig_pk + [c for c in bcols if c not in orig_pk]))
+            child_include_cols[t] = include
+
+        # 1) 创建每个业务表
+        sql_statements = []
+        logger.debug("创建业务表与列集合中...")
         for i, new_table in enumerate(self.new_tables):
-            table_primary_keys = self.primary_keys_dict.get(new_table, [])
-            business_columns = self.columnList.get(new_table, [])
-            
-            print(f"\n  表 {i+1}: {new_table}")
-            print(f"    主键列: {table_primary_keys}")
-            print(f"    业务列（原始）: {business_columns}")
-            
-            # 移除可能重复的主键列
-            business_columns = [col for col in business_columns if col not in table_primary_keys]
-            print(f"    业务列（去重后）: {business_columns}")
-            
-            # 合并列
-            all_table_columns = table_primary_keys + business_columns
-            all_columns_str = ", ".join(all_table_columns)
-            
+            include = child_include_cols[new_table]
+            logger.debug("子表%d: %s 列: %s", i + 1, new_table, include)
+            cols_str = ", ".join(include)
             sql = f"""CREATE TABLE `{new_table}` AS
-    SELECT DISTINCT {all_columns_str}
+    SELECT DISTINCT {cols_str}
     FROM {old_table_quoted};"""
-            
-            print(f"    SQL: CREATE TABLE {new_table}...")
             sql_statements.append(sql)
-            
-            # 添加主键约束
-            if table_primary_keys:
-                pk_str = ", ".join(table_primary_keys)
-                pk_sql = f"""ALTER TABLE `{new_table}`
-    ADD PRIMARY KEY ({pk_str});"""
-                
-                print(f"    主键约束: ALTER TABLE {new_table}...")
-                sql_statements.append(pk_sql)
-        
-        # 3. 删除原表（可选）
-        # sql_last = f"DROP TABLE IF EXISTS {old_table_quoted};"
-        # print(f"\n🗑️ SQL 最后 - 删除原表:")
-        # print(sql_last)
-        # sql_statements.append(sql_last)
-        
-        print(f"\n📊 总共 {len(sql_statements)} 条 SQL 语句")
-        
-        # 执行 SQL
+
+        # 2) 为每个子表重建主键（使用原表主键）+ 其它约束（唯一、检查、出站外键不在这里处理）
+        for new_table in self.new_tables:
+            if orig_pk:
+                pk_str = ", ".join(orig_pk)
+                sql_statements.append(f"ALTER TABLE `{new_table}` ADD PRIMARY KEY ({pk_str});")
+
+        # 3) 唯一/检查约束重建（只要其列全集在子表内）
+        for new_table in self.new_tables:
+            include = child_include_cols[new_table]
+            add_stmts = helper.build_add_constraints_for_table(new_table, cons, include, rename_map=None)
+            # 过滤：已手动添加了主键；外键稍后单独处理；保留 UNIQUE/CHECK
+            for s in add_stmts:
+                su = s.upper()
+                if ' ADD PRIMARY KEY ' in su:
+                    continue
+                if ' FOREIGN KEY ' in su:
+                    continue
+                sql_statements.append(s)
+
+        # 4) 外键约束定位并在单一子表重建
+        fk_assigned = set()
+        for fk in cons.get('foreign_keys_outbound', []) or []:
+            child_cols = [c for (c, _, _) in fk['cols']]
+            # 找能完全包含该外键列集合的子表
+            candidates = [t for t in self.new_tables if set(child_cols).issubset(set(child_include_cols[t]))]
+            if not candidates:
+                raise ValueError(f"外键约束 {fk['constraint_name']} 的列 {child_cols} 无法完整落在某个子表中，违反外键不得垂直拆分规则")
+            chosen = candidates[0]
+            fk_assigned.add((fk['constraint_name'], chosen))
+            ref_table = fk['cols'][0][1]
+            ref_cols = [rc for (_, _, rc) in fk['cols']]
+            cols_sql = ", ".join(f"`{c}`" for c in child_cols)
+            ref_sql = ", ".join(f"`{c}`" for c in ref_cols)
+            cname = f"{fk['constraint_name']}_{chosen}"
+            clause = (
+                f"ALTER TABLE `{chosen}` ADD CONSTRAINT `{cname}` FOREIGN KEY ({cols_sql}) "
+                f"REFERENCES `{ref_table}` ({ref_sql})"
+            )
+            if fk.get('delete_rule'):
+                clause += f" ON DELETE {fk['delete_rule']}"
+            if fk.get('update_rule'):
+                clause += f" ON UPDATE {fk['update_rule']}"
+            sql_statements.append(clause)
+
+        # 5) 列属性：默认值 / 自增
+        colmeta = cons.get('columns') or []
+        def _lit(v: str):
+            if v is None or v == 'NULL':
+                return 'NULL'
+            try:
+                float(v)
+                return str(v)
+            except Exception:
+                pass
+            return "'" + str(v).replace("'", "''") + "'"
+        for new_table in self.new_tables:
+            include = set(child_include_cols[new_table])
+            for cm in colmeta:
+                col = cm['COLUMN_NAME']
+                if col not in include:
+                    continue
+                default = cm.get('COLUMN_DEFAULT')
+                extra = (cm.get('EXTRA') or '').lower()
+                ctype = cm.get('COLUMN_TYPE') or 'varchar(255)'
+                nullable = cm.get('IS_NULLABLE', 'YES')
+                if default is not None:
+                    sql_statements.append(
+                        f"ALTER TABLE `{new_table}` ALTER COLUMN `{col}` SET DEFAULT {_lit(default)}"
+                    )
+                if 'auto_increment' in extra:
+                    sql_statements.append(
+                        f"ALTER TABLE `{new_table}` MODIFY COLUMN `{col}` {ctype} "
+                        f"{'NOT NULL' if nullable=='NO' else 'NULL'} AUTO_INCREMENT"
+                    )
+
+        logger.info("将执行 %d 条SQL", len(sql_statements))
         results = []
-        
         for i, sql in enumerate(sql_statements, 1):
-            print(f"\n[{i}/{len(sql_statements)}] 执行SQL...")
-            print(f"SQL: {sql[:100]}...")
-            
+            logger.debug("[%d/%d] SQL: %s", i, len(sql_statements), sql)
             success = db.execute_statement(sql)
-            
             if success:
-                print("  ✅ 成功")
+                logger.debug("执行成功")
             else:
-                print(f"  ❌ 失败")
-                print("操作中止")
+                logger.error("执行失败，已中止")
                 return False, results
-            
-            results.append({
-                'index': i,
-                'sql': sql,
-                'success': success
-            })
-        
-        print(f"\n🎉 所有SQL执行成功")
-        print(f"表拆分完成: {self.old_table} -> {self.new_tables}")
+            results.append({'index': i,'sql': sql,'success': success})
+        logger.info("表拆分完成: %s -> %s", self.old_table, ", ".join(self.new_tables))
         return True, results
                 
     def apply_to_data(self):
@@ -342,5 +365,3 @@ class TableSplit(SMO):
                     f.write(f"{sql};\n")
             
             print(f"已保存重写后的SQL到: {output_path}")
-
-

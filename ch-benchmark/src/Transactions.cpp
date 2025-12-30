@@ -20,11 +20,15 @@ limitations under the License.
 #include "Log.h"
 #include "Transactions.h"
 #include "dialect/DialectStrategy.h"
+#include "RewriteDML.h"
 
 #include <cstdlib>
 #include <cstring>
 #include <string>
 #include <map>
+#include <vector>
+#include <unordered_set>
+#include <algorithm>
 
 using namespace std;
 
@@ -252,7 +256,32 @@ bool Transactions::prepareStatements(SQLHDBC& hDBC){
 }
 
 bool Transactions::executeNewOrder(SQLHDBC& hDBC){
-	prepareNewOrder(hDBC);
+    prepareNewOrder(hDBC);
+    // 事务级上下文：用于延迟合并、去重、以及阶段化冗余列
+    TxnRewriteCtx rwctx;
+    // 在事务开始时枚举判断：是否存在“合并目标表”覆盖了本事务 for 循环内插入的表（orderline）
+    // 若不存在合并目标，则无需延迟 orders/neworder 的插入与后续 flush。
+    auto old2new_all = Config::getOld2New();
+    auto newCols_all = Config::getnewTableColumns();
+    auto hasNewTable = [&](const std::string& t){ return newCols_all.find(t) != newCols_all.end(); };
+    auto getTargets = [&](const char* tab){
+        std::vector<std::string> v; auto it = old2new_all.find(tab); if(it!=old2new_all.end()) v = it->second; return v; };
+    std::vector<std::string> orderlineTargets = getTargets("orderline");
+    std::vector<std::string> ordersTargets    = getTargets("orders");
+    std::vector<std::string> neworderTargets  = getTargets("neworder");
+    // 判断交集：orderline 与 (orders ∪ neworder) 在相同的新表上是否有交集，并且这些新表真实存在于映射列清单中
+    std::unordered_set<std::string> hdrTargets;
+    for(const auto& t : ordersTargets) hdrTargets.insert(t);
+    for(const auto& t : neworderTargets) hdrTargets.insert(t);
+    bool mergeRequired = false;
+    std::vector<std::string> mergeTargets;
+    for(const auto& t : orderlineTargets){
+        if(hdrTargets.count(t) && hasNewTable(t)) { mergeRequired = true; mergeTargets.push_back(t); }
+    }
+
+    // 若需要延迟合并，则在循环期间累积行参数，待最后一条行插入时统一 flush
+    struct StagedLineArgs { int o_id; int d_id; int w_id; int number; int i_id; int supply_w_id; int quantity; double amount; char dist[24]; };
+    std::vector<StagedLineArgs> stagedLines;
 	struct OrderLine{
 		int olIId;
 		int olSupplyWId;
@@ -325,136 +354,42 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 		DbcTools::rollback(hDBC);
 		return 0;
 	}
-	// 更新district：update tpcch.district set D_NEXT_O_ID=D_NEXT_O_ID+1 where D_W_ID=? and D_ID=?
+    // 更新district：update tpcch.district set D_NEXT_O_ID=D_NEXT_O_ID+1 where D_W_ID=? and D_ID=?
 
-	// 清除之前绑定的参数
-	DbcTools::resetStatement(noDistrictUpdate);
-	// 这里是新增加检测逻辑
-	// old2new是执行程序时就创建一个映射关系，全局变量，各事务线程只读
-	// 默认拆分合并前后列名一致
-    std::map<std::string, std::vector<std::string>> old2new = Config::getOld2New();
-	
-	// newTableColumns是新表包含的列
-	std::map<std::string, std::vector<std::string>> newTableColumns = Config::getnewTableColumns();
-	// 以下是一个表拆分映射关系例子,记录可能越拆越少
-    // old2new["orders"] = {"orders1", "orders2"};
-    // old2new["orderline"] = {"orderline1", "orderline2"};
+    // 清除之前绑定的参数
+    DbcTools::resetStatement(noDistrictUpdate);
 
-	// 以下是一个表合并映射关系例子
-	// old2new["district"] = {"district_orders"};
-    // old2new["orders"] = {"district_orders"};
-	// 以下是一个表合并映射关系例子,记录可能越合越多
-	// old2new["orders"] = {"orders_orderline"};
-    // old2new["orderline"] = {"orders_orderline"};
+    // 基于映射的最小重写流程（仅处理 UPDATE district）
+    auto old2new = Config::getOld2New();
+    auto newTableColumns = Config::getnewTableColumns();
 
-	// 这是一个newTableColumns例子
-	// newTableColumns["district1"] = {"d_id", ""};
-	// newTableColumns["district2"] = {"d_w_id", ""};
-	// newTableColumns["district3"] = {"d_id", "d_w_id", "d_next_o_id"};
+    // 捕获原参数（顺序一致）：1 -> wId, 2 -> dId
+    ParamPack pack; // from RewriteDML.h
+    pack.addInt(wId);
+    pack.addInt(dId);
 
-	// 检查district是否包含在old2new映射关系的key中
-	// 在 就进入rewrite 按照列映射重新构造新update sql
-	// 如果是insert 可能存在重复插入的问题，需要检查
-    auto it = old2new.find("district");
+    const std::string originalSql = DialectStrategy::getInstance()->getNoDistrictUpdate();
 
-    if (it != old2new.end()) {
-		// 存在
-		// 识别表拆分, 映射到多个新表
-		if(old2new["district"].size() >= 2){
-			const auto& newTables = old2new["district"];
-			const auto& newSqls;
-			const auto& parameters;
-			// 一个位置参数映射到多个位置怎么办
-			int parameterCount = [[table, ], ];
-			for (const auto& table : newTables) {
-				// 每个表中的列
-				int _parameter_count = 1;
-				// 检查sql中set关键字后面的列
-				for(const auto& setcolumn : sqlparser(getnoDistrictUpdate()).getSetColumn()){
-					if(setcolumn in newTableColumns[table].value){
-						
-						if(_parameter_count == 1){
-							// 首次处理set
-							newSqls[table] = "update " + table + " set " + sqltext + ",";
-							if(sqltext.contain("?")){
-								// 如果这段text存在“？”,要加入维护参数位置的映射关系
-							}
-						}
-						else{
-							// set关键词后面的构建
-							newSqls[table] = newSqls[table] + sqltext + ",";
-						}
-						 
-					}
-					else{
-						// 查看下一个sql语句中涉及的列
-						
-					}
-				}
-
-				// 检查sql中where关键字后面的列
-				int where_count = 0;
-				for(const auto& wherecolumn : sqlparser(getnoDistrictUpdate()).getWhereColumn()){
-					if(wherecolumn in newTableColumns[table].value){
-						if(where_count == 0){
-							newSqls[table] = newSqls[table] + " where " + sqltext + " and ";
-						}
-						else{
-							// set关键词后面的构建
-							newSqls[table] = newSqls[table] + sqltext + " and ";
-						}
-					}
-					else{
-						// 查看下一个列
-					}
-				}
-				allocAndPrepareStmt(hDBC, newsqlHstmt, newSqls[0-2]);
-				execute(newsqlHstmt)
+    {
+        auto rr = RewriteDML::tryRewriteAndExecUpdate(hDBC,
+                                                      std::string("district"),
+                                                      originalSql,
+                                                      pack,
+                                                      old2new,
+                                                      newTableColumns);
+        if (rr == RewriteResult::Failed) {
+            DbcTools::rollback(hDBC);
+            return 0;
         }
-		}
-        // 识别表合并
-		if(old2new["district"].size() == 1){
-			// 如果原表使用，继续原逻辑
-			// 原表不使用，更新 连接的大表
-			// 记录可能变多，原来插入或者更新order_id == pk 
-			// order更新一条 orderline更新n条
-			// 表连接后order更新n条，但一句sql where order_id == pk 
-			// 自动更新n条记录
-			// 问题在于 order处和orderline处重复更新两遍
-
-			// 这里如果是insert
-			order insert 1条
-			orderlines insert n条  (col1 , )
-			orderline1 insert n条(ol_id, col2, ol_o_id)
-			insert into tpcch.neworder values(?,?,?)
-			orderline2 insert 1条(o_id, col5) 只能全连接 where o_id = ol_o_id
-			
-			for i : olCount
-
-			insert into tpcch.orderline values (?,?,?,?,?,?,NULL,?,?,?,  ?,?)
-
-			{
-				orderline1
-				orderline2
-				orderline3
-			}
-		}
-        
-    } else {
-		// 不存在，不涉及表拆分合并变化
-        // 继续原逻辑
-
-		// 绑定参数 wId dId
-		DbcTools::bind(noDistrictUpdate,1,wId);
-		newsql[0], 3, wId
-		DbcTools::bind(noDistrictUpdate,2,dId);
-
-		// 执行预编译好的update sql, 不成功就回滚
-		if(!DbcTools::executePreparedStatement(noDistrictUpdate)){
-			DbcTools::rollback(hDBC);
-			return 0;
-		}
-
+        if (rr == RewriteResult::NotApplicable) {
+        // 不重写或重写失败，走原逻辑
+        DbcTools::bind(noDistrictUpdate,1,wId);
+        DbcTools::bind(noDistrictUpdate,2,dId);
+        if(!DbcTools::executePreparedStatement(noDistrictUpdate)){
+            DbcTools::rollback(hDBC);
+            return 0;
+        }
+        }
     }
 	
 
@@ -462,32 +397,143 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 	DbcTools::bind(noCustomerSelect,1,wId);
 	DbcTools::bind(noCustomerSelect,2,dId);
 	DbcTools::bind(noCustomerSelect,3,cId);
-	if(!DbcTools::executePreparedStatement(noCustomerSelect)){
-		DbcTools::rollback(hDBC);
-		return 0;
-	}
+    if(!DbcTools::executePreparedStatement(noCustomerSelect)){
+        DbcTools::rollback(hDBC);
+        return 0;
+    }
+    // 若需要合并到包含冗余列的新表，则从外键 customer 实时取值并阶段化
+    if (mergeRequired) {
+        double cDiscount = 0.0; std::string cLast = ""; std::string cCredit = "";
+        // 期望列顺序: C_DISCOUNT (1), C_LAST (2), C_CREDIT (3)
+        if (SQL_SUCCESS==SQLFetch(noCustomerSelect)){
+            // C_DISCOUNT
+            if(SQL_SUCCESS==SQLGetData(noCustomerSelect,1,SQL_C_CHAR,buf,1024,&nIdicator)){
+                cDiscount = atof((char*)buf);
+            } else { DbcTools::rollback(hDBC); return 0; }
+            // C_LAST
+            if(SQL_SUCCESS==SQLGetData(noCustomerSelect,2,SQL_C_CHAR,buf,1024,&nIdicator)){
+                cLast = std::string((char*)buf);
+            } else { DbcTools::rollback(hDBC); return 0; }
+            // C_CREDIT
+            if(SQL_SUCCESS==SQLGetData(noCustomerSelect,3,SQL_C_CHAR,buf,1024,&nIdicator)){
+                cCredit = std::string((char*)buf);
+            } else { DbcTools::rollback(hDBC); return 0; }
 
-	DbcTools::resetStatement(noOrderInsert);
-	DbcTools::bind(noOrderInsert,1,dNextOId);
-	DbcTools::bind(noOrderInsert,2,dId);
-	DbcTools::bind(noOrderInsert,3,wId);
-	DbcTools::bind(noOrderInsert,4,cId);
-	DbcTools::bind(noOrderInsert,5,oEntryD);
-	DbcTools::bind(noOrderInsert,6,olCount);
-	DbcTools::bind(noOrderInsert,7,allLocal);
-	if(!DbcTools::executePreparedStatement(noOrderInsert)){
-		DbcTools::rollback(hDBC);
-		return 0;
-	}
+            // 将冗余列阶段化到所有合并目标（只有存在对应列的新表才会在 flush 中被使用）
+            for (const auto& tgt : mergeTargets){
+                ParamValue pv;
+                // c_discount
+                pv.kind = ParamKind::Double; pv.d = cDiscount;
+                RewriteDML::stageExtraForOrderKey(rwctx, tgt, wId, dId, dNextOId, "c_discount", pv);
+                // c_last
+                pv = ParamValue{}; pv.kind = ParamKind::String; pv.s = cLast; pv.slen = (int)cLast.size();
+                RewriteDML::stageExtraForOrderKey(rwctx, tgt, wId, dId, dNextOId, "c_last", pv);
+                // c_credit
+                pv = ParamValue{}; pv.kind = ParamKind::String; pv.s = cCredit; pv.slen = (int)cCredit.size();
+                RewriteDML::stageExtraForOrderKey(rwctx, tgt, wId, dId, dNextOId, "c_credit", pv);
+            }
+        } else {
+            DbcTools::rollback(hDBC);
+            return 0;
+        }
+    }
 
-	DbcTools::resetStatement(noNewOrderInsert);
-	DbcTools::bind(noNewOrderInsert,1,dNextOId);
-	DbcTools::bind(noNewOrderInsert,2,dId);
-	DbcTools::bind(noNewOrderInsert,3,wId);
-	if(!DbcTools::executePreparedStatement(noNewOrderInsert)){
-		DbcTools::rollback(hDBC);
-		return 0;
-	}
+    DbcTools::resetStatement(noOrderInsert);
+    // 使用事务级上下文：若确定存在合并场景，则延迟 orders；否则走常规路径
+    {
+        ParamPack pack;
+        pack.addInt(dNextOId);
+        pack.addInt(dId);
+        pack.addInt(wId);
+        pack.addInt(cId);
+        pack.addTimestamp(oEntryD);
+        pack.addInt(olCount);
+        pack.addInt(allLocal);
+        std::string sql = DialectStrategy::getInstance()->getNoOrderInsert();
+        auto old2new = old2new_all;
+        auto newCols  = newCols_all;
+        auto oldCols  = Config::getOldTableColumns();
+        if (mergeRequired) {
+            auto rr = RewriteDML::deferMergeInsert(hDBC, "orders", sql, pack, old2new, newCols, oldCols, rwctx);
+            if (rr == RewriteResult::Failed) { DbcTools::rollback(hDBC); return 0; }
+            if (rr == RewriteResult::NotApplicable) {
+                // 未识别到可延迟目标，退回常规路径
+                auto rr2 = RewriteDML::tryRewriteAndExecInsert(hDBC, "orders", sql, pack, old2new, newCols);
+                if (rr2 == RewriteResult::Failed) { DbcTools::rollback(hDBC); return 0; }
+                if (rr2 == RewriteResult::NotApplicable) {
+                    DbcTools::bind(noOrderInsert,1,dNextOId);
+                    DbcTools::bind(noOrderInsert,2,dId);
+                    DbcTools::bind(noOrderInsert,3,wId);
+                    DbcTools::bind(noOrderInsert,4,cId);
+                    DbcTools::bind(noOrderInsert,5,oEntryD);
+                    DbcTools::bind(noOrderInsert,6,olCount);
+                    DbcTools::bind(noOrderInsert,7,allLocal);
+                    if(!DbcTools::executePreparedStatement(noOrderInsert)){
+                        DbcTools::rollback(hDBC);
+                        return 0;
+                    }
+                }
+            }
+        } else {
+            // 无合并需求，直接常规改写或原语句
+            auto rr2 = RewriteDML::tryRewriteAndExecInsert(hDBC, "orders", sql, pack, old2new, newCols);
+            if (rr2 == RewriteResult::Failed) { DbcTools::rollback(hDBC); return 0; }
+            if (rr2 == RewriteResult::NotApplicable) {
+                DbcTools::bind(noOrderInsert,1,dNextOId);
+                DbcTools::bind(noOrderInsert,2,dId);
+                DbcTools::bind(noOrderInsert,3,wId);
+                DbcTools::bind(noOrderInsert,4,cId);
+                DbcTools::bind(noOrderInsert,5,oEntryD);
+                DbcTools::bind(noOrderInsert,6,olCount);
+                DbcTools::bind(noOrderInsert,7,allLocal);
+                if(!DbcTools::executePreparedStatement(noOrderInsert)){
+                    DbcTools::rollback(hDBC);
+                    return 0;
+                }
+            }
+        }
+    }
+
+    DbcTools::resetStatement(noNewOrderInsert);
+    {
+        ParamPack pack;
+        pack.addInt(dNextOId);
+        pack.addInt(dId);
+        pack.addInt(wId);
+        std::string sql = DialectStrategy::getInstance()->getNoNewOrderInsert();
+        auto old2new = old2new_all;
+        auto newCols  = newCols_all;
+        auto oldCols  = Config::getOldTableColumns();
+        if (mergeRequired) {
+            auto rr = RewriteDML::deferMergeInsert(hDBC, "neworder", sql, pack, old2new, newCols, oldCols, rwctx);
+            if (rr == RewriteResult::Failed) { DbcTools::rollback(hDBC); return 0; }
+            if (rr == RewriteResult::NotApplicable) {
+                auto rr2 = RewriteDML::tryRewriteAndExecInsert(hDBC, "neworder", sql, pack, old2new, newCols);
+                if (rr2 == RewriteResult::Failed) { DbcTools::rollback(hDBC); return 0; }
+                if (rr2 == RewriteResult::NotApplicable) {
+                    DbcTools::bind(noNewOrderInsert,1,dNextOId);
+                    DbcTools::bind(noNewOrderInsert,2,dId);
+                    DbcTools::bind(noNewOrderInsert,3,wId);
+                    if(!DbcTools::executePreparedStatement(noNewOrderInsert)){
+                        DbcTools::rollback(hDBC);
+                        return 0;
+                    }
+                }
+            }
+        } else {
+            auto rr2 = RewriteDML::tryRewriteAndExecInsert(hDBC, "neworder", sql, pack, old2new, newCols);
+            if (rr2 == RewriteResult::Failed) { DbcTools::rollback(hDBC); return 0; }
+            if (rr2 == RewriteResult::NotApplicable) {
+                DbcTools::bind(noNewOrderInsert,1,dNextOId);
+                DbcTools::bind(noNewOrderInsert,2,dId);
+                DbcTools::bind(noNewOrderInsert,3,wId);
+                if(!DbcTools::executePreparedStatement(noNewOrderInsert)){
+                    DbcTools::rollback(hDBC);
+                    return 0;
+                }
+            }
+        }
+    }
 
 	double iPrice;
 	int sQuantity;
@@ -563,35 +609,126 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 		DbcTools::bind(noStockUpdates[(oLines[i].olIsRemote?1:0)],2, tmp1);
 		DbcTools::bind(noStockUpdates[(oLines[i].olIsRemote?1:0)],3, oLines[i].olIId);
 		DbcTools::bind(noStockUpdates[(oLines[i].olIsRemote?1:0)],4, oLines[i].olSupplyWId);
-		if(!DbcTools::executePreparedStatement(noStockUpdates[(oLines[i].olIsRemote?1:0)])){
-			DbcTools::rollback(hDBC);
-			return 0;
-		}
+        {
+            ParamPack pack;
+            pack.addInt(oLines[i].olQuantity);
+            pack.addInt(tmp1);
+            pack.addInt(oLines[i].olIId);
+            pack.addInt(oLines[i].olSupplyWId);
+            std::string sql = (oLines[i].olIsRemote ?
+                std::string(DialectStrategy::getInstance()->getNoStockUpdate02()) :
+                std::string(DialectStrategy::getInstance()->getNoStockUpdate01()));
+            auto old2new = Config::getOld2New();
+            auto newCols = Config::getnewTableColumns();
+            auto rr = RewriteDML::tryRewriteAndExecUpdate(hDBC, "stock", sql, pack, old2new, newCols);
+            if (rr == RewriteResult::Failed) { DbcTools::rollback(hDBC); return 0; }
+            if (rr == RewriteResult::NotApplicable) {
+                if(!DbcTools::executePreparedStatement(noStockUpdates[(oLines[i].olIsRemote?1:0)])){
+                    DbcTools::rollback(hDBC);
+                    return 0;
+                }
+            }
+        }
 
-		// 插入orderline
-		// 这里可能涉及到表拆分，重复插入 检查
-		// 这里可能涉及到表合并
-		// 先判断是否是变化的表
-		DbcTools::resetStatement(noOrderlineInsert);
-		DbcTools::bind(noOrderlineInsert,1,dNextOId);
-		DbcTools::bind(noOrderlineInsert,2,dId);
-		DbcTools::bind(noOrderlineInsert,3,wId);
-		tmp1 = i+1;
-		DbcTools::bind(noOrderlineInsert,4,tmp1);
-		DbcTools::bind(noOrderlineInsert,5,(oLines[i].olIId));
-		DbcTools::bind(noOrderlineInsert,6,(oLines[i].olSupplyWId));
-		DbcTools::bind(noOrderlineInsert,7,(oLines[i].olQuantity));
-		tmp2 = iPrice*oLines[i].olQuantity;
-		DbcTools::bind(noOrderlineInsert,8,tmp2);
-		//日志1
-		char buffer[24];
-		//strcpy(buffer,sDist.c_str());
-		memcpy(buffer,sDist.c_str(),sizeof(buffer));
-		DbcTools::bind(noOrderlineInsert,9,24,buffer);
-		if(!DbcTools::executePreparedStatement(noOrderlineInsert)){
-			DbcTools::rollback(hDBC);
-			return 0;
-		}
+        // 插入 orderline
+        // 若需要合并（mergeRequired==true），则先行累积参数，最后一条时统一 flush；
+        // 否则按原策略逐条改写/插入。
+        tmp1 = i+1;
+        tmp2 = iPrice*oLines[i].olQuantity;
+        if (mergeRequired) {
+            StagedLineArgs args;
+            args.o_id = dNextOId; args.d_id = dId; args.w_id = wId; args.number = tmp1;
+            args.i_id = oLines[i].olIId; args.supply_w_id = oLines[i].olSupplyWId;
+            args.quantity = oLines[i].olQuantity; args.amount = tmp2;
+            memset(args.dist, 0, sizeof(args.dist));
+            // sDist 应为 24 字节固定宽度
+            memcpy(args.dist, sDist.c_str(), std::min<size_t>(sizeof(args.dist), sDist.size()));
+            stagedLines.push_back(args);
+
+            // 若是最后一条，则统一 flush 所有累积的行
+            if (i == olCount-1) {
+                std::string sql = DialectStrategy::getInstance()->getNoOrderlineInsert();
+                auto old2new = old2new_all;
+                auto newCols  = newCols_all;
+                auto oldCols  = Config::getOldTableColumns();
+                for (const auto& ln : stagedLines) {
+                    ParamPack p;
+                    p.addInt(ln.o_id); p.addInt(ln.d_id); p.addInt(ln.w_id);
+                    p.addInt(ln.number); p.addInt(ln.i_id); p.addInt(ln.supply_w_id);
+                    p.addInt(ln.quantity); p.addDouble(ln.amount); p.addFixedString(ln.dist, 24);
+                    // 先尝试合并延迟插入（若有）
+                    auto rr = RewriteDML::flushMergeInsert(hDBC, "orderline", sql, p, old2new, newCols, oldCols, rwctx);
+                    if (rr == RewriteResult::NotApplicable) {
+                        // 常规改写执行（带去重）
+                        rr = RewriteDML::tryRewriteAndExecInsertWithCtx(hDBC, "orderline", sql, p, old2new, newCols, oldCols, rwctx);
+                    }
+                    if (rr == RewriteResult::Failed) { DbcTools::rollback(hDBC); return 0; }
+                    if (rr == RewriteResult::NotApplicable) {
+                        // 兜底：执行原始预处理语句
+                        DbcTools::resetStatement(noOrderlineInsert);
+                        int v_o = ln.o_id, v_d = ln.d_id, v_w = ln.w_id;
+                        int v_num = ln.number, v_i = ln.i_id, v_sw = ln.supply_w_id, v_q = ln.quantity;
+                        double v_amt = ln.amount;
+                        char v_dist[24]; memcpy(v_dist, ln.dist, sizeof(v_dist));
+                        DbcTools::bind(noOrderlineInsert,1,v_o);
+                        DbcTools::bind(noOrderlineInsert,2,v_d);
+                        DbcTools::bind(noOrderlineInsert,3,v_w);
+                        DbcTools::bind(noOrderlineInsert,4,v_num);
+                        DbcTools::bind(noOrderlineInsert,5,v_i);
+                        DbcTools::bind(noOrderlineInsert,6,v_sw);
+                        DbcTools::bind(noOrderlineInsert,7,v_q);
+                        DbcTools::bind(noOrderlineInsert,8,v_amt);
+                        DbcTools::bind(noOrderlineInsert,9,24,v_dist);
+                        if(!DbcTools::executePreparedStatement(noOrderlineInsert)){
+                            DbcTools::rollback(hDBC);
+                            return 0;
+                        }
+                    }
+                }
+            }
+        } else {
+            DbcTools::resetStatement(noOrderlineInsert);
+            {
+                ParamPack pack;
+                pack.addInt(dNextOId);
+                pack.addInt(dId);
+                pack.addInt(wId);
+                pack.addInt(tmp1);
+                pack.addInt(oLines[i].olIId);
+                pack.addInt(oLines[i].olSupplyWId);
+                pack.addInt(oLines[i].olQuantity);
+                pack.addDouble(tmp2);
+                char buffer[24];
+                memcpy(buffer,sDist.c_str(),sizeof(buffer));
+                pack.addFixedString(buffer, 24);
+                std::string sql = DialectStrategy::getInstance()->getNoOrderlineInsert();
+                auto old2new = old2new_all;
+                auto newCols  = newCols_all;
+                auto oldCols  = Config::getOldTableColumns();
+                // 先尝试合并延迟插入（若有）
+                auto rr = RewriteDML::flushMergeInsert(hDBC, "orderline", sql, pack, old2new, newCols, oldCols, rwctx);
+                if (rr == RewriteResult::NotApplicable) {
+                    // 常规改写执行（带去重）
+                    rr = RewriteDML::tryRewriteAndExecInsertWithCtx(hDBC, "orderline", sql, pack, old2new, newCols, oldCols, rwctx);
+                }
+                if (rr == RewriteResult::Failed) { DbcTools::rollback(hDBC); return 0; }
+                if (rr == RewriteResult::NotApplicable) {
+                    DbcTools::bind(noOrderlineInsert,1,dNextOId);
+                    DbcTools::bind(noOrderlineInsert,2,dId);
+                    DbcTools::bind(noOrderlineInsert,3,wId);
+                    DbcTools::bind(noOrderlineInsert,4,tmp1);
+                    DbcTools::bind(noOrderlineInsert,5,(oLines[i].olIId));
+                    DbcTools::bind(noOrderlineInsert,6,(oLines[i].olSupplyWId));
+                    DbcTools::bind(noOrderlineInsert,7,(oLines[i].olQuantity));
+                    DbcTools::bind(noOrderlineInsert,8,tmp2);
+                    DbcTools::bind(noOrderlineInsert,9,24,buffer);
+                    if(!DbcTools::executePreparedStatement(noOrderlineInsert)){
+                        DbcTools::rollback(hDBC);
+                        return 0;
+                    }
+                }
+            }
+        }
 	}
 
 	//COMMIT

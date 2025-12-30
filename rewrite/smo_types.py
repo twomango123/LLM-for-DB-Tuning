@@ -1,6 +1,9 @@
 # smo/smo_types.py
 
-from base import SMO
+try:
+    from .base import SMO
+except Exception:
+    from base import SMO
 import re
 from typing import List, Dict
 from sqlglot import parse_one, exp
@@ -8,39 +11,7 @@ import re
 
 
 # 列复制
-class ColumnCopy(SMO):
-    def __init__(self, table, column):
-
-        self.table = table
-
-    def apply_to_sql(self, sql_ast):
-        pass
-    def apply_to_data(self, data_dict: dict):
-
-        result = data_dict.copy()
-
-        if self.table not in result:
-            raise ValueError(f"[ColumnCopy] 表 {self.table} 不存在")
-
-        df = result[self.table]
-
-        if self.oldcolumn not in df.columns:
-            raise ValueError(
-                f"[ColumnCopy] 列 {self.oldcolumn} 在表 {self.table} 中不存在"
-            )
-
-        # 执行列复制，命名为“副本”
-        df[self.newcolumn] = df[self.oldcolumn].values
-
-        # 写回
-        result[self.table] = df
-
-        return result
-    
-        
-
-
-
+# 旧的 ColumnCopy/移动相关实现已移除；保留 TableSplit 占位。
 # 表拆分
 class TableSplit(SMO):
     def __init__(self, old_table, new_tables, columnList):
@@ -60,4 +31,3 @@ class TableSplit(SMO):
         # 逻辑同sql
         pass
         
-
