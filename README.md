@@ -1,13 +1,13 @@
 # rewrite接口 测试运行方法  
 在当前目录创建并激活虚拟环境  
-`python -m venv venv`
-`source venv/bin/activate`
-`pip install -r requirements.txt`  
+`python -m venv venv`  
+`source venv/bin/activate`  
+`pip install -r requirements.txt`    
 
-进入rewrite目录  
-`cd rewrite`
-可运行测试  
-`python3 test_rewrite.py`
+进入rewrite目录    
+`cd rewrite`  
+可运行示例测试  
+`python3 test_rewrite.py`  
 
 
 # L0:evaluation-chbenchmark
