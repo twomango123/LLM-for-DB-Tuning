@@ -1,10 +1,16 @@
-import pandas as pd
+try:
+    import pandas as pd  # 仅在数据级合并时使用
+except Exception:
+    pd = None
 from io import StringIO
 import os
-from .base import SMO
+try:
+    from .base import SMO, MySQLConstraintHelper
+except Exception:  # pragma: no cover
+    from base import SMO, MySQLConstraintHelper
 
 class TableMerge(SMO):
-    def __init__(self, old_tables, new_table, old_columns_list, sign):
+    def __init__(self, old_tables, new_table, old_columns_list, sign, join_key=None):
         """
         old_tables: 旧表名列表 [table1, table2]
         new_table: 新表名
@@ -14,65 +20,231 @@ class TableMerge(SMO):
         self.new_table = new_table
         self.old_columns_list = old_columns_list
         self.sign = sign #sign==1 不保留原表，==2保留原表建立物化视图
+        self.join_key = join_key
         
 
     def apply_to_schema(self, db):
-        # 旧表不保留
+        """
+        表垂直合并（旧表不保留）- MySQL 专用：
+        - 先创建合并后的新表（模拟全外连接：LEFT JOIN UNION RIGHT JOIN过滤），
+        - 使用约束助手迁移/重建约束：
+          主键 = 两表主键与连接键的并集（去重复）；
+          外键 = 两表全部出站外键映射到新表列；
+          入站外键 = 所有引用旧表的子表外键重定向指向新表（在列名不变或可映射时）；
+          唯一/检查/默认/自增 = 从旧表复制并在新表重建（列名冲突按映射处理）。
+        - 最后删除旧表。
+        """
+        # 仅在“旧表不保留”时进行约束重建；否则创建物化视图并返回
+        if getattr(self, 'sign', 1) != 1:
+            # sign != 1 代表旧表保留，仅创建视图/物化表，不做约束迁移
+            self.create_physical_view(db)
+            return True
+        t1, t2 = self.old_tables[0], self.old_tables[1]
+        newt = self.new_table
+        join_key = self.join_key
 
+        helper = MySQLConstraintHelper(db)
+        c1 = helper.fetch_constraints(t1)
+        c2 = helper.fetch_constraints(t2)
+
+        # 组装 SELECT 列与重命名映射
         select_columns = []
         seen_columns = set()
-        
-        # 处理第一个表的列
+
+        # t1 列映射（基本保持同名；连接键使用 COALESCE 统一为 join_key 名字）
+        rename_map_t1 = {}
         for col in self.old_columns_list[0]:
-            if col == self.join_key and self.join_key:
-                # 连接键只保留一次
-                select_columns.append(f"COALESCE(t1.{col}, t2.{col}) AS {col}")
+            if join_key and col == join_key:
+                select_columns.append(f"COALESCE(t1.{col}, t2.{col}) AS `{col}`")
+                rename_map_t1[col] = col
             else:
-                select_columns.append(f"t1.{col}")
+                select_columns.append(f"t1.{col} AS `{col}`")
+                rename_map_t1[col] = col
             seen_columns.add(col)
-        
-        # 处理第二个表的列，处理重复列名
+
+        # t2 列映射（冲突列加 _2 后缀；连接键跳过，因为已由 t1 统一）
+        rename_map_t2 = {}
         for col in self.old_columns_list[1]:
-            if col == self.join_key and self.join_key:
-                # 连接键已经在第一个表中处理过了，跳过
+            if join_key and col == join_key:
+                # 该列在新表中使用 t1 的同名列
+                rename_map_t2[col] = join_key
                 continue
-            elif col in seen_columns:
-                # 重复列名，添加后缀
+            if col in seen_columns:
                 new_col_name = f"{col}_2"
-                select_columns.append(f"t2.{col} AS {new_col_name}")
             else:
-                select_columns.append(f"t2.{col}")
-        
-        # 构建连接条件
-        if self.join_key:
-            join_condition = f"t1.{self.join_key} = t2.{self.join_key}"
+                new_col_name = col
+            select_columns.append(f"t2.{col} AS `{new_col_name}`")
+            rename_map_t2[col] = new_col_name
+
+        # 连接条件
+        if join_key:
+            join_condition = f"t1.{join_key} = t2.{join_key}"
         else:
-            join_condition = "1=1"  # 笛卡尔积
-        
-        # 构建MySQL兼容的全外连接SQL语句
+            join_condition = "1=1"
+
+        # 创建新表（全外连接模拟）
         union_sql = f"""
-        CREATE TABLE {self.new_table} AS
+        CREATE TABLE `{newt}` AS
         SELECT {', '.join(select_columns)}
-        FROM {self.old_tables[0]} t1
-        LEFT JOIN {self.old_tables[1]} t2
-        ON {join_condition}
-        
+        FROM `{t1}` t1
+        LEFT JOIN `{t2}` t2
+          ON {join_condition}
         UNION
-        
         SELECT {', '.join(select_columns)}
-        FROM {self.old_tables[0]} t1
-        RIGHT JOIN {self.old_tables[1]} t2
-        ON {join_condition}
+        FROM `{t1}` t1
+        RIGHT JOIN `{t2}` t2
+          ON {join_condition}
         WHERE t1.{self.old_columns_list[0][0]} IS NULL
         """
-        
-        # 执行创建新表的SQL
-        db.execute_statement(union_sql)
-        
+
+        stmts: list[str] = []
+        stmts.append('SET FOREIGN_KEY_CHECKS=0')
+        stmts.append(union_sql)
+
+        # 构建新表主键：两表主键 ∪ 连接键（去重）
+        def _mapped_list(cols, rmap):
+            res = []
+            for c in cols or []:
+                nc = rmap.get(c)
+                if nc and nc not in res:
+                    res.append(nc)
+            return res
+
+        pk1 = (c1.get('primary_key') or {}).get('columns') or []
+        pk2 = (c2.get('primary_key') or {}).get('columns') or []
+        new_pk_cols = []
+        for col in _mapped_list(pk1, rename_map_t1):
+            if col not in new_pk_cols:
+                new_pk_cols.append(col)
+        for col in _mapped_list(pk2, rename_map_t2):
+            if col not in new_pk_cols:
+                new_pk_cols.append(col)
+        if join_key and join_key not in new_pk_cols:
+            new_pk_cols.append(join_key)
+        if new_pk_cols:
+            stmts.append(
+                f"ALTER TABLE `{newt}` ADD PRIMARY KEY (" + ", ".join(f"`{c}`" for c in new_pk_cols) + ")"
+            )
+
+        # 复制唯一约束/出站外键（来自 t1 和 t2）
+        include_t1 = list(rename_map_t1.values())
+        include_t2 = [v for (k, v) in rename_map_t2.items() if k != join_key]
+        # t1
+        stmts.extend(helper.build_add_constraints_for_table(newt, c1, include_t1, rename_map=rename_map_t1))
+        # t2
+        stmts.extend(helper.build_add_constraints_for_table(newt, c2, include_t2, rename_map=rename_map_t2))
+
+        # 复制 CHECK 约束（简单表达式替换）
+        import re as _re
+        def rewrite_check(check_clause: str, rmap: dict) -> str:
+            # 对 rmap 的 key 做词边界替换
+            s = check_clause
+            for k, v in sorted(rmap.items(), key=lambda x: -len(x[0])):
+                if v is None:
+                    continue
+                s = _re.sub(rf"(?<!\.)\b{_re.escape(k)}\b", v, s)
+            return s
+        for src, cons, rmap in ((t1, c1, rename_map_t1), (t2, c2, rename_map_t2)):
+            for ck in cons.get('checks', []) or []:
+                clause = rewrite_check(ck['clause'], rmap)
+                name = ck['name']
+                # 防止重名，附加源表前缀
+                name = f"{src}_{name}"
+                stmts.append(
+                    f"ALTER TABLE `{newt}` ADD CONSTRAINT `{name}` CHECK ({clause})"
+                )
+
+        # 复制默认值；自增：仅当该“新列”来自的源表中恰有一个带自增时才设置
+        def _lit(v: str):
+            if v is None or v == 'NULL':
+                return 'NULL'
+            try:
+                float(v)
+                return v
+            except Exception:
+                pass
+            v = str(v).replace("'", "''")
+            return f"'{v}'"
+
+        # 聚合每个“新列”的属性
+        from collections import defaultdict
+        defaults_map = defaultdict(list)  # new_col -> [defaults...]
+        ai_count = defaultdict(int)       # new_col -> number of sources with AI
+        ctype_map = {}                    # new_col -> column type (prefer first)
+        nullable_map = {}
+
+        def fold_props(colmeta, rmap):
+            for cm in colmeta or []:
+                oldc = cm['COLUMN_NAME']
+                newc = rmap.get(oldc)
+                if not newc:
+                    continue
+                if newc not in ctype_map:
+                    ctype_map[newc] = cm.get('COLUMN_TYPE') or 'varchar(255)'
+                    nullable_map[newc] = cm.get('IS_NULLABLE', 'YES')
+                defaults_map[newc].append(cm.get('COLUMN_DEFAULT'))
+                if 'auto_increment' in (cm.get('EXTRA') or '').lower():
+                    ai_count[newc] += 1
+
+        fold_props(c1.get('columns'), rename_map_t1)
+        fold_props(c2.get('columns'), rename_map_t2)
+
+        # 应用默认与自增（自增仅在计数==1 时设置）
+        for newc, lst in defaults_map.items():
+            # 默认值：取第一个非 None 值（垂直合并时每个新列来源唯一，不会冲突）
+            dv = next((x for x in lst if x is not None), None)
+            if dv is not None:
+                stmts.append(f"ALTER TABLE `{newt}` ALTER COLUMN `{newc}` SET DEFAULT {_lit(dv)}")
+        for newc, cnt in ai_count.items():
+            if cnt == 1:
+                ctype = ctype_map.get(newc, 'varchar(255)')
+                nullable = nullable_map.get(newc, 'YES')
+                stmts.append(
+                    f"ALTER TABLE `{newt}` MODIFY COLUMN `{newc}` {ctype} "
+                    f"{'NOT NULL' if nullable=='NO' else 'NULL'} AUTO_INCREMENT"
+                )
+
+        # 入站外键重定向到新表（仅当所有引用列都能映射到新表列名时）
+        def rebuild_inbound(cons, rmap):
+            for fk in cons.get('foreign_keys_inbound', []) or []:
+                child = fk['child_table']
+                ref_cols_old = [ref for (_, ref) in fk['cols']]
+                ref_cols_new = []
+                ok = True
+                for rc in ref_cols_old:
+                    nc = rmap.get(rc)
+                    if not nc:
+                        ok = False
+                        break
+                    ref_cols_new.append(nc)
+                if not ok:
+                    continue
+                # drop + add
+                stmts.append(f"ALTER TABLE `{child}` DROP FOREIGN KEY `{fk['constraint_name']}`")
+                child_cols = [c for (c, _) in fk['cols']]
+                clause = (
+                    f"ALTER TABLE `{child}` ADD CONSTRAINT `{fk['constraint_name']}` "
+                    f"FOREIGN KEY (" + ", ".join(f'`{c}`' for c in child_cols) + ") "
+                    f"REFERENCES `{newt}` (" + ", ".join(f'`{c}`' for c in ref_cols_new) + ")"
+                )
+                if fk.get('delete_rule'):
+                    clause += f" ON DELETE {fk['delete_rule']}"
+                if fk.get('update_rule'):
+                    clause += f" ON UPDATE {fk['update_rule']}"
+                stmts.append(clause)
+
+        rebuild_inbound(c1, rename_map_t1)
+        rebuild_inbound(c2, rename_map_t2)
+
         # 删除旧表
         for old_table in self.old_tables:
-            drop_sql = f"DROP TABLE {old_table}"
-            db.execute_statement(drop_sql)
+            stmts.append(f"DROP TABLE `{old_table}`")
+
+        stmts.append('SET FOREIGN_KEY_CHECKS=1')
+
+        # 执行
+        for s in stmts:
+            db.execute_statement(s)
         
 
     def create_physical_view(self, db):
@@ -137,12 +309,16 @@ class TableMerge(SMO):
         db.execute_statement(create_sql)
         print(f"已创建物化视图（表）: {self.new_table}")
 
-    def apply_to_data(self, data_dict):
-        pass
+    
 
-
-    def apply_to_sql(self):
-        pass
+    def apply_to_sql(self, sql: str) -> str:
+        """
+        将查询中 old_tables 的自然连接改写为对 new_table 的读取。
+        仅处理只读 SELECT，且遵循“FROM t1, t2 ... WHERE ...”的常见格式。
+        - 当 sign==1/2 使用与 apply_to_readonly_sql 内部相同的 from 替换策略。
+        """
+        return (self._replace_strategy1(sql, self.new_table) if self.sign == 1
+                else self._replace_strategy2(sql, self.new_table))
 
     def apply_to_readonly_sql(self, sql_path) :
         # 构建一个表 只保留old_table主属性列

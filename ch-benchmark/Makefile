@@ -20,11 +20,17 @@ LDFLAGS=-lodbc -pthread
 DEBUG_CXXFLAGS=-c -std=c++11 -O0 -Wall -g3 -ggdb -DDEBUG -fno-omit-frame-pointer
 DEBUG_LDFLAGS=-lodbc -pthread -g3 -ggdb
 
-SOURCES=src/AnalyticalStatistic.cpp src/TransactionalStatistic.cpp src/dialect/DialectStrategy.cpp src/Config.cpp src/Log.cpp src/DbcTools.cpp src/DataSource.cpp src/TupleGen.cpp src/Schema.cpp src/Queries.cpp src/Transactions.cpp chBenchmark.cpp
+SOURCES=src/AnalyticalStatistic.cpp src/TransactionalStatistic.cpp src/dialect/DialectStrategy.cpp src/Config.cpp src/Log.cpp src/DbcTools.cpp src/DataSource.cpp src/TupleGen.cpp src/Schema.cpp src/Queries.cpp src/RewriteDML.cpp src/Transactions.cpp chBenchmark.cpp
 OBJECTS=$(SOURCES:.cpp=.o)
 DEBUG_OBJECTS=$(SOURCES:.cpp=_debug.o)
 EXECUTABLE=chBenchmark
 DEBUG_EXECUTABLE=chBenchmark_debug
+TEST_EXECUTABLE=rewrite_test
+PLAN_TEST_EXECUTABLE=rewrite_plan
+TRI_TEST_EXECUTABLE=rewrite_tri
+MERGE_TEST_EXECUTABLE=rewrite_merge
+SPLIT_TEST_EXECUTABLE=rewrite_split
+DELAYED_VISUAL_EXECUTABLE=delayed_insert_test
 
 all: $(SOURCES) $(EXECUTABLE)
 	
@@ -73,6 +79,49 @@ clean:
 	rm -f src/dialect/*.o
 	rm -f src/dialect/*_debug.o
 	rm -f $(EXECUTABLE) $(DEBUG_EXECUTABLE)
+	rm -f $(TEST_EXECUTABLE)
+	rm -f $(PLAN_TEST_EXECUTABLE)
+	rm -f $(TRI_TEST_EXECUTABLE)
+	rm -f $(MERGE_TEST_EXECUTABLE)
+	rm -f $(SPLIT_TEST_EXECUTABLE)
 
 # 另外
 .PHONY: all debug run_debug gdb valgrind asan clean install help
+
+# Lightweight test to print rewrite plan without ODBC link
+test_rewrite:
+	$(CC) -std=c++11 -O2 -Wall -g -DREWRITE_NO_ODBC \
+	  src/RewriteDML.cpp src/RewriteDMLTest.cpp \
+	  -o $(TEST_EXECUTABLE)
+	@echo "Run ./$(TEST_EXECUTABLE) to see rewrite plans."
+
+plan_only:
+	$(CC) -std=c++11 -O2 -Wall -g -DREWRITE_NO_ODBC \
+	  src/RewriteDML.cpp src/RewritePlanTest.cpp \
+	  -o $(PLAN_TEST_EXECUTABLE)
+	@echo "Run ./$(PLAN_TEST_EXECUTABLE) to see generated plans."
+
+tri_only:
+	$(CC) -std=c++11 -O2 -Wall -g -DREWRITE_NO_ODBC \
+	  src/RewriteDML.cpp src/RewriteTriStateTest.cpp \
+	  -o $(TRI_TEST_EXECUTABLE)
+	@echo "Run ./$(TRI_TEST_EXECUTABLE) to see tri-state style results."
+
+merge_only:
+	$(CC) -std=c++11 -O2 -Wall -g \
+	  src/RewriteMergeBufferTest.cpp \
+	  -o $(MERGE_TEST_EXECUTABLE)
+	@echo "Run ./$(MERGE_TEST_EXECUTABLE) to see delayed merge + dedup demo."
+
+split_only:
+	$(CC) -std=c++11 -O2 -Wall -g -DREWRITE_NO_ODBC \
+	  src/RewriteDML.cpp src/RewriteSplitDedupTest.cpp \
+	  -o $(SPLIT_TEST_EXECUTABLE)
+	@echo "Run ./$(SPLIT_TEST_EXECUTABLE) to see split dedup demo."
+
+# Visual: delayed insert demos (no ODBC)
+delayed_only:
+	$(CC) -std=c++11 -O2 -Wall -g -DREWRITE_NO_ODBC \
+	  src/RewriteDML.cpp src/DelayedInsertVisualTest.cpp \
+	  -o $(DELAYED_VISUAL_EXECUTABLE)
+	@echo "Run ./$(DELAYED_VISUAL_EXECUTABLE) to see delayed insert scenarios."

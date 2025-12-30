@@ -23,6 +23,8 @@ limitations under the License.
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <map>
+#include <vector>
 
 using namespace std;
 
@@ -40,6 +42,20 @@ int Config::WARMUP_DURATION_IN_S=-1;
 int Config::TEST_DURATION_IN_S=-1;
 string Config::INITIAL_DB_CREATION_PATH;
 string Config::OUTPUT_PATH;
+
+// Schema tuning mappings (optional). When empty, rewriting is skipped.
+std::map<std::string, std::vector<std::string>> Config::OLD2NEW = {};
+std::map<std::string, std::vector<std::string>> Config::NEW_TABLE_COLUMNS = {};
+std::map<std::string, std::vector<std::string>> Config::OLD_TABLE_COLUMNS = {};
+std::map<std::string, std::vector<std::string>> Config::TABLE_KEYS = {};
+std::map<std::string, std::map<std::string, std::string>> Config::COLUMN_RENAMES = {};
+std::map<std::string, std::map<std::string, std::string>> Config::EXTRA_INSERT_COLS = {};
+std::map<std::string, std::map<std::string, std::string>> Config::EXTRA_UPDATE_SETS = {};
+std::map<std::string, std::vector<std::string>> Config::HORIZONTAL_SPLIT = {};
+std::map<std::string, std::string> Config::HORIZONTAL_MERGE = {};
+std::map<std::string, std::map<std::string, std::vector<std::string>>> Config::COLUMN_SPLIT_COLUMNS = {};
+std::map<std::string, std::map<std::string, std::string>> Config::COLUMN_SPLIT_DELIMS = {};
+std::map<std::string, std::vector<std::string>> Config::REMOVE_COLUMNS = {};
 
 
 int Config::is(const char* value, int argc, char* argv[]){
@@ -212,6 +228,7 @@ bool Config::initialize(int argc, char* argv[]){
 	return 1;
 }
 
+#ifndef REWRITE_NO_ODBC
 bool Config::warehouseDetection(SQLHSTMT& hStmt){
 
 	WAREHOUSE_COUNT = 0;
@@ -231,6 +248,7 @@ bool Config::warehouseDetection(SQLHSTMT& hStmt){
 
 	return 1;
 }
+#endif
 
 int Config::getType(){
 	return TYPE;
@@ -280,3 +298,97 @@ char Config::getCsvDelim(){
 	return CSV_DELIMITER;
 }
 
+// --- Schema tuning mapping accessors ---
+std::map<std::string, std::vector<std::string>> Config::getOld2New(){
+    return OLD2NEW;
+}
+
+std::map<std::string, std::vector<std::string>> Config::getnewTableColumns(){
+    return NEW_TABLE_COLUMNS;
+}
+
+std::map<std::string, std::vector<std::string>> Config::getOldTableColumns(){
+    return OLD_TABLE_COLUMNS;
+}
+
+std::map<std::string, std::vector<std::string>> Config::getTableKeys(){
+    return TABLE_KEYS;
+}
+
+void Config::setOld2New(const std::map<std::string, std::vector<std::string>>& m){
+    OLD2NEW = m;
+}
+
+void Config::setNewTableColumns(const std::map<std::string, std::vector<std::string>>& m){
+    NEW_TABLE_COLUMNS = m;
+}
+
+void Config::setOldTableColumns(const std::map<std::string, std::vector<std::string>>& m){
+    OLD_TABLE_COLUMNS = m;
+}
+
+void Config::setTableKeys(const std::map<std::string, std::vector<std::string>>& m){
+    TABLE_KEYS = m;
+}
+
+std::map<std::string, std::map<std::string, std::string>> Config::getColumnRenames(){
+    return COLUMN_RENAMES;
+}
+
+void Config::setColumnRenames(const std::map<std::string, std::map<std::string, std::string>>& m){
+    COLUMN_RENAMES = m;
+}
+
+std::map<std::string, std::map<std::string, std::string>> Config::getExtraInsertCols(){
+    return EXTRA_INSERT_COLS;
+}
+
+void Config::setExtraInsertCols(const std::map<std::string, std::map<std::string, std::string>>& m){
+    EXTRA_INSERT_COLS = m;
+}
+std::map<std::string, std::map<std::string, std::string>> Config::getExtraUpdateSets(){
+    return EXTRA_UPDATE_SETS;
+}
+void Config::setExtraUpdateSets(const std::map<std::string, std::map<std::string, std::string>>& m){
+    EXTRA_UPDATE_SETS = m;
+}
+
+std::map<std::string, std::vector<std::string>> Config::getHorizontalSplit(){
+    return HORIZONTAL_SPLIT;
+}
+
+void Config::setHorizontalSplit(const std::map<std::string, std::vector<std::string>>& m){
+    HORIZONTAL_SPLIT = m;
+}
+
+std::map<std::string, std::string> Config::getHorizontalMerge(){
+    return HORIZONTAL_MERGE;
+}
+
+void Config::setHorizontalMerge(const std::map<std::string, std::string>& m){
+    HORIZONTAL_MERGE = m;
+}
+
+std::map<std::string, std::map<std::string, std::vector<std::string>>> Config::getColumnSplitColumns(){
+    return COLUMN_SPLIT_COLUMNS;
+}
+
+void Config::setColumnSplitColumns(const std::map<std::string, std::map<std::string, std::vector<std::string>>>& m){
+    COLUMN_SPLIT_COLUMNS = m;
+}
+
+std::map<std::string, std::map<std::string, std::string>> Config::getColumnSplitDelims(){
+    return COLUMN_SPLIT_DELIMS;
+}
+
+void Config::setColumnSplitDelims(const std::map<std::string, std::map<std::string, std::string>>& m){
+    COLUMN_SPLIT_DELIMS = m;
+}
+
+std::map<std::string, std::vector<std::string>> Config::getRemoveColumns(){
+    return REMOVE_COLUMNS;
+}
+
+void Config::setRemoveColumns(const std::map<std::string, std::vector<std::string>>& m){
+    REMOVE_COLUMNS = m;
+}

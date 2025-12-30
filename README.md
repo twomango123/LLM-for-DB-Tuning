@@ -2,12 +2,13 @@
 在当前目录创建并激活虚拟环境  
 `python -m venv venv`
 `source venv/bin/activate`
+`pip install -r requirements.txt`  
 
 进入rewrite目录  
 `cd rewrite`
 可运行测试  
-`python TableMerge.py`
-部分已设置用例测试
+`python3 test_rewrite.py`
+
 
 # L0:evaluation-chbenchmark
 ### 创建镜像 运行并进入docker  

@@ -1,8 +1,15 @@
-from base import SMO
-from ColumnMove import ColumnMove
-from ColumnCopy import ColumnCopy
-from ColumnRename import ColumnRename  
-import pandas as pd
+try:
+    from .base import SMO, MySQLConstraintHelper
+    # ColumnMove/ColumnCopy 已移除
+    from .ColumnRename import ColumnRename
+except Exception:  # pragma: no cover
+    from base import SMO, MySQLConstraintHelper
+    # ColumnMove/ColumnCopy 已移除
+    from ColumnRename import ColumnRename
+try:
+    import pandas as pd  # 可选依赖，仅在 apply_to_data 使用
+except Exception:
+    pd = None
 import os
 
 class TableSplit(SMO):
@@ -12,8 +19,73 @@ class TableSplit(SMO):
         self.columnList = columnList  # 每个新表对应的列名列表
         self.primary_keys_dict = primary_keys_dict  # 每个新表的主键列名
 
-    def apply_to_schema(self, schema):
-        pass
+    def apply_to_schema(self, db=None):
+        """
+        基于“主键表 + 业务表”模式落地实体表：
+        - 创建 {old}_keys 主键表（去重）
+        - 针对每个新表创建包含主键+业务列的去重表
+        - 可选择不立即删除旧表（此处不删，避免破坏）。
+
+        如果传入 db 则执行并返回 bool，否则返回 SQL 脚本字符串。
+        """
+        old = self.old_table
+        pk_table = f"{old}_keys"
+        # 汇总所有主键列
+        all_pks = []
+        for _, pks in (self.primary_keys_dict or {}).items():
+            for p in pks:
+                if p not in all_pks:
+                    all_pks.append(p)
+
+        stmts = []
+        stmts.append('SET FOREIGN_KEY_CHECKS=0')
+        if all_pks:
+            pk_cols = ", ".join(all_pks)
+            stmts.append(
+                f"CREATE TABLE `{pk_table}` AS SELECT DISTINCT {pk_cols} FROM `{old}`;"
+            )
+            stmts.append(f"ALTER TABLE `{pk_table}` ADD PRIMARY KEY ({pk_cols});")
+
+        # 业务表
+        for i, new_table in enumerate(self.new_tables):
+            table_pks = self.primary_keys_dict.get(new_table, [])
+            biz_cols = self.columnList[i] if i < len(self.columnList) else []
+            # 去除和主键重复的列
+            cols = table_pks + [c for c in biz_cols if c not in table_pks]
+            cols_str = ", ".join(f"`{c}`" for c in cols)
+            stmts.append(
+                f"CREATE TABLE `{new_table}` AS SELECT DISTINCT {cols_str} FROM `{old}`;"
+            )
+            if table_pks:
+                pk_str = ", ".join(f"`{c}`" for c in table_pks)
+                stmts.append(f"ALTER TABLE `{new_table}` ADD PRIMARY KEY ({pk_str});")
+
+        # 使用约束助手迁移唯一约束、出站外键等（避免重复添加主键）
+        if db is not None:
+            helper = MySQLConstraintHelper(db)
+            constraints = helper.fetch_constraints(old)
+            for i, new_table in enumerate(self.new_tables):
+                table_pks = self.primary_keys_dict.get(new_table, [])
+                biz_cols = self.columnList[i] if i < len(self.columnList) else []
+                include_cols = list(dict.fromkeys(table_pks + biz_cols))
+                add_stmts = helper.build_add_constraints_for_table(new_table, constraints, include_cols, rename_map=None)
+                # 过滤掉可能重复的 ADD PRIMARY KEY 语句
+                filtered = [s for s in add_stmts if ' ADD PRIMARY KEY ' not in s]
+                stmts.extend(filtered)
+
+            # 入站外键：若引用列是旧表主键子集，则改指向主键表
+            inbound_fix = helper.build_update_inbound_fks(old, pk_table, all_pks)
+            stmts.extend(inbound_fix)
+
+        stmts.append('SET FOREIGN_KEY_CHECKS=1')
+
+        script = "\n".join(stmts)
+        if db is not None and hasattr(db, "execute_statement"):
+            ok = True
+            for s in stmts:
+                ok = ok and db.execute_statement(s)
+            return ok
+        return script
 
     # ----------------------------------------------------------
     # SQL 改写操作
@@ -160,6 +232,8 @@ class TableSplit(SMO):
     
 
     def apply_to_data(self, data_dict):
+        if pd is None:
+            raise ImportError("需要安装 pandas 才能执行数据级别的数据拆分 (apply_to_data)")
         result = data_dict.copy()
         
         if self.old_table not in result:
