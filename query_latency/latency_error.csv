@@ -1,0 +1,18 @@
+query_id,error
+query13,1054 (42S22): Unknown column 't1.campus' in 'where clause'
+query14,1054 (42S22): Unknown column 't1.campus' in 'where clause'
+query15,1054 (42S22): Unknown column 't1.campus' in 'where clause'
+query16,1054 (42S22): Unknown column 't1.campus' in 'where clause'
+query39,1054 (42S22): Unknown column 'T1.campus' in 'field list'
+query40,1054 (42S22): Unknown column 'T1.campus' in 'field list'
+query45,1054 (42S22): Unknown column 't1.campus' in 'where clause'
+query46,1054 (42S22): Unknown column 't1.campus' in 'where clause'
+query47,1054 (42S22): Unknown column 't1.campus' in 'where clause'
+query48,1054 (42S22): Unknown column 't1.campus' in 'where clause'
+query55,1054 (42S22): Unknown column 'T1.campus' in 'field list'
+query56,1054 (42S22): Unknown column 'T1.campus' in 'field list'
+query57,1054 (42S22): Unknown column 't2.year' in 'where clause'
+query58,1054 (42S22): Unknown column 't2.year' in 'where clause'
+query59,1054 (42S22): Unknown column 't2.year' in 'where clause'
+query60,1054 (42S22): Unknown column 't2.year' in 'where clause'
+schema,statement execution failed
