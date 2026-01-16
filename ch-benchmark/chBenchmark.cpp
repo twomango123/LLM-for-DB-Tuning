@@ -162,7 +162,7 @@ void* analyticalThread(void* args){
 				// ---------------------------------------------------------
 				// SOLO 执行 22 个 TPCH Query 并记录每个 Query 的延迟
 				// ---------------------------------------------------------
-				const std::string apOut = "/var/lib/mysql-files/latency_AP.txt"; // ⭐你可以改路径
+            const std::string apOut = Config::getOutputPath()+"/latency_AP.txt";
 				std::ofstream ofs(apOut, std::ios::app);
 
 				if (!ofs.is_open()) {
@@ -316,7 +316,7 @@ void* transactionalThread(void* args){
 					}
 
 					// 写入到指定文件
-					const std::string outPath = "/var/lib/mysql-files/latency_TP.txt"; // ⚠你可改成想要的路径
+                    const std::string outPath = Config::getOutputPath()+"/latency_TP.txt";
 					std::ofstream ofs(outPath, std::ios::app);
 
 					if (ofs.is_open()) {

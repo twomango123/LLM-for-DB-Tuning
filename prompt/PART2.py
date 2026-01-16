@@ -6,7 +6,11 @@ from pathlib import Path
 import re
 from typing import Dict, List, Optional
 
-_CREATE_TABLE_RE = re.compile(r"CREATE\s+TABLE\s+`?([\w_]+)`?\s*\(", re.IGNORECASE)
+# 兼容 IF NOT EXISTS 与 schema.table，仅捕获末尾表名
+_CREATE_TABLE_RE = re.compile(
+    r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:(?:`?[\w]+`?\.)?`?([\w_]+)`?)\s*\(",
+    re.IGNORECASE,
+)
 
 
 def _extract_columns(block: str) -> Dict[str, str]:
@@ -47,12 +51,17 @@ def parse_schema(schema_sql_path: str) -> Dict[str, Dict[str, str]]:
     return tables
 
 
-def _find_csv_for_table(base: Path, t: str) -> Optional[Path]:
+def _find_data_file_for_table(base: Path, t: str) -> Optional[Path]:
+    # 支持 CSV 与 TBL，大小写自适应
     candidates = [
         base / f"{t}.csv",
         base / f"{t}.CSV",
         base / f"{t.lower()}.csv",
         base / f"{t.upper()}.csv",
+        base / f"{t}.tbl",
+        base / f"{t}.TBL",
+        base / f"{t.lower()}.tbl",
+        base / f"{t.upper()}.tbl",
     ]
     for c in candidates:
         if c.exists():
@@ -60,21 +69,23 @@ def _find_csv_for_table(base: Path, t: str) -> Optional[Path]:
     return None
 
 
-def _count_csv_rows(csv_path: Path) -> int:
-    # Count lines and subtract header line if present (assumes header exists).
+def _count_rows(path: Path) -> int:
+    # CSV 默认首行为表头，TBL 默认无表头
     cnt = 0
-    with csv_path.open("r", encoding="utf-8", newline="") as f:
+    with path.open("r", encoding="utf-8", newline="") as f:
         for _ in f:
             cnt += 1
-    return max(cnt - 1, 0)
+    if path.suffix.lower() == ".csv" and cnt > 0:
+        cnt -= 1
+    return max(cnt, 0)
 
 
 def collect_row_counts(schema_dir: str, tables: Dict[str, Dict[str, str]]) -> Dict[str, int]:
     base = Path(schema_dir)
     counts: Dict[str, int] = {}
     for t in tables.keys():
-        csv_path = _find_csv_for_table(base, t)
-        counts[t] = _count_csv_rows(csv_path) if csv_path else 0
+        data_path = _find_data_file_for_table(base, t)
+        counts[t] = _count_rows(data_path) if data_path else 0
     return counts
 
 
@@ -92,6 +103,10 @@ def build_part2(schema_dir: str) -> str:
     if not schema_sql.is_file():
         raise SystemExit(f"schema.sql not found in: {schema_dir}")
     tables = parse_schema(str(schema_sql))
+    if not tables:
+        raise SystemExit(
+            f"解析失败：未在 {schema_sql} 中解析到任何表。请确认 schema.sql 内容与 SQL 定义格式。"
+        )
     counts = collect_row_counts(schema_dir, tables)
     block = render_row_counts(counts, list(tables.keys()))
     return (
@@ -101,8 +116,8 @@ def build_part2(schema_dir: str) -> str:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="PART2: 统计各表 CSV 行数并渲染提示片段")
-    ap.add_argument("schema_dir", help="目录，包含 schema.sql 和与表同名的 *.csv")
+    ap = argparse.ArgumentParser(description="PART2: 统计各表 CSV/TBL 行数并渲染提示片段")
+    ap.add_argument("schema_dir", help="目录，包含 schema.sql 和与表同名的 *.csv 或 *.tbl")
     ap.add_argument("--out", help="输出文件；省略则打印到标准输出")
     args = ap.parse_args()
 

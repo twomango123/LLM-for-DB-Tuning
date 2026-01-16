@@ -6,7 +6,11 @@ import re
 from typing import Dict, List
 
 
-_CREATE_TABLE_RE = re.compile(r"CREATE\s+TABLE\s+`?([\w_]+)`?\s*\(", re.IGNORECASE)
+# 支持 schema.table 以及可选 IF NOT EXISTS，捕获最后的表名部分
+_CREATE_TABLE_RE = re.compile(
+    r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:(?:`?[\w]+`?\.)?`?([\w_]+)`?)\s*\(",
+    re.IGNORECASE,
+)
 
 
 def _extract_columns(block: str) -> Dict[str, str]:
@@ -65,6 +69,10 @@ def render_schema(tables: Dict[str, Dict[str, str]]) -> str:
 
 def build_part1(schema_sql_path: str) -> str:
     tables = parse_schema(schema_sql_path)
+    if not tables:
+        raise SystemExit(
+            f"解析失败：未从 schema.sql 解析到任何表（路径：{schema_sql_path}）。请检查文件内容与 SQL 定义格式。"
+        )
     schema_block = render_schema(tables)
     background = (
         "背景：\n\n"

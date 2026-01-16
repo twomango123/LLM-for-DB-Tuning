@@ -177,27 +177,35 @@ class MySQLConstraintHelper:
         original_constraints: Dict[str, Any],
         include_columns: List[str],
         rename_map: Optional[Dict[str, str]] = None,
+        skip_primary_key: bool = False,
+        name_prefix: Optional[str] = None,
     ) -> List[str]:
         rm = rename_map or {}
         stmts: List[str] = []
 
         pk = original_constraints.get('primary_key')
-        if pk and all((c in include_columns) for c in pk['columns']):
+        if (not skip_primary_key) and pk and all((c in include_columns) for c in pk['columns']):
             cols = [rm.get(c, c) for c in pk['columns']]
             stmts.append(f"ALTER TABLE `{new_table}` ADD PRIMARY KEY ({self._cols_sql(cols)})")
 
         for u in original_constraints.get('uniques', []) or []:
             if all((c in include_columns) for c in u['columns']):
                 cols = [rm.get(c, c) for c in u['columns']]
+                cname = u['name']
+                if name_prefix:
+                    cname = f"{name_prefix}_{cname}"
                 stmts.append(
-                    f"ALTER TABLE `{new_table}` ADD CONSTRAINT `{u['name']}` UNIQUE ({self._cols_sql(cols)})"
+                    f"ALTER TABLE `{new_table}` ADD CONSTRAINT `{cname}` UNIQUE ({self._cols_sql(cols)})"
                 )
 
         for ck in original_constraints.get('checks', []) or []:
             if rm:  # 表达式重写较复杂，涉及列重命名时先跳过
                 continue
+            cname = ck['name']
+            if name_prefix:
+                cname = f"{name_prefix}_{cname}"
             stmts.append(
-                f"ALTER TABLE `{new_table}` ADD CONSTRAINT `{ck['name']}` CHECK ({ck['clause']})"
+                f"ALTER TABLE `{new_table}` ADD CONSTRAINT `{cname}` CHECK ({ck['clause']})"
             )
 
         for fk in original_constraints.get('foreign_keys_outbound', []) or []:
@@ -206,8 +214,11 @@ class MySQLConstraintHelper:
                 cols = [rm.get(c, c) for c in child_cols]
                 ref_table = fk['cols'][0][1]
                 ref_cols = [rc for (_, _, rc) in fk['cols']]
+                cname = fk['constraint_name']
+                if name_prefix:
+                    cname = f"{name_prefix}_{cname}"
                 clause = (
-                    f"ALTER TABLE `{new_table}` ADD CONSTRAINT `{fk['constraint_name']}` "
+                    f"ALTER TABLE `{new_table}` ADD CONSTRAINT `{cname}` "
                     f"FOREIGN KEY ({self._cols_sql(cols)}) REFERENCES `{ref_table}` ({self._cols_sql(ref_cols)})"
                 )
                 if fk['delete_rule']:
@@ -258,4 +269,3 @@ class SMO(ABC):
     def apply_to_sql(self, sql_ast):
         """用于根据 SMO 改写 SQL"""
         pass
-

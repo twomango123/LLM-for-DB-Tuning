@@ -64,7 +64,8 @@ WORKDIR /LLM-for-DB-Tuning
 # 将工作目录复制到容器中
 COPY ./LLM-for-DB-Tuning /LLM-for-DB-Tuning
 
-
+RUN pip install sqlglot
+RUN pip install mysql-connector-python
 RUN service mysql start 
 # 暴露端口
 EXPOSE 3306

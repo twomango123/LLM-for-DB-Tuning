@@ -24,16 +24,71 @@ limitations under the License.
 #include <fstream>
 #include <cstring>
 #include <sstream>
+#include <unistd.h>
+#include <limits.h>
 
 class MySqlDialect : public Dialect {
 
   private:
+    // Resolve binary directory (Linux) for robust relative paths
+    static std::string getExeDir() {
+        char buf[PATH_MAX] = {0};
+        ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+        if (len > 0) {
+            buf[len] = '\0';
+            std::string p(buf);
+            size_t pos = p.find_last_of('/');
+            if (pos != std::string::npos) return p.substr(0, pos);
+            return p;
+        }
+        return std::string(".");
+    }
+
+    // Read an entire file into a std::string with fallbacks
+    static std::string readFileToString(const std::string& path) {
+        auto read_once = [](const std::string& p) -> std::string {
+            std::ifstream f(p);
+            if (!f.is_open()) return std::string();
+            std::stringstream ss; ss << f.rdbuf();
+            return ss.str();
+        };
+
+        // 1) As-is
+        std::string content = read_once(path);
+        if (!content.empty()) return content;
+
+        // 2) If path is absolute like "/LLM-for-DB-Tuning/...", try prefixing the binary dir
+        if (!path.empty() && path[0] == '/') {
+            std::string exeDir = getExeDir();
+            // join exeDir + "/.." + path (without leading '/'), to land in workspace
+            std::string without_leading = path.substr(1);
+            std::string candidate = exeDir + "/.."; // up to LLM-for-DB-Tuning
+            candidate += "/" + without_leading;
+            content = read_once(candidate);
+            if (!content.empty()) return content;
+        }
+
+        // 3) If the file name is just the basename under query_sql/, try exeDir/../DataBase/...
+        size_t last_slash = path.find_last_of('/');
+        std::string baseName = (last_slash == std::string::npos) ? path : path.substr(last_slash + 1);
+        {
+            std::string exeDir = getExeDir();
+            std::string candidate = exeDir + "/../DataBase/cleaned_sql/query_sql/" + baseName;
+            content = read_once(candidate);
+            if (!content.empty()) return content;
+        }
+
+        // As a last resort, return empty
+        return std::string();
+    }
     std::vector<const char*> dropExistingSchemaStatements = {
         "DROP DATABASE IF EXISTS tpcch"};
 
     
 
     std::vector<const char*> createSchemaStatements = {
+        "DROP DATABASE IF EXISTS tpcch",
+        
         "CREATE DATABASE tpcch",
 
         "CREATE TABLE tpcch.warehouse (\n"
@@ -229,7 +284,7 @@ class MySqlDialect : public Dialect {
         "/customer.tbl' INTO TABLE tpcch.customer FIELDS TERMINATED BY '|'",
         "/history.tbl' INTO TABLE tpcch.history FIELDS TERMINATED BY '|'",
         "/neworder.tbl' INTO TABLE tpcch.neworder FIELDS TERMINATED BY '|'",
-        "/order.tbl' INTO TABLE tpcch.orders FIELDS TERMINATED BY '|' "
+        "/orders.tbl' INTO TABLE tpcch.orders FIELDS TERMINATED BY '|' "
         "  (o_id, o_d_id, o_w_id, o_c_id, o_entry_d, @x, o_ol_cnt, o_all_local) "
         "  SET o_carrier_id = IF(@x = '', NULL, @x)",
         "/orderline.tbl' INTO TABLE tpcch.orderline FIELDS TERMINATED BY '|'"
@@ -269,6 +324,10 @@ class MySqlDialect : public Dialect {
 
 
   public:
+    // Auto-load SQL texts on construction
+    MySqlDialect() {
+        init();
+    }
     std::string getSelectCountWarehouseString;
     std::string getSelectCountDistrictString;
     std::string getSelectCountCustomerString;
@@ -313,58 +372,63 @@ class MySqlDialect : public Dialect {
     std::string getSlStockSelectString;
 
     bool init(){
-        
-        std::string getSelectCountWarehouseString;
-        std::string getSelectCountDistrictString;
-        std::string getSelectCountCustomerString;
-        std::string getSelectCountOrderString;
-        std::string getSelectCountOrderlineString;
-        std::string getSelectCountNeworderString;
-        std::string getSelectCountHistoryString;
-        std::string getSelectCountStockString;
-        std::string getSelectCountItemString;
-        std::string getSelectCountSupplierString;
-        std::string getSelectCountNationString;
-        std::string getSelectCountRegionString;
-        std::string getNoWarehouseSelectString;
-        std::string getNoDistrictSelectString;
-        std::string getNoCustomerSelectString;
-        std::string getNoItemSelectString;
-        std::string getNoStockSelect01String;
-        std::string getNoStockSelect02String;
-        std::string getNoStockSelect03String;
-        std::string getNoStockSelect04String;
-        std::string getNoStockSelect05String;
-        std::string getNoStockSelect06String;
-        std::string getNoStockSelect07String;
-        std::string getNoStockSelect08String;
-        std::string getNoStockSelect09String;
-        std::string getNoStockSelect10String;
-        std::string getPmWarehouseSelectString;
-        std::string getPmDistrictSelectString;
-        std::string getPmCustomerSelect1String;
-        std::string getPmCustomerSelect2String;
-        std::string getPmCustomerSelect3String;
-        std::string getPmCustomerSelect4String;
-        std::string getOsCustomerSelect1String;
-        std::string getOsCustomerSelect2String;
-        std::string getOsCustomerSelect3String;
-        std::string getOsOrderSelectString;
-        std::string getOsOrderlineSelectString;
-        std::string getDlNewOrderSelectString;
-        std::string getDlOrderSelectString;
-        std::string getDlOrderlineSelectString;
-        std::string getSlDistrictSelectString;
-        std::string getSlStockSelectString;
+        const std::string base = "/LLM-for-DB-Tuning/DataBase/cleaned_sql/query_sql/";
 
+        // Database check
+        getSelectCountWarehouseString = readFileToString(base + "getSelectCountWarehouse.sql");
+        getSelectCountDistrictString  = readFileToString(base + "getSelectCountDistrict.sql");
+        getSelectCountCustomerString  = readFileToString(base + "getSelectCountCustomer.sql");
+        getSelectCountOrderString     = readFileToString(base + "getSelectCountOrder.sql");
+        getSelectCountOrderlineString = readFileToString(base + "getSelectCountOrderline.sql");
+        getSelectCountNeworderString  = readFileToString(base + "getSelectCountNeworder.sql");
+        getSelectCountHistoryString   = readFileToString(base + "getSelectCountHistory.sql");
+        getSelectCountStockString     = readFileToString(base + "getSelectCountStock.sql");
+        getSelectCountItemString      = readFileToString(base + "getSelectCountItem.sql");
+        getSelectCountSupplierString  = readFileToString(base + "getSelectCountSupplier.sql");
+        getSelectCountNationString    = readFileToString(base + "getSelectCountNation.sql");
+        getSelectCountRegionString    = readFileToString(base + "getSelectCountRegion.sql");
 
-        getNoWarehouseSelectString = loadSQLFile("/LLM-for-DB-Tuning/DataBase/cleaned_sql/query_sql/getNoWarehouseSelect.sql");
-        
-        getNoWarehouseSelectString = loadString.c_str();
+        // NewOrder
+        getNoWarehouseSelectString = readFileToString(base + "getNoWarehouseSelect.sql");
+        getNoDistrictSelectString  = readFileToString(base + "getNoDistrictSelect.sql");
+        getNoCustomerSelectString  = readFileToString(base + "getNoCustomerSelect.sql");
+        getNoItemSelectString      = readFileToString(base + "getNoItemSelect.sql");
+        getNoStockSelect01String   = readFileToString(base + "getNoStockSelect01.sql");
+        getNoStockSelect02String   = readFileToString(base + "getNoStockSelect02.sql");
+        getNoStockSelect03String   = readFileToString(base + "getNoStockSelect03.sql");
+        getNoStockSelect04String   = readFileToString(base + "getNoStockSelect04.sql");
+        getNoStockSelect05String   = readFileToString(base + "getNoStockSelect05.sql");
+        getNoStockSelect06String   = readFileToString(base + "getNoStockSelect06.sql");
+        getNoStockSelect07String   = readFileToString(base + "getNoStockSelect07.sql");
+        getNoStockSelect08String   = readFileToString(base + "getNoStockSelect08.sql");
+        getNoStockSelect09String   = readFileToString(base + "getNoStockSelect09.sql");
+        getNoStockSelect10String   = readFileToString(base + "getNoStockSelect10.sql");
 
+        // Payment
+        getPmWarehouseSelectString = readFileToString(base + "getPmWarehouseSelect.sql");
+        getPmDistrictSelectString  = readFileToString(base + "getPmDistrictSelect.sql");
+        getPmCustomerSelect1String = readFileToString(base + "getPmCustomerSelect1.sql");
+        getPmCustomerSelect2String = readFileToString(base + "getPmCustomerSelect2.sql");
+        getPmCustomerSelect3String = readFileToString(base + "getPmCustomerSelect3.sql");
+        getPmCustomerSelect4String = readFileToString(base + "getPmCustomerSelect4.sql");
 
-    loadString = loadSQLFile("/LLM-for-DB-Tuning/DataBase/cleaned_sql/query_sql/getNoDistrictSelect.sql");
-    const char * getNoDistrictSelectString = loadSQLFile("/LLM-for-DB-Tuning/DataBase/cleaned_sql/query_sql/getNoDistrictSelect.sql");
+        // OrderStatus
+        getOsCustomerSelect1String = readFileToString(base + "getOsCustomerSelect1.sql");
+        getOsCustomerSelect2String = readFileToString(base + "getOsCustomerSelect2.sql");
+        getOsCustomerSelect3String = readFileToString(base + "getOsCustomerSelect3.sql");
+        getOsOrderSelectString     = readFileToString(base + "getOsOrderSelect.sql");
+        getOsOrderlineSelectString = readFileToString(base + "getOsOrderlineSelect.sql");
+
+        // Delivery
+        getDlNewOrderSelectString  = readFileToString(base + "getDlNewOrderSelect.sql");
+        getDlOrderSelectString     = readFileToString(base + "getDlOrderSelect.sql");
+        getDlOrderlineSelectString = readFileToString(base + "getDlOrderlineSelect.sql");
+
+        // StockLevel
+        getSlDistrictSelectString  = readFileToString(base + "getSlDistrictSelect.sql");
+        getSlStockSelectString     = readFileToString(base + "getSlStockSelect.sql");
+
+        return true;
     }
     // Strings to create initial database
     virtual std::vector<const char*>& getDropExistingSchemaStatements() {
@@ -389,19 +453,10 @@ class MySqlDialect : public Dialect {
 
     std::vector<std::string> loadSQLFiles(const std::vector<std::string>& paths) {
         std::vector<std::string> queries;
-        
+        queries.reserve(paths.size());
         for (const auto& path : paths) {
-            std::ifstream file(path);
-            if (!file) {
-                queries.emplace_back("");
-                continue;
-            }
-            
-            std::string content((std::istreambuf_iterator<char>(file)),
-                            std::istreambuf_iterator<char>());
-            queries.push_back(content);
+            queries.push_back(readFileToString(path));
         }
-        
         return queries;
     }
     const char* loadSQLFile(const std::string& path) {
@@ -479,7 +534,7 @@ class MySqlDialect : public Dialect {
     }
 
     virtual const char* getSelectCountStock() {
-        return     std::string getSelectCountStockString.c_str();
+        return getSelectCountStockString.c_str();
     }
 
     virtual const char* getSelectCountItem() {

@@ -1,686 +1,399 @@
 try:
     from .base import SMO, MySQLConstraintHelper
-    # ColumnMove/ColumnCopy 已移除
-    from .ColumnRename import ColumnRename
-except Exception:  # pragma: no cover
+except Exception:  
     from base import SMO, MySQLConstraintHelper
-    # ColumnMove/ColumnCopy 已移除
-    from ColumnRename import ColumnRename
+
 try:
-    import pandas as pd  # 可选依赖，仅在 apply_to_data 使用
+    import pandas as pd
 except Exception:
     pd = None
 import os
+import re
+import sqlglot
+from sqlglot import expressions as exp
+try:
+    from log_info.log_info import get_logger
+except Exception:
+    import sys as _sys, os as _os
+    _sys.path.append(_os.path.dirname(_os.path.dirname(__file__)))
+    from log_info.log_info import get_logger
+
+logger = get_logger()
+
 
 class TableSplit(SMO):
-    def __init__(self, old_table, new_tables, columnList, primary_keys_dict):
+    def __init__(self, old_table, new_tables, columnList, primary_keys_dict, new_view, is_retained=False):
         self.old_table = old_table
         self.new_tables = new_tables  # 新表名列表
         self.columnList = columnList  # 每个新表对应的列名列表
         self.primary_keys_dict = primary_keys_dict  # 每个新表的主键列名
+        self.new_view = new_view
+        self.is_retained = is_retained #是否保留原表
 
-    def apply_to_schema(self, db=None):
-        """
-        基于“主键表 + 业务表”模式落地实体表：
-        - 创建 {old}_keys 主键表（去重）
-        - 针对每个新表创建包含主键+业务列的去重表
-        - 可选择不立即删除旧表（此处不删，避免破坏）。
+    def apply_to_schema(self, db):
+        logger.info("开始表拆分（不保留原表）: %s -> %s", self.old_table, ", ".join(self.new_tables))
 
-        如果传入 db 则执行并返回 bool，否则返回 SQL 脚本字符串。
-        """
-        old = self.old_table
-        pk_table = f"{old}_keys"
-        # 汇总所有主键列
-        all_pks = []
-        for _, pks in (self.primary_keys_dict or {}).items():
-            for p in pks:
-                if p not in all_pks:
-                    all_pks.append(p)
+        old_table_quoted = f"`{self.old_table}`"
+        helper = MySQLConstraintHelper(db)
+        cons = helper.fetch_constraints(self.old_table)
+        orig_pk = (cons.get('primary_key') or {}).get('columns') or []
+        if not orig_pk:
+            logger.warning("原表未检测到主键，建议设置主键后再执行拆分")
 
-        stmts = []
-        stmts.append('SET FOREIGN_KEY_CHECKS=0')
-        if all_pks:
-            pk_cols = ", ".join(all_pks)
-            stmts.append(
-                f"CREATE TABLE `{pk_table}` AS SELECT DISTINCT {pk_cols} FROM `{old}`;"
-            )
-            stmts.append(f"ALTER TABLE `{pk_table}` ADD PRIMARY KEY ({pk_cols});")
+        # 规则检查：外键不得被拆在不同子表
+        # 这里的策略：若某个外键引用列集合无法完全落在某个子表的列集合中，直接报错
+        # 同时，后续仅在“第一个满足条件的子表”上重建该外键，避免一条外键被复制到多个子表
 
-        # 业务表
+        # 构造每个子表应包含的列集合（原表主键 + 业务列）
+        child_include_cols = {}
+        for t in self.new_tables:
+            bcols = list(dict.fromkeys(self.columnList.get(t, [])))
+            # 去重并前置原表主键
+            include = list(dict.fromkeys(orig_pk + [c for c in bcols if c not in orig_pk]))
+            child_include_cols[t] = include
+
+        # 1) 创建每个业务表
+        sql_statements = []
+        logger.debug("创建业务表与列集合中...")
         for i, new_table in enumerate(self.new_tables):
-            table_pks = self.primary_keys_dict.get(new_table, [])
-            biz_cols = self.columnList[i] if i < len(self.columnList) else []
-            # 去除和主键重复的列
-            cols = table_pks + [c for c in biz_cols if c not in table_pks]
-            cols_str = ", ".join(f"`{c}`" for c in cols)
-            stmts.append(
-                f"CREATE TABLE `{new_table}` AS SELECT DISTINCT {cols_str} FROM `{old}`;"
+            include = child_include_cols[new_table]
+            logger.debug("子表%d: %s 列: %s", i + 1, new_table, include)
+            cols_str = ", ".join(include)
+            sql = f"""CREATE TABLE `{new_table}` AS
+                SELECT DISTINCT {cols_str}
+                FROM {old_table_quoted};"""
+            sql_statements.append(sql)
+
+        # 2) 为每个子表重建主键（使用原表主键）+ 其它约束（唯一、检查、出站外键不在这里处理）
+        for new_table in self.new_tables:
+            if orig_pk:
+                pk_str = ", ".join(orig_pk)
+                sql_statements.append(f"ALTER TABLE `{new_table}` ADD PRIMARY KEY ({pk_str});")
+
+        # 3) 唯一/检查约束重建（只要其列全集在子表内）
+        for new_table in self.new_tables:
+            include = child_include_cols[new_table]
+            add_stmts = helper.build_add_constraints_for_table(new_table, cons, include, rename_map=None)
+            # 过滤：已手动添加了主键；外键稍后单独处理；保留 UNIQUE/CHECK
+            for s in add_stmts:
+                su = s.upper()
+                if ' ADD PRIMARY KEY ' in su:
+                    continue
+                if ' FOREIGN KEY ' in su:
+                    continue
+                sql_statements.append(s)
+
+        # 4) 外键约束定位并在单一子表重建
+        fk_assigned = set()
+        for fk in cons.get('foreign_keys_outbound', []) or []:
+            child_cols = [c for (c, _, _) in fk['cols']]
+            # 找能完全包含该外键列集合的子表
+            candidates = [t for t in self.new_tables if set(child_cols).issubset(set(child_include_cols[t]))]
+            if not candidates:
+                raise ValueError(f"外键约束 {fk['constraint_name']} 的列 {child_cols} 无法完整落在某个子表中，违反外键不得垂直拆分规则")
+            chosen = candidates[0]
+            fk_assigned.add((fk['constraint_name'], chosen))
+            ref_table = fk['cols'][0][1]
+            ref_cols = [rc for (_, _, rc) in fk['cols']]
+            cols_sql = ", ".join(f"`{c}`" for c in child_cols)
+            ref_sql = ", ".join(f"`{c}`" for c in ref_cols)
+            cname = f"{fk['constraint_name']}_{chosen}"
+            clause = (
+                f"ALTER TABLE `{chosen}` ADD CONSTRAINT `{cname}` FOREIGN KEY ({cols_sql}) "
+                f"REFERENCES `{ref_table}` ({ref_sql})"
             )
-            if table_pks:
-                pk_str = ", ".join(f"`{c}`" for c in table_pks)
-                stmts.append(f"ALTER TABLE `{new_table}` ADD PRIMARY KEY ({pk_str});")
+            if fk.get('delete_rule'):
+                clause += f" ON DELETE {fk['delete_rule']}"
+            if fk.get('update_rule'):
+                clause += f" ON UPDATE {fk['update_rule']}"
+            sql_statements.append(clause)
 
-        # 使用约束助手迁移唯一约束、出站外键等（避免重复添加主键）
-        if db is not None:
-            helper = MySQLConstraintHelper(db)
-            constraints = helper.fetch_constraints(old)
-            for i, new_table in enumerate(self.new_tables):
-                table_pks = self.primary_keys_dict.get(new_table, [])
-                biz_cols = self.columnList[i] if i < len(self.columnList) else []
-                include_cols = list(dict.fromkeys(table_pks + biz_cols))
-                add_stmts = helper.build_add_constraints_for_table(new_table, constraints, include_cols, rename_map=None)
-                # 过滤掉可能重复的 ADD PRIMARY KEY 语句
-                filtered = [s for s in add_stmts if ' ADD PRIMARY KEY ' not in s]
-                stmts.extend(filtered)
+        # 5) 列属性：默认值 / 自增
+        colmeta = cons.get('columns') or []
+        def _lit(v: str):
+            if v is None or v == 'NULL':
+                return 'NULL'
+            try:
+                float(v)
+                return str(v)
+            except Exception:
+                pass
+            return "'" + str(v).replace("'", "''") + "'"
+        for new_table in self.new_tables:
+            include = set(child_include_cols[new_table])
+            for cm in colmeta:
+                col = cm['COLUMN_NAME']
+                if col not in include:
+                    continue
+                default = cm.get('COLUMN_DEFAULT')
+                extra = (cm.get('EXTRA') or '').lower()
+                ctype = cm.get('COLUMN_TYPE') or 'varchar(255)'
+                nullable = cm.get('IS_NULLABLE', 'YES')
+                if default is not None:
+                    sql_statements.append(
+                        f"ALTER TABLE `{new_table}` ALTER COLUMN `{col}` SET DEFAULT {_lit(default)}"
+                    )
+                if 'auto_increment' in extra:
+                    sql_statements.append(
+                        f"ALTER TABLE `{new_table}` MODIFY COLUMN `{col}` {ctype} "
+                        f"{'NOT NULL' if nullable=='NO' else 'NULL'} AUTO_INCREMENT"
+                    )
 
-            # 入站外键：若引用列是旧表主键子集，则改指向主键表
-            inbound_fix = helper.build_update_inbound_fks(old, pk_table, all_pks)
-            stmts.extend(inbound_fix)
+        logger.info("将执行 %d 条SQL", len(sql_statements))
+        results = []
+        for i, sql in enumerate(sql_statements, 1):
+            logger.debug("[%d/%d] SQL: %s", i, len(sql_statements), sql)
+            success = db.execute_statement(sql)
+            if success:
+                logger.debug("执行成功")
+            else:
+                logger.error("执行失败，已中止")
+                return False, results
+            results.append({'index': i,'sql': sql,'success': success})
+        logger.info("表拆分完成: %s -> %s", self.old_table, ", ".join(self.new_tables))
+        return True, results
+                
+    def apply_to_data(self):
+        pass
 
-        stmts.append('SET FOREIGN_KEY_CHECKS=1')
+    def apply_to_sql(self, sql: str) -> str:
+        """
+        只读 SQL 改写：
+        - is_retained=True：保持原 SQL 不变；
+        - is_retained=False：将 FROM 中的 old_table 替换为拆分后构建的视图 self.new_view，保留原有别名。
+        """
+        if getattr(self, 'is_retained', False):
+            return sql
 
-        script = "\n".join(stmts)
-        if db is not None and hasattr(db, "execute_statement"):
-            ok = True
-            for s in stmts:
-                ok = ok and db.execute_statement(s)
-            return ok
-        return script
-
+        view_name = self.new_view or f"view_{self.old_table}"
+        try:
+            parsed = sqlglot.parse_one(sql, read='mysql')
+            changed = False
+            for table in list(parsed.find_all(exp.Table)):
+                full_name = table.name
+                short_name = full_name.split('.')[-1] if full_name else ''
+                if short_name == self.old_table:
+                    alias = table.args.get('alias')
+                    new_tbl = exp.Table(this=exp.Identifier(this=view_name, quoted=False))
+                    new_node = exp.Alias(this=new_tbl, alias=alias) if alias is not None else new_tbl
+                    table.replace(new_node)
+                    changed = True
+            return parsed.sql(dialect='mysql') if changed else sql
+        except Exception:
+            # 兜底：仅替换无 schema 前缀的表名，以及常见 schema.old_table 形式
+            # 优先替换 schema.old_table → schema.view_name
+            # 若不存在 schema 前缀，则替换裸表名
+            sql2 = re.sub(rf"\b([a-zA-Z0-9_]+)\.{re.escape(self.old_table)}\b",
+                          rf"\1.{view_name}", sql)
+            if sql2 == sql:
+                sql2 = re.sub(rf"\b{re.escape(self.old_table)}\b", view_name, sql)
+            return sql2
     # ----------------------------------------------------------
     # SQL 改写操作
     # # ----------------------------------------------------------
     # 这个逻辑还不够完善，第一个需要考虑*代表查询表中所有列，第二点一旦遇到某个查询改写后包含多个原表拆分来的新表，需要增加新表连接操作才能确保查询到的数据和之前查询原表得到的一致，注意。
-    def apply_to_sql(self, sql):
+    def apply_to_readonly_sql(self, db, sql_path) :
+        # 构建一个表 只保留old_table主属性列
+        # 构建sql语句创建表
+        # 将数据导入数据库表中
+        # primary_key_table_name = f"{self.old_table}_keys"
         
-        """
-        重写SQL字符串 - 使用主键表进行连接
-        """
-        import re
-        
-        # 构建列到表的映射
-        column_to_table = {}
-        for i, table in enumerate(self.new_tables):
-            # 该表的主键列
-            pk_columns = self.primary_keys_dict.get(table, [])
-            # 该表的业务列
-            business_columns = self.columnList[i] if i < len(self.columnList) else []
-            
-            # 记录每个列对应的表
-            for col in pk_columns + business_columns:
-                if col not in column_to_table:
-                    column_to_table[col] = []
-                if table not in column_to_table[col]:
-                    column_to_table[col].append(table)
-        
-        print(f"  [DEBUG] 列映射: {column_to_table}")
-        
-        # 主键表名
-        pk_table_name = f"{self.old_table}_keys"
-        
-        # 简单的SQL重写逻辑
-        sql_upper = sql.upper()
-        
-        # 1. 处理SELECT * 的情况
-        if "SELECT *" in sql_upper:
-            # 展开SELECT * 为所有列（通过主键表JOIN所有业务表）
-            all_columns = []
-            for table in self.new_tables:
-                pk_columns = self.primary_keys_dict.get(table, [])
-                business_columns = self.columnList[self.new_tables.index(table)] if self.new_tables.index(table) < len(self.columnList) else []
-                for col in pk_columns + business_columns:
-                    # 避免重复列，使用业务表的列
-                    if col not in all_columns:
-                        all_columns.append(f"{table}.{col}")
-            
-            sql = sql.replace("SELECT *", f"SELECT {', '.join(all_columns)}")
-        
-        # 2. 分析查询中实际使用的列
-        used_columns = set()
-        
-        # 从SELECT子句中提取列
-        select_match = re.search(r'SELECT\s+(.*?)\s+FROM', sql_upper, re.IGNORECASE | re.DOTALL)
-        if select_match:
-            select_clause = select_match.group(1)
-            if select_clause != "*":
-                # 解析列名（简化处理）
-                columns = [col.strip().split(' ')[0].split('.')[-1] for col in select_clause.split(',')]
-                used_columns.update(columns)
-        
-        # 从WHERE子句中提取列
-        where_match = re.search(r'WHERE\s+(.*?)(?:\s+ORDER BY|\s+GROUP BY|$)', sql_upper, re.IGNORECASE | re.DOTALL)
-        if where_match:
-            where_clause = where_match.group(1)
-            # 简单的列名提取
-            words = re.findall(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', where_clause)
-            for word in words:
-                if word.upper() not in ['AND', 'OR', 'NOT', 'IN', 'LIKE', 'BETWEEN', 'IS', 'NULL', 'TRUE', 'FALSE']:
-                    if word in column_to_table:
-                        used_columns.add(word)
-        
-        print(f"  [DEBUG] 使用的列: {used_columns}")
-        
-        # 3. 确定需要哪些业务表
-        needed_business_tables = set()
-        for col in used_columns:
-            if col in column_to_table:
-                needed_business_tables.update(column_to_table[col])
-        
-        # 如果没有明确使用的列，使用所有业务表
-        if not needed_business_tables:
-            needed_business_tables = set(self.new_tables)
-        
-        needed_business_tables = list(needed_business_tables)
-        print(f"  [DEBUG] 需要的业务表: {needed_business_tables}")
-        
-        # 4. 构建SQL重写逻辑
-        if len(needed_business_tables) == 0:
-            # 没有业务表需要，直接使用主键表
-            new_sql = re.sub(r'\b' + re.escape(self.old_table) + r'\b', pk_table_name, sql, flags=re.IGNORECASE)
-        
-        elif len(needed_business_tables) == 1:
-            # 只有一个业务表，直接使用该表
-            business_table = needed_business_tables[0]
-            new_sql = re.sub(r'\b' + re.escape(self.old_table) + r'\b', business_table, sql, flags=re.IGNORECASE)
-        
-        else:
-            # 多个业务表，使用主键表进行JOIN
-            base_table = pk_table_name
-            
-            # 替换FROM子句
-            from_pattern = re.compile(r'FROM\s+' + re.escape(self.old_table) + r'\b', re.IGNORECASE)
-            new_from = f"FROM {base_table}"
-            
-            # 为每个需要的业务表添加JOIN
-            join_clauses = []
-            for business_table in needed_business_tables:
-                # 获取该业务表的主键列
-                table_pk = self.primary_keys_dict.get(business_table, [])
-                if table_pk:
-                    # 构建JOIN条件：主键表.pk = 业务表.pk
-                    join_conditions = [f"{base_table}.{pk} = {business_table}.{pk}" for pk in table_pk]
-                    join_clause = f"JOIN {business_table} ON {' AND '.join(join_conditions)}"
-                    join_clauses.append(join_clause)
-            
-            if join_clauses:
-                new_from += " " + " ".join(join_clauses)
-            
-            new_sql = from_pattern.sub(new_from, sql)
-        
-        # 5. 为可能产生歧义的列添加表名前缀
-        for col, tables in column_to_table.items():
-            if len(tables) > 1 and col in new_sql:
-                # 这个列在多个表中存在，需要确定使用哪个表
-                # 优先选择在needed_business_tables中且包含该列的表
-                available_tables = [t for t in tables if t in needed_business_tables]
-                if available_tables:
-                    table_for_col = available_tables[0]
-                    # 使用更精确的替换
-                    col_pattern = re.compile(r'(?<!\w\.)\b' + re.escape(col) + r'\b(?!\s*\.)')
-                    new_sql = col_pattern.sub(f"{table_for_col}.{col}", new_sql)
-        
-        # 6. 处理表别名
-        # 如果原SQL使用了表别名，需要相应调整
-        alias_pattern = re.compile(r'\b' + re.escape(self.old_table) + r'\s+(\w+)', re.IGNORECASE)
-        alias_match = alias_pattern.search(sql)
-        if alias_match:
-            old_alias = alias_match.group(1)
-            # 在改写后的SQL中替换别名引用
-            new_sql = re.sub(r'\b' + re.escape(old_alias) + r'\.', '', new_sql)
-        
-        return new_sql
-    
+        # 创建拆分后表的视图
+        # view_name= self.create_logical_view(db, primary_key_table_name)
 
-    def apply_to_data(self, data_dict):
-        if pd is None:
-            raise ImportError("需要安装 pandas 才能执行数据级别的数据拆分 (apply_to_data)")
-        result = data_dict.copy()
+        # 逐个文件处理sql语句
+        # 解析 替换from后表名为原表名self.old_table的表名为view_name
+        output_sqls = self.process_sql_files(sql_path, self.new_view)
         
-        if self.old_table not in result:
-            raise ValueError(f"[TableSplit] 原表 {self.old_table} 不存在")
-        
-        old_df = result[self.old_table]
-        original_columns = set(old_df.columns)
-        
-        # 第一步：识别所有唯一的主键列（去重）
-        all_primary_keys = set()
-        for pk_columns in self.primary_keys_dict.values():
-            all_primary_keys.update(pk_columns)
-        
-        # 验证所有主键列都存在
-        for pk_col in all_primary_keys:
-            if pk_col not in old_df.columns:
-                raise ValueError(f"[TableSplit] 主键列 {pk_col} 在原表 {self.old_table} 中不存在")
-        
-        # 第二步：创建独立的主键表（包含所有唯一的主键列组合）
-        pk_table_name = f"{self.old_table}_keys"
-        if pk_table_name in result:
-            raise ValueError(f"[TableSplit] 主键表名 {pk_table_name} 已存在")
-        
-        # 创建主键表（去除重复的主键组合）
-        pk_df = old_df[list(all_primary_keys)].drop_duplicates().reset_index(drop=True)
-        result[pk_table_name] = pk_df
-        print(f"[TableSplit] 创建独立主键表: {pk_table_name}，包含列: {list(all_primary_keys)}")
-        print(f"主键表数据 ({len(pk_df)} 行):")
-        print(pk_df)
-        
-        # 第三步：为每个新表创建业务表（去除完全重复的行）
-        migrated_columns = set()
-        
-        for i, new_table in enumerate(self.new_tables):
-            if new_table in result:
-                raise ValueError(f"[TableSplit] 新表名 {new_table} 已存在")
-            
-            # 获取该新表的主键列（根据主键字典）
-            table_primary_keys = self.primary_keys_dict.get(new_table, [])
-            
-            # 获取该新表的业务列
-            business_columns = []
-            if i < len(self.columnList):
-                business_columns = self.columnList[i]
-            
-            # 构建新表的所有列：主键部分 + 业务列
-            all_table_columns = table_primary_keys + business_columns
-            
-            # 验证列是否存在
-            for col in all_table_columns:
-                if col not in old_df.columns:
-                    raise ValueError(f"[TableSplit] 列 {col} 在原表 {self.old_table} 中不存在")
-            
-            # 创建新表并去除完全重复的行
-            new_df = old_df[all_table_columns].drop_duplicates().reset_index(drop=True)
-            result[new_table] = new_df
-            
-            # 记录已迁移的列
-            migrated_columns.update(all_table_columns)
-            
-            print(f"\n[TableSplit] 创建业务表: {new_table}")
-            print(f"  - 主键部分: {table_primary_keys}")
-            print(f"  - 业务列: {business_columns}")
-            print(f"  - 总列数: {len(all_table_columns)}")
-            print(f"  - 去重后行数: {len(new_df)} 行")
-            print(f"  - 数据预览:")
-            print(new_df)
-        
-        # 第四步：检查所有列是否都已迁移
-        remaining_columns = original_columns - migrated_columns
-        if remaining_columns:
-            raise ValueError(
-                f"[TableSplit] 源表 {self.old_table} 仍有列未被迁移: {sorted(remaining_columns)}"
-            )
-        
-        # 第五步：验证无损分解
-        self._verify_lossless_decomposition(result, old_df, pk_table_name)
-        
-        # 第六步：记录表关系映射
-        table_mapping = {
-            'primary_key_table': pk_table_name,
-            'business_tables': {
-                table: {
-                    'primary_keys': self.primary_keys_dict.get(table, []),
-                    'business_columns': self.columnList[i] if i < len(self.columnList) else [],
-                    'row_count': len(result[table])
-                }
-                for i, table in enumerate(self.new_tables)
-            },
-            'all_primary_keys': list(all_primary_keys),
-            'original_row_count': len(old_df)
-        }
-        result[f"{self.old_table}_mapping"] = table_mapping
-        
-        # 移除原表
-        result.pop(self.old_table, None)
-        
-        print(f"\n[TableSplit] 表拆分完成！")
-        print(f"  - 原表: {self.old_table} ({len(old_df)} 行)")
-        print(f"  - 主键表: {pk_table_name} ({len(pk_df)} 行)")
-        for table_name in self.new_tables:
-            print(f"  - {table_name}: ({len(result[table_name])} 行)")
-        
-        return result
+        # 将处理后的sql语句保存到文件中
+        self._save_rewritten_sql(output_sqls, sql_path)
 
-    def _verify_lossless_decomposition(self, result, original_df, pk_table_name):
-        """
-        验证无损分解：确保通过JOIN可以还原原始数据
-        """
-        print(f"\n[TableSplit] 验证无损分解...")
+        return True
         
-        try:
-            # 获取所有表
-            pk_df = result[pk_table_name]
-            
-            # 构建JOIN查询来还原数据
-            reconstructed_df = pk_df.copy()
-            
-            # 按正确的顺序JOIN所有业务表
-            for table_name in self.new_tables:
-                if table_name in result:
-                    business_df = result[table_name]
+        
+    def create_logical_view(self, db, primary_key_table_name):
+
+        """
+        创建逻辑视图，使用 self.columnList 获取业务表列信息
+        """
+        view_name = f"view_{self.old_table}"
+        
+        print(f"🔍 开始创建视图: {view_name}")
+        print(f"主键表: {primary_key_table_name}")
+        print(f"业务表: {self.new_tables}")
+        print(f"列字典: {self.columnList}")
+        
+        # 1. 获取主键表的所有列（假设主键表只有主键列）
+        primary_key_columns = set()
+        for pk_list in self.primary_keys_dict.values():
+            primary_key_columns.update(pk_list)
+        
+        print(f"所有主键列: {primary_key_columns}")
+        
+        # 2. 构建 SELECT 列列表
+        select_columns = []
+        used_columns = set()  # 跟踪已使用的列名
+        
+        # 2.1 首先添加主键表的列（用原始列名）
+        for pk in sorted(primary_key_columns):
+            col_expr = f"{primary_key_table_name}.{pk}"
+            select_columns.append(f"{col_expr} AS {pk}")
+            used_columns.add(pk)
+        
+        # 2.2 添加业务表的列（排除主键列，避免重复）
+        for new_table in self.new_tables:
+            if new_table in self.columnList:
+                table_columns = self.columnList[new_table]
+                print(f"处理表 '{new_table}' 的列: {table_columns}")
+                
+                for col in table_columns:
+                    # 如果这个列是主键列，已经添加过了，跳过
+                    if col in primary_key_columns:
+                        continue
                     
-                    # 找出共同的主键列进行JOIN
-                    common_columns = list(set(reconstructed_df.columns) & set(business_df.columns))
-                    if common_columns:
-                        # 使用left join确保不丢失主键表的任何行
-                        reconstructed_df = pd.merge(reconstructed_df, business_df, on=common_columns, how='left')
-                        print(f"  ✓ 已JOIN表 {table_name}，关联列: {common_columns}")
-            
-            # 按原始列顺序重新排列
-            reconstructed_df = reconstructed_df[original_df.columns]
-            
-            # 排序后比较
-            sort_columns = list(pk_df.columns)
-            reconstructed_sorted = reconstructed_df.sort_values(by=sort_columns).reset_index(drop=True)
-            original_sorted = original_df.sort_values(by=sort_columns).reset_index(drop=True)
-            
-            print(f"\n数据对比:")
-            print(f"  原始数据: {len(original_sorted)} 行")
-            print(original_sorted)
-            print(f"  还原数据: {len(reconstructed_sorted)} 行")
-            print(reconstructed_sorted)
-            
-            # 检查数据一致性
-            if reconstructed_sorted.equals(original_sorted):
-                print("  ✓ 无损分解验证通过：数据可以完全还原")
-            else:
-                print("  ✗ 无损分解验证失败：还原数据与原始数据不一致")
-                
-                # 显示具体差异
-                print(f"\n差异分析:")
-                for idx in range(min(len(original_sorted), len(reconstructed_sorted))):
-                    if not reconstructed_sorted.iloc[idx].equals(original_sorted.iloc[idx]):
-                        print(f"  第{idx}行不一致:")
-                        print(f"    原始: {original_sorted.iloc[idx].to_dict()}")
-                        print(f"    还原: {reconstructed_sorted.iloc[idx].to_dict()}")
-                        break
-                
-        except Exception as e:
-            print(f"  ✗ 无损分解验证失败: {e}")
-            import traceback
-            traceback.print_exc()
-            
+                    # 如果列名已经用过（不同表可能有相同列名），添加表名前缀
+                    if col in used_columns:
+                        col_alias = f"{new_table}_{col}"
+                    else:
+                        col_alias = col
+                    
+                    col_expr = f"{new_table}.{col}"
+                    select_columns.append(f"{col_expr} AS {col_alias}")
+                    used_columns.add(col_alias)
         
-
-
-
-def test_student_course_decomposition():
-    """测试学生选课表的无损分解"""
+        print(f"选择的列: {select_columns}")
+        
+        # 3. 构建 JOIN 条件
+        join_clauses = []
+        for new_table in self.new_tables:
+            if new_table in self.primary_keys_dict:
+                primary_keys = self.primary_keys_dict[new_table]
+                join_conditions = []
+                
+                for pk in primary_keys:
+                    join_conditions.append(f"{new_table}.{pk} = {primary_key_table_name}.{pk}")
+                
+                if join_conditions:
+                    join_clauses.append(f"LEFT JOIN `{new_table}` ON {' AND '.join(join_conditions)}")
+        
+        # 4. 构建完整的 CREATE VIEW SQL
+        if not select_columns:
+            print("❌ 错误: 没有选择任何列")
+            return None
+        
+        select_clause = ",\n    ".join(select_columns)
+        join_clause = "\n".join(join_clauses)
+        
+        create_view_sql = f"""CREATE OR REPLACE VIEW `{view_name}` AS
+    SELECT 
+        {select_clause}
+    FROM `{primary_key_table_name}`
+    {join_clause};"""
+        
+        print(f"\n📝 生成的视图 SQL:")
+        print(create_view_sql)
+        
+        # 5. 执行 SQL 创建视图
+        try:
+            success = db.execute_statement(create_view_sql)
+            
+            if success:
+                print(f"✅ 视图 '{view_name}' 创建成功")
+                return view_name
+            else:
+                print(f"❌ 视图 '{view_name}' 创建失败")
+                return None
+        except Exception as e:
+            print(f"❌ 创建视图时出错: {e}")
+            
+        return view_name
     
-    # 创建学生选课表测试数据
-    input_data = {
-        'student_courses': pd.DataFrame({
-            'student_id': [1, 1, 1, 2, 2, 3, 3, 4],
-            'student_name': ['张三', '张三', '张三', '李四', '李四', '王五', '王五', '赵六'],
-            'student_major': ['计算机', '计算机', '计算机', '数学', '数学', '物理', '物理', '化学'],
-            'course_id': [101, 102, 103, 101, 104, 102, 105, 101],
-            'course_name': ['数据库', '算法', '网络', '数据库', '统计学', '算法', '量子力学', '数据库'],
-            'credit': [3, 4, 3, 3, 4, 4, 3, 3],
-            'grade': [85, 92, 78, 88, 95, 90, 85, 82],
-            'semester': ['2023春', '2023春', '2023秋', '2023春', '2023秋', '2023春', '2023秋', '2023春']
-        })
-    }
+    def process_sql_files(self, sql_path, view_name):
+        output_sqls = {}
+        
+        if os.path.isdir(sql_path):
+            # 处理文件夹中的所有SQL文件
+            for filename in os.listdir(sql_path):
+                if filename.endswith('.sql'):
+                    file_path = os.path.join(sql_path, filename)
+                    rewritten_sql = self._rewrite_sql_file(file_path, view_name)
+                    output_sqls[filename] = rewritten_sql
+        else:
+            # 处理单个SQL文件
+            filename = os.path.basename(sql_path)
+            rewritten_sql = self._rewrite_sql_file(sql_path, view_name)
+            output_sqls[filename] = rewritten_sql
+        
+        return output_sqls
     
-    print("原始学生选课表:")
-    print(input_data['student_courses'])
-    print(f"\n原始表列: {list(input_data['student_courses'].columns)}")
+    def _rewrite_sql_file(self, file_path, view_name):
+        """重写单个SQL文件"""
+        with open(file_path, 'r', encoding='utf-8') as f:
+            sql_content = f.read()
+        
+        # 分割SQL语句
+        sql_statements = [stmt.strip() for stmt in sql_content.split(';') if stmt.strip()]
+        
+        rewritten_statements = []
+        for sql in sql_statements:
+            if sql.upper().startswith('SELECT'):
+                # 替换FROM后的表名
+                rewritten_sql = self._replace_table_name(sql, view_name)
+                rewritten_statements.append(rewritten_sql)
+            else:
+                rewritten_statements.append(sql)
+        
+        return rewritten_statements
     
-    # 定义拆分规则 - 将学生选课表拆分为三个表
-    split_operation = TableSplit(
-        old_table='student_courses',
-        new_tables=['students', 'courses', 'enrollments'],
-        columnList=[
-            ['student_name', 'student_major'],    # students 表的业务列
-            ['course_name', 'credit'],            # courses 表的业务列
-            ['grade', 'semester']                 # enrollments 表的业务列
-        ],
-        primary_keys_dict={
-            'students': ['student_id'],           # 学生表主键
-            'courses': ['course_id'],             # 课程表主键
-            'enrollments': ['student_id', 'course_id']  # 选课表复合主键
-        }
-    )
-    
-    # 执行拆分
-    output_data = split_operation.apply_to_data(input_data.copy())
-    
-    return input_data, output_data, split_operation
-
-def verify_student_course_reconstruction(input_data, output_data):
-    """验证学生选课表可以通过JOIN还原"""
-    
-    print(f"\n{'='*60}")
-    print("验证无损分解 - 通过JOIN还原原始数据")
-    print(f"{'='*60}")
-    
-    # 获取拆分后的各个表
-    pk_table = output_data['student_courses_keys']
-    students_table = output_data['students']
-    courses_table = output_data['courses']
-    enrollments_table = output_data['enrollments']
-    
-    print(f"\n拆分后的表结构:")
-    print(f"主键表 ({pk_table.shape}): {list(pk_table.columns)}")
-    print(f"学生表 ({students_table.shape}): {list(students_table.columns)}")
-    print(f"课程表 ({courses_table.shape}): {list(courses_table.columns)}")
-    print(f"选课表 ({enrollments_table.shape}): {list(enrollments_table.columns)}")
-    
-    # 显示各表数据
-    print(f"\n主键表数据:")
-    print(pk_table)
-    
-    print(f"\n学生表数据:")
-    print(students_table)
-    
-    print(f"\n课程表数据:")
-    print(courses_table)
-    
-    print(f"\n选课表数据:")
-    print(enrollments_table)
-    
-    # 通过JOIN操作还原原始数据
-    print(f"\n通过JOIN还原数据...")
-    
-    # 第一步：主键表 + 学生表
-    step1 = pd.merge(pk_table, students_table, on=['student_id'], how='left')
-    print(f"✓ 主键表 JOIN 学生表: {step1.shape}")
-    print(step1)
-    
-    # 第二步：加入课程表
-    step2 = pd.merge(step1, courses_table, on=['course_id'], how='left')
-    print(f"✓ 加入课程表: {step2.shape}")
-    print(step2)
-    
-    # 第三步：加入选课表
-    reconstructed = pd.merge(step2, enrollments_table, on=['student_id', 'course_id'], how='left')
-    print(f"✓ 加入选课表: {reconstructed.shape}")
-    
-    # 按原始列顺序排列
-    original_columns = input_data['student_courses'].columns
-    reconstructed = reconstructed[original_columns]
-    
-    # 排序后比较
-    original_sorted = input_data['student_courses'].sort_values(['student_id', 'course_id']).reset_index(drop=True)
-    reconstructed_sorted = reconstructed.sort_values(['student_id', 'course_id']).reset_index(drop=True)
-    
-    print(f"\n还原验证结果:")
-    print(f"原始数据形状: {original_sorted.shape}")
-    print(f"还原数据形状: {reconstructed_sorted.shape}")
-    print(f"数据完全一致: {original_sorted.equals(reconstructed_sorted)}")
-    
-    if not original_sorted.equals(reconstructed_sorted):
-        print(f"\n数据差异分析:")
-        print("原始数据:")
-        print(original_sorted)
-        print("\n还原数据:")
-        print(reconstructed_sorted)
-    
-    return reconstructed_sorted
-
-def demonstrate_sql_rewriting_with_pk_table(input_data, output_data, split_operation):
-    """使用主键表的SQL改写功能测试"""
-    
-    print(f"\n{'='*60}")
-    print("SQL改写功能测试 (使用主键表)")
-    print(f"{'='*60}")
-    
-    # 主键表名
-    pk_table_name = f"{split_operation.old_table}_keys"
-    
-    # 测试用例
-    test_sqls = [
-        {
-            "description": "1. 简单SELECT * 查询",
-            "sql": "SELECT * FROM student_courses",
-            "expected_tables": [pk_table_name, "students", "courses", "enrollments"],
-            "should_have_join": True,
-            "should_expand_select": True
-        },
-        {
-            "description": "2. 纯学生表查询",
-            "sql": "SELECT student_id, student_name FROM student_courses WHERE student_major = '计算机'",
-            "expected_tables": ["students"],  # 只需要学生表
-            "should_have_join": False,
-            "should_expand_select": False
-        },
-        {
-            "description": "3. 纯课程表查询", 
-            "sql": "SELECT course_id, course_name, credit FROM student_courses WHERE credit > 3",
-            "expected_tables": ["courses"],  # 只需要课程表
-            "should_have_join": False,
-            "should_expand_select": False
-        },
-        {
-            "description": "4. 纯选课表查询",
-            "sql": "SELECT student_id, course_id, grade FROM student_courses WHERE grade > 90",
-            "expected_tables": ["enrollments"],  # 只需要选课表
-            "should_have_join": False,
-            "should_expand_select": False
-        },
-        {
-            "description": "5. 跨表查询需要JOIN",
-            "sql": "SELECT student_name, course_name, grade, semester FROM student_courses",
-            "expected_tables": [pk_table_name, "students", "courses", "enrollments"],
-            "should_have_join": True,
-            "should_expand_select": False
-        },
-        {
-            "description": "6. 学生和成绩联合查询",
-            "sql": "SELECT student_name, grade FROM student_courses",
-            "expected_tables": [pk_table_name, "students", "enrollments"],
-            "should_have_join": True,
-            "should_expand_select": False
-        },
-        {
-            "description": "7. 课程和成绩联合查询",
-            "sql": "SELECT course_name, grade FROM student_courses",
-            "expected_tables": [pk_table_name, "courses", "enrollments"],
-            "should_have_join": True,
-            "should_expand_select": False
-        }
-    ]
-    
-    print(f"原表: {split_operation.old_table}")
-    print(f"主键表: {pk_table_name}")
-    print(f"业务表: {split_operation.new_tables}")
-    
-    for test_case in test_sqls:
-        print(f"\n{test_case['description']}")
-        print(f"  原SQL: {test_case['sql']}")
+    def _replace_table_name(self, sql, view_name):
+        """使用sqlglot替换表名"""
+        print(f"\n处理表: {self.old_table} -> {view_name}")
+        print(f"原始SQL: {sql[:100]}..." if len(sql) > 100 else f"原始SQL: {sql}")
         
         try:
-            # 应用SQL改写
-            rewritten_sql = split_operation.apply_to_sql(test_case['sql'])
-            print(f"  改写后SQL: {rewritten_sql}")
+            parsed = sqlglot.parse_one(sql, read='mysql')
+            found_tables = []
             
-            # 分析改写结果
-            analyze_rewritten_with_pk_table(rewritten_sql, test_case, split_operation, pk_table_name)
+            for table in parsed.find_all(sqlglot.exp.Table):
+                full_name = table.name
+                short_name = full_name.split('.')[-1]
+                found_tables.append(full_name)
+                
+                if short_name == self.old_table:
+                    new_name = f"{full_name.split('.')[0]}.{view_name}" if '.' in full_name else view_name
+                    table.replace(sqlglot.exp.Table(this=sqlglot.exp.Identifier(this=new_name, quoted=False)))
+                    print(f"✓ 替换: {full_name} -> {new_name}")
+                    rewritten_sql = parsed.sql(dialect='mysql')
+                    print(f"新SQL: {rewritten_sql[:100]}..." if len(rewritten_sql) > 100 else f"新SQL: {rewritten_sql}")
+                    return rewritten_sql
+            
+            print(f"发现表: {found_tables}")
+            print(f"未匹配到: {self.old_table}")
             
         except Exception as e:
-            print(f"  ✗ SQL改写失败: {e}")
-
-def analyze_rewritten_with_pk_table(rewritten_sql, test_case, split_operation, pk_table_name):
-    """使用主键表的SQL改写分析"""
-    
-    print(f"  改写分析:")
-    
-    # 1. 基本语法检查
-    issues = []
-    
-    # 检查是否还包含原表名
-    if split_operation.old_table.lower() in rewritten_sql.lower():
-        issues.append("✗ 仍然包含原表名")
-    
-    # 2. 表使用检查
-    missing_tables = []
-    for table in test_case['expected_tables']:
-        if table.lower() not in rewritten_sql.lower():
-            missing_tables.append(table)
-    
-    if missing_tables:
-        issues.append(f"✗ 缺少表: {missing_tables}")
-    
-    # 检查不需要的表
-    unexpected_tables = []
-    all_possible_tables = [pk_table_name] + split_operation.new_tables
-    for table in all_possible_tables:
-        if (table.lower() in rewritten_sql.lower() and 
-            table not in test_case['expected_tables']):
-            unexpected_tables.append(table)
-    
-    if unexpected_tables:
-        issues.append(f"⚠ 包含不需要的表: {unexpected_tables}")
-    
-    # 3. JOIN检查
-    has_join = any(keyword in rewritten_sql.upper() for keyword in [" JOIN ", " INNER JOIN ", " LEFT JOIN "])
-    if test_case['should_have_join'] and not has_join:
-        issues.append("✗ 应该包含JOIN操作但缺少")
-    elif not test_case['should_have_join'] and has_join:
-        issues.append("⚠ 不需要JOIN但包含了JOIN操作")
-    
-    # 4. SELECT检查
-    if test_case['should_expand_select'] and "SELECT *" in rewritten_sql.upper():
-        issues.append("✗ SELECT * 没有被展开")
-    
-    # 5. 输出结果
-    if issues:
-        for issue in issues:
-            print(f"    {issue}")
-    else:
-        print(f"    ✓ SQL改写正确")
+            print(f"解析失败: {e}")
         
-        # 显示成功细节
-        details = []
-        details.append("原表名已替换")
-        if pk_table_name in test_case['expected_tables']:
-            details.append("使用主键表连接")
-        if test_case['should_have_join']:
-            details.append("JOIN操作正确")
-        if test_case['should_expand_select']:
-            details.append("SELECT * 已展开")
+        # 手动替换
+        old_pattern = f"tpcch.{self.old_table}"
+        if old_pattern in sql:
+            new_sql = sql.replace(old_pattern, f"tpcch.{view_name}")
+            print(f"✓ 手动替换: {old_pattern} -> tpcch.{view_name}")
+            print(f"新SQL: {new_sql[:100]}..." if len(new_sql) > 100 else f"新SQL: {new_sql}")
+            return new_sql
         
-        print(f"    → {', '.join(details)}")
-
-# 运行测试
-if __name__ == "__main__":
-    # 测试学生选课表分解
-    input_data, output_data, split_operation = test_student_course_decomposition()
+        print(f"未找到表: {old_pattern}")
+        return sql
     
-    # 验证无损分解
-    reconstructed = verify_student_course_reconstruction(input_data, output_data)
-    
-    # 测试SQL改写功能
-    demonstrate_sql_rewriting_with_pk_table(input_data, output_data, split_operation)
-    
-    
-    
-    # 显示表关系映射
-    print(f"\n{'='*60}")
-    print("表关系映射信息")
-    print(f"{'='*60}")
-    mapping = output_data['student_courses_mapping']
-    print(f"主键表: {mapping['primary_key_table']}")
-    print(f"所有主键列: {mapping['all_primary_keys']}")
-    print(f"\n业务表详情:")
-    for table_name, table_info in mapping['business_tables'].items():
-        print(f"  {table_name}:")
-        print(f"    主键: {table_info['primary_keys']}")
-        print(f"    业务列: {table_info['business_columns']}")
+    def _save_rewritten_sql(self, output_sqls, original_path):
+        """保存重写后的SQL语句"""
+        output_dir = os.path.join(os.path.dirname(original_path), "rewritten")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        for filename, sql_statements in output_sqls.items():
+            output_path = os.path.join(output_dir, f"rewritten_{filename}")
+            
+            with open(output_path, 'w', encoding='utf-8') as f:
+                for sql in sql_statements:
+                    f.write(f"{sql};\n")
+            
+            print(f"已保存重写后的SQL到: {output_path}")

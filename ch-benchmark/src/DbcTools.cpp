@@ -65,16 +65,26 @@ bool DbcTools::autoCommitOff(SQLHDBC& hDBC){
 }
 
 bool DbcTools::allocAndPrepareStmt(SQLHDBC& hDBC, SQLHSTMT& hStmt, const char* stmt){
-	if(hStmt!=0){
-		SQLFreeHandle(SQL_HANDLE_STMT,hStmt);
-		hStmt=0;
-	}
-	if(SQL_SUCCESS==SQLAllocHandle(SQL_HANDLE_STMT, hDBC, &hStmt)){
-		if(SQL_SUCCESS==SQLPrepare(hStmt, (unsigned char*) stmt, SQL_NTS))
-				return 1;
-	}
-	Log::l1() << Log::tm() << "-prepare statement failed:\n" << stmt << "\n";
-	return 0;
+    // Guard against null or empty SQL strings to avoid driver crashes
+    if (stmt == nullptr || stmt[0] == '\0') {
+        Log::l1() << Log::tm() << "-prepare statement skipped (empty SQL)\n";
+        return 0;
+    }
+
+    if(hStmt!=0){
+        SQLFreeHandle(SQL_HANDLE_STMT,hStmt);
+        hStmt=0;
+    }
+    if(SQL_SUCCESS==SQLAllocHandle(SQL_HANDLE_STMT, hDBC, &hStmt)){
+        SQLRETURN retp = SQLPrepare(hStmt, (unsigned char*) stmt, SQL_NTS);
+        if (retp == SQL_SUCCESS || retp == SQL_SUCCESS_WITH_INFO) {
+            return 1;
+        }
+        // Print ODBC diagnostics on failure
+        reviewReturn(hStmt, SQL_HANDLE_STMT, retp, true);
+    }
+    Log::l1() << Log::tm() << "-prepare statement failed:\n" << stmt << "\n";
+    return 0;
 }
 
 bool DbcTools::resetStatement(SQLHSTMT& hStmt){

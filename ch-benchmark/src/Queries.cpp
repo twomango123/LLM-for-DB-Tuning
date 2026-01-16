@@ -25,8 +25,15 @@ using namespace std;
 bool Queries::prepareStatements(SQLHDBC& hDBC){
 
 	for(int i = 0; i < 22; i++){
-		if(!DbcTools::allocAndPrepareStmt(hDBC, odbc_queries[i], DialectStrategy::getInstance()->getTpchQueryStrings()[i])){
-			Log::l2() << Log::tm() << "-prepare statements failed\n";
+		const char* sql = DialectStrategy::getInstance()->getTpchQueryStrings()[i];
+		if (sql == nullptr || sql[0] == '\0') {
+			std::string msg = "-empty TPCH query #" + std::to_string(i+1) + "\n";
+			Log::l2() << Log::tm() << msg;
+			return 0;
+		}
+		if(!DbcTools::allocAndPrepareStmt(hDBC, odbc_queries[i], sql)){
+			std::string msg = "-prepare failed for TPCH query #" + std::to_string(i+1) + "\n";
+			Log::l2() << Log::tm() << msg;
 			return 0;
 		}
 	}

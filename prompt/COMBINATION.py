@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+# python3 prompt/COMBINATION.py --schema-sql DataBase/cleaned_sql/schema.sql --csv-dir /var/lib/mysql-files/ --sql-dir DataBase/cleaned_sql/query_sql --latency /var/lib/mysql-files/latency_AP.txt --out prompt/final_prompt.md
 import argparse
 from pathlib import Path
 import sys
 import os
-from typing import Optional
 
 # Import PART1/2/3 from the same folder
 _THIS_DIR = os.path.dirname(__file__)
@@ -29,8 +28,8 @@ TAIL_TEXT = """## 操作集合
 
 	"VerticalSplit": {
 	"操作含义": "按列将一张表垂直拆分为多个子表，每个子表保留原主键列，可选保留或删除原表",
-	"接口": "VerticalSplit(SourceTable, is_retained):table1(attribute1, ...),table2(attribute2, ...)",
-	"举例": "VerticalSplit(CUSTOMER, True):C1(c_id,c_name,c_sex),C2(c_id,c_birthday,c_level)",
+	"接口": "VerticalSplit(SourceTable, is_retained):table1(attribute1, ...),table2(attribute2, ...), table1(primary_key...), table2(primary_key...)",
+	"举例": "VerticalSplit(CUSTOMER, True):C1(c_id,c_name,c_sex),C2(c_id,c_birthday,c_level), C1(c_id), C2(c_id)",
 	"约束条件": "（不保留原表）每个子表必须包含全部主键列；同一外键的组成列不得拆到不同子表"
 	},
 	"TableJoin": {
@@ -112,15 +111,16 @@ TAIL_TEXT = """## 操作集合
 ~~~
 1.按照支持的操作接口，给出操作序列，短横线分隔，无需回答其他内容
 2.可参考给出的经验进行schema变化操作
-3.每一项操作前后可能有表被删除，请根据操作顺序，在后续操作中使用变化后的新表进行操作
+3.每一项操作前后可能有表被删除，请根据操作顺序，在后续操作中使用变化后的新表进行操作  
+4.在给出一个操作时，需要确定当前被操作的表和列经过前序操作仍包含其中  
 ~~~
 """
 
 
-def build_combined(schema_sql: str, csv_dir: str, sql_dir: str, latency_csv: Optional[str]) -> str:
+def build_combined(schema_sql: str, csv_dir: str, sql_dir: str, latency_path: str) -> str:
     part1 = build_part1(schema_sql).rstrip()
     part2 = build_part2(csv_dir).rstrip()
-    part3 = build_part3(sql_dir, latency_csv, unit="auto").rstrip()
+    part3 = build_part3(sql_dir, latency_path).rstrip()
     tail = TAIL_TEXT.rstrip()
 
     pieces = [part1, part2, part3, tail]
@@ -129,16 +129,16 @@ def build_combined(schema_sql: str, csv_dir: str, sql_dir: str, latency_csv: Opt
 
 def main() -> None:
     ap = argparse.ArgumentParser(
-        description="COMBINATION: 拼接 PART1/2/3，并追加固定的“操作集合/经验/要求”尾部，写出完整提示词"
+        description="COMBINATION: 拼接 PART1/2/3，并追加固定的“操作集合/经验/要求”尾部（延迟单位：ms），写出完整提示词"
     )
     ap.add_argument("--schema-sql", required=True, help="schema.sql 路径（供 PART1 使用）")
     ap.add_argument("--csv-dir", required=True, help="包含 schema.sql 与 *.csv 的目录（供 PART2 使用）")
-    ap.add_argument("--sql-dir", required=True, help="包含 queryN.sql 与延迟CSV的目录（供 PART3 使用）")
-    ap.add_argument("--latency-csv", default=None, help="延迟CSV路径（可选；默认使用 sql_dir/latency_results.csv）")
+    ap.add_argument("--sql-dir", required=True, help="包含 queryN.sql/ query_XX.sql 的目录（供 PART3 使用）")
+    ap.add_argument("--latency", "--csv", dest="latency_path", required=True, help="延迟结果文件路径（CSV 或 TXT）")
     ap.add_argument("--out", required=True, help="输出完整提示词文件路径")
     args = ap.parse_args()
 
-    content = build_combined(args.schema_sql, args.csv_dir, args.sql_dir, args.latency_csv)
+    content = build_combined(args.schema_sql, args.csv_dir, args.sql_dir, args.latency_path)
     Path(args.out).write_text(content, encoding="utf-8")
 
 

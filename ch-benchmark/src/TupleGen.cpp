@@ -38,7 +38,7 @@ void TupleGen::openOutputFiles(){
 	customerStream.open( (Config::getInitialDbCreationPath()+"/customer.tbl").c_str() );
 	historyStream.open( (Config::getInitialDbCreationPath()+"/history.tbl").c_str() );
 	neworderStream.open( (Config::getInitialDbCreationPath()+"/neworder.tbl").c_str() );
-	orderStream.open( (Config::getInitialDbCreationPath()+"/order.tbl").c_str() );
+	orderStream.open( (Config::getInitialDbCreationPath()+"/orders.tbl").c_str() );
 	orderlineStream.open( (Config::getInitialDbCreationPath()+"/orderline.tbl").c_str() );
 	itemStream.open( (Config::getInitialDbCreationPath()+"/item.tbl").c_str() );
 	stockStream.open( (Config::getInitialDbCreationPath()+"/stock.tbl").c_str() );

@@ -12,27 +12,49 @@ class HorizontalSplit(SMO):
     """
     表水平拆分：按谓词将一张表拆成多张分表。
     - predicates: [(new_table, where_clause_sql), ...]
-    
-    apply_to_schema:
-      CREATE TABLE new_i AS SELECT * FROM old WHERE pred_i;
-    apply_to_sql:
-      将 FROM old 改为 (SELECT * FROM union all of new_i) 以保持语义。
+    - is_retained: 是否保留原表
+
+    当 is_retained=False（默认）：
+      apply_to_schema:
+        为每个分片创建实体表：CREATE TABLE new_i AS SELECT * FROM old WHERE pred_i;
+        复制主键/唯一/出站外键/默认/自增（尽力）。
+      apply_to_sql:
+        根据 WHERE 唯一命中替换为对应分表；否则替换为所有分表的 UNION ALL 子查询。
+
+    当 is_retained=True（保留原表）：
+      apply_to_schema:
+        为每个分片创建视图：CREATE OR REPLACE VIEW new_i AS SELECT * FROM old WHERE pred_i;
+        原表不变，不复制约束。
+      apply_to_sql:
+        根据 WHERE 唯一命中替换为对应视图；无法唯一命中时保持原表不变。
     """
 
-    def __init__(self, table: str, predicates: list[tuple[str, str]]):
+    def __init__(self, table: str, predicates: list[tuple[str, str]], is_retained: bool = False):
         self.table = table
         self.predicates = predicates
+        self.is_retained = is_retained
 
     def apply_to_schema(self, db=None):
         """
-        水平拆分并复制原表约束到每个分表：
-        - 为每个分表 CTAS 创建数据；
-        - 使用约束助手迁移主键/唯一/出站外键；
-        - 复制默认值和自增设置；
-        - 入站外键保持不变（仍指向旧表）。
+        水平拆分：根据 is_retained 选择创建实体表或视图。
         """
-        stmts = []
         old = self.table
+        # 保留原表：创建视图
+        if getattr(self, 'is_retained', False):
+            stmts = []
+            for new_tbl, where in self.predicates:
+                stmts.append(
+                    f"CREATE OR REPLACE VIEW `{new_tbl}` AS SELECT * FROM `{old}` WHERE {where};"
+                )
+            if db is not None and hasattr(db, "execute_statement"):
+                ok = True
+                for s in stmts:
+                    ok = ok and db.execute_statement(s)
+                return ok
+            return "\n".join(stmts)
+
+        # 不保留原表：创建实体表并复制约束
+        stmts = []
         helper = MySQLConstraintHelper(db) if db is not None else None
         constraints = helper.fetch_constraints(old) if helper else {'columns': []}
 
@@ -87,7 +109,9 @@ class HorizontalSplit(SMO):
         """
         只读 SQL 改写：
         - 如果 WHERE 条件能够唯一命中某个分表的谓词，则将该表替换为该分表；
-        - 否则，将该表替换为 (SELECT * FROM t1 UNION ALL SELECT * FROM t2 ...) 的子查询并保留别名。
+        - 否则：
+            * 当 is_retained=False 时，替换为 (SELECT * FROM t1 UNION ALL SELECT * FROM t2 ...) 子查询并保留别名；
+            * 当 is_retained=True 时，保持原表不变。
         """
 
         def canonical_col(s: str) -> str:
@@ -183,15 +207,17 @@ class HorizontalSplit(SMO):
                     new_node = new_table
                 tbl.replace(new_node)
             else:
-                # 2) 否则替换为 UNION ALL 子查询，保留别名
-                # 如果没有唯一匹配但存在多个匹配，可以只 union 匹配到的；
-                # 这里按需求使用所有子表。
-                union_sql = " UNION ALL ".join([f"SELECT * FROM {t}" for t, _ in self.predicates])
-                alias_name = alias_sql or self.table
-                sub_sql = f"(SELECT * FROM {self.predicates[0][0]}"  # will be replaced next line
-                sub_sql = f"( {union_sql} ) AS {alias_name}"
-                sub_node = sqlglot.parse_one(sub_sql)
-                tbl.replace(sub_node)
+                # 2) 无唯一匹配
+                if not getattr(self, 'is_retained', False):
+                    # 不保留原表 → 使用 UNION ALL 子查询替换
+                    union_sql = " UNION ALL ".join([f"SELECT * FROM {t}" for t, _ in self.predicates])
+                    alias_name = alias_sql or self.table
+                    sub_sql = f"( {union_sql} ) AS {alias_name}"
+                    sub_node = sqlglot.parse_one(sub_sql)
+                    tbl.replace(sub_node)
+                else:
+                    # 保留原表 → 不替换
+                    pass
 
         return tree.sql()
 

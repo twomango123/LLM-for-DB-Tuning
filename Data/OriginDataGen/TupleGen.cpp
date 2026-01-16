@@ -23,7 +23,7 @@ void TupleGen::openOutputFiles(const std::string& outputPath){
 	customerStream.open( (outputPath+"/CUSTOMER.tbl").c_str() );
 	historyStream.open( (outputPath+"/HISTORY.tbl").c_str() );
 	neworderStream.open( (outputPath+"/NEWORDER.tbl").c_str() );
-	orderStream.open( (outputPath+"/ORDER.tbl").c_str() );
+	orderStream.open( (outputPath+"/ORDERS.tbl").c_str() );
 	orderlineStream.open( (outputPath+"/ORDERLINE.tbl").c_str() );
 	itemStream.open( (outputPath+"/ITEM.tbl").c_str() );
 	stockStream.open( (outputPath+"/STOCK.tbl").c_str() );
