@@ -158,11 +158,14 @@ WHERE
     AND TABLE_NAME = 'nation'
     AND CONSTRAINT_NAME = 'PRIMARY';
 ### 运行生成数据命令 可指定warehouse数量（-wh 1） 最好不要更改csv输出目录
-`./chBenchmark -csv -wh 1 -pa /var/lib/mysql-files  `  
+`./chBenchmark -csv -wh 10 -pa /var/lib/mysql-files  `  
 
 ### 运行数据库初始化，创建schema导入数据  
 `./chBenchmark -init -dsn mysql-bench -usr root -pwd '123!@#200' -a 1 -t 0 -wd 30 -td 100 -pa /var/lib/mysql-files -op /var/lib/mysql-files `  
 
+### 负载生成压缩  
+拷贝查看  
+docker cp 4c539dc58099:LLM-for-DB-Tuning/prompt/final_prompt.md ./final_prompt.md
 ### 运行ch-benchmark测试
 -a是OLAP线程数量，-t是TP线程数，a=1,t=0时仅顺序执行22个查询测试AP_latency，a=0,t=1时仅顺序执行5个事务测试TP_latency。  
 -wd是warmup duration，-td是test duration，限定了并发执行的时间，当测试latency时不受test duration控制，执行完毕后直接结束线程不会等待。  

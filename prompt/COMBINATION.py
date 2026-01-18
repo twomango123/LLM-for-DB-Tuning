@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# python3 prompt/COMBINATION.py --schema-sql DataBase/cleaned_sql/schema.sql --csv-dir /var/lib/mysql-files/ --sql-dir DataBase/cleaned_sql/query_sql --latency /var/lib/mysql-files/latency_AP.txt --out prompt/final_prompt.md
+# PART2_DEBUG=1 PART2_DEBUG_DIR=LLM-for-DB-Tuning/debug/part2 
+# python3 LLM-for-DB-Tuning/prompt/COMBINATION.py --schema-sql LLM-for-DB-Tuning/DataBase/cleaned_sql/schema.sql --csv-dir /var/lib/mysql-files --sql-dir LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update --out LLM-for-DB-Tuning/prompt/final_prompt.md
 import argparse
 from pathlib import Path
 import sys
@@ -117,28 +118,45 @@ TAIL_TEXT = """## 操作集合
 """
 
 
-def build_combined(schema_sql: str, csv_dir: str, sql_dir: str, latency_path: str) -> str:
+def build_combined(schema_sql: str, csv_dir: str, sql_dir: str) -> str:
     part1 = build_part1(schema_sql).rstrip()
-    part2 = build_part2(csv_dir).rstrip()
-    part3 = build_part3(sql_dir, latency_path).rstrip()
+    # PART2 now outputs JSON mapping of operations and estimated rows
+    # 透传数据库参数用于 PART2 进行字段长度估算与可选 rows 估算
+    # 注意：PART2 内部会要求能连接 MySQL，否则报错退出
+    part2_json = build_part2(
+        schema_sql_path=schema_sql,
+        sql_dir=sql_dir,
+        dialect="mysql",
+        host=os.environ.get("DB_HOST", "127.0.0.1"),
+        port=int(os.environ.get("DB_PORT", "3306")),
+        user=os.environ.get("DB_USER", "root"),
+        password=os.environ.get("DB_PASSWORD", ""),
+        database=os.environ.get("DB_NAME", ""),
+        config_path=os.environ.get("DB_CONFIG", str(Path(_THIS_DIR).with_name("query_latency") / "db_config.ini")),
+        debug=bool(int(os.environ.get("PART2_DEBUG", "0"))),
+        debug_dir=os.environ.get("PART2_DEBUG_DIR", str(Path(_THIS_DIR).with_name("debug") / "part2"))
+    ).rstrip()
+    # PART3 已简化为不再读取历史负载与延迟，这里调用将返回空字符串
+    part3 = build_part3().rstrip()
     tail = TAIL_TEXT.rstrip()
 
+    # Provide a small header to separate the JSON section clearly
+    part2 = "列级操作与基数统计：\n\n" + part2_json
     pieces = [part1, part2, part3, tail]
     return "\n\n".join(pieces) + "\n"
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(
-        description="COMBINATION: 拼接 PART1/2/3，并追加固定的“操作集合/经验/要求”尾部（延迟单位：ms），写出完整提示词"
+        description="COMBINATION: 拼接 PART1/2/3（简化版 PART3 不再读取历史负载），并追加固定尾部，写出完整提示词"
     )
     ap.add_argument("--schema-sql", required=True, help="schema.sql 路径（供 PART1 使用）")
     ap.add_argument("--csv-dir", required=True, help="包含 schema.sql 与 *.csv 的目录（供 PART2 使用）")
     ap.add_argument("--sql-dir", required=True, help="包含 queryN.sql/ query_XX.sql 的目录（供 PART3 使用）")
-    ap.add_argument("--latency", "--csv", dest="latency_path", required=True, help="延迟结果文件路径（CSV 或 TXT）")
     ap.add_argument("--out", required=True, help="输出完整提示词文件路径")
     args = ap.parse_args()
 
-    content = build_combined(args.schema_sql, args.csv_dir, args.sql_dir, args.latency_path)
+    content = build_combined(args.schema_sql, args.csv_dir, args.sql_dir)
     Path(args.out).write_text(content, encoding="utf-8")
 
 

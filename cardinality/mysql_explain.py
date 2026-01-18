@@ -109,10 +109,21 @@ class MySQLCardinalityEstimator:
             }
             for t in chain
         ]
+        # 便于上层直接按表名获取 filtered
+        filtered_by_table = {}
+        for d in details:
+            tbl = d.get("table")
+            if tbl is None:
+                continue
+            if d.get("filtered") is not None:
+                try:
+                    filtered_by_table[tbl] = float(d.get("filtered"))
+                except Exception:
+                    pass
         return {
             "dialect": "mysql",
             "estimated_rows": est,
             "explain": ej,
             "details": details,
+            "filtered_by_table": filtered_by_table,
         }
-

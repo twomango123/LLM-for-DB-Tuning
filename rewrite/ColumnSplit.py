@@ -281,34 +281,206 @@ class ColumnSplit(SMO):
 
     def apply_to_sql(self, sql: str) -> str:
         """
-        对只读 SQL：将对旧列的引用替换为 CONCAT_WS 重构表达式，
-        以保持查询语义与拆分前一致。
+        将查询中对“目标表的旧列”的使用，按上下文改写为新列：
+          - SELECT 投影：将单个旧列替换为多个新列（保留表别名/前缀）。
+          - WHERE <op> <value>：若右侧为常量，按拆分规则将其拆分成多个值，并改写为
+            new1 <op> v1 AND new2 <op> v2 (...)。
+          - GROUP BY / ORDER BY：将旧列展开为多个新列键（ORDER 继承排序方向）。
+          - JOIN ON：若检测到在 ON 谓词中引用旧列，则不改写 ON，并打印提示“建议不修改，会有 join 冲突”。
+
+        说明：仅改写与目标表相关的列。无前缀列仅在该目标表在 FROM 中唯一时才改写。
         """
-        def rebuild_expr(table_qualifier: str | None) -> exp.Expression:
-            qualified_cols = [
-                f"{table_qualifier}.{c}" if table_qualifier else c for c in self.new_columns
-            ]
+
+        def build_alias_maps(scope_select: exp.Select):
+            alias_to_base: dict[str, str] = {}
+            base_count: dict[str, int] = {}
+            for tbl in list(scope_select.find_all(exp.Table)):
+                base = (tbl.name or '').split('.')[-1].lower()
+                if base:
+                    base_count[base] = base_count.get(base, 0) + 1
+                alias_node = tbl.args.get('alias')
+                if alias_node is not None:
+                    alias_name = getattr(alias_node, 'name', None)
+                    if alias_name:
+                        alias_to_base[alias_name.lower()] = base
+            return alias_to_base, base_count
+
+        def is_target_col(col: exp.Column, alias_to_base: dict[str, str], base_count: dict[str, int]) -> tuple[bool, str | None]:
+            old_lower = self.old_column.lower()
+            if (col.name or '').lower() != old_lower:
+                return False, None
+            target_base = self.table.split('.')[-1].lower()
+            prefix = col.table
+            if prefix:
+                pref = prefix.split('.')[-1].lower()
+                mapped = alias_to_base.get(pref, pref)
+                return (mapped == target_base), prefix
+            # 无前缀：仅当目标表在 FROM 中唯一出现时改写
+            unique = base_count.get(target_base, 0) == 1
+            return (unique and target_base in base_count), None
+
+        def make_col(prefix: str | None, name: str) -> exp.Expression:
+            if prefix:
+                return parse_one(f"{prefix}.{name}")
+            return parse_one(name)
+
+        def warn_join_once():
+            nonlocal join_warned
+            if not join_warned:
+                print("提示：JOIN ON 中出现被拆分列，建议不修改，会有 join 冲突")
+                join_warned = True
+
+        def split_value(lit: exp.Literal) -> list[str] | None:
+            # 返回与新列一一对应的字符串值列表；不足部分以空串补齐
+            raw = str(getattr(lit, 'this', ''))
+            parts: list[str]
             if self.split_delimiter is not None:
-                func_sql = (
-                    f"CONCAT_WS('{self.split_delimiter}', "
-                    + ", ".join(qualified_cols)
-                    + ")"
-                )
-            else:
-                # split_position 情形：两段直接 CONCAT 组回
-                func_sql = "CONCAT(" + ", ".join(qualified_cols) + ")"
-            return parse_one(func_sql)
+                parts = raw.split(self.split_delimiter)
+                if len(parts) < len(self.new_columns):
+                    parts += [''] * (len(self.new_columns) - len(parts))
+                return parts[:len(self.new_columns)]
+            elif self.split_position is not None:
+                # 仅支持两段
+                p = int(self.split_position)
+                a, b = raw[:p], raw[p:]
+                parts = [a, b]
+                if len(self.new_columns) == 2:
+                    return parts
+                # 若新列不为2，仅返回前两列对应的值，其余为空
+                return (parts + [''] * (len(self.new_columns) - 2))[:len(self.new_columns)]
+            return None
+
+        def to_sql_literal(v: str, was_string: bool) -> str:
+            if was_string:
+                v = v.replace("'", "''")
+                return f"'{v}'"
+            # 数字或其它：直接返回（若不是纯数字将作为标识解析，调用方需保证数据类型正确）
+            return v
 
         try:
-            tree = sqlglot.parse_one(sql)
-            for col in list(tree.find_all(exp.Column)):
-                if col.name == self.old_column:
-                    alias = col.table
-                    new_node = rebuild_expr(alias)
-                    col.replace(new_node)
-            return tree.sql()
+            tree = sqlglot.parse_one(sql, read='postgres')
+
+            join_warned = False
+
+            # 遍历所有 SELECT 作用域进行改写
+            for sel in list(tree.find_all(exp.Select)):
+                alias_to_base, base_count = build_alias_maps(sel)
+
+                # 1) JOIN ON 警告（不改写 ON 内部）
+                for j in list(sel.find_all(exp.Join)):
+                    on_expr = j.args.get('on')
+                    if not on_expr:
+                        continue
+                    for c in on_expr.find_all(exp.Column):
+                        ok, _ = is_target_col(c, alias_to_base, base_count)
+                        if ok:
+                            warn_join_once()
+                            break
+
+                # 2) WHERE： c <op> 'value' -> (new1 <op> v1 AND new2 <op> v2 ...)
+                where_node = sel.args.get('where')
+                if where_node is not None:
+                    # 支持的二元比较运算节点类型
+                    cmp_types = (exp.EQ, exp.NEQ, exp.GT, exp.GTE, exp.LT, exp.LTE)
+                    op_symbol = {
+                        exp.EQ: "=",
+                        exp.NEQ: "<>",
+                        exp.GT: ">",
+                        exp.GTE: ">=",
+                        exp.LT: "<",
+                        exp.LTE: "<=",
+                    }
+                    invert = {"<": ">", "<=": ">=", ">": "<", ">=": "<=", "=": "=", "<>": "<>"}
+                    for cmp in list(where_node.find_all(cmp_types)):
+                        left = cmp.args.get('this')
+                        right = cmp.args.get('expression')
+                        # 左右翻转的情况
+                        col_side = None
+                        lit_side = None
+                        reverse = False
+                        if isinstance(left, exp.Column) and isinstance(right, exp.Literal):
+                            col_side, lit_side = left, right
+                        elif isinstance(right, exp.Column) and isinstance(left, exp.Literal):
+                            col_side, lit_side = right, left
+                            reverse = True
+                        else:
+                            continue
+
+                        ok, prefix = is_target_col(col_side, alias_to_base, base_count)
+                        if not ok:
+                            continue
+
+                        vals = split_value(lit_side)
+                        if vals is None:
+                            continue
+
+                        # 构造 new_i <op> val_i 的 AND 串
+                        op_sql = op_symbol.get(type(cmp), "=")
+                        if reverse:
+                            op_sql = invert.get(op_sql, op_sql)
+                        conjuncts = []
+                        for nc, v in zip(self.new_columns, vals):
+                            left_expr = make_col(prefix, nc)
+                            right_sql = to_sql_literal(v, bool(getattr(lit_side, 'is_string', False)))
+                            expr_sql = f"{left_expr.sql(dialect='mysql')} {op_sql} {right_sql}"
+                            conjuncts.append(parse_one(expr_sql, read='mysql'))
+                        new_pred = conjuncts[0]
+                        for nxt in conjuncts[1:]:
+                            new_pred = exp.and_(new_pred, nxt)
+                        cmp.replace(new_pred)
+
+                # 3) GROUP BY：展开为多个新列
+                group_node = sel.args.get('group')
+                if group_node is not None:
+                    new_items = []
+                    for gexp in list(group_node.expressions):
+                        if isinstance(gexp, exp.Column):
+                            ok, prefix = is_target_col(gexp, alias_to_base, base_count)
+                            if ok:
+                                for nc in self.new_columns:
+                                    new_items.append(make_col(prefix, nc))
+                                continue
+                        new_items.append(gexp)
+                    group_node.set('expressions', new_items)
+
+                # 4) ORDER BY：展开为多个新列，继承方向
+                order_node = sel.args.get('order')
+                if order_node is not None:
+                    new_orders = []
+                    for o in list(order_node.expressions):
+                        target = o.this if hasattr(o, 'this') else None
+                        if isinstance(target, exp.Column):
+                            ok, prefix = is_target_col(target, alias_to_base, base_count)
+                            if ok:
+                                desc = bool(getattr(o, 'args', {}).get('desc'))
+                                for nc in self.new_columns:
+                                    oe = exp.Ordered(this=make_col(prefix, nc), desc=desc)
+                                    new_orders.append(oe)
+                                continue
+                        new_orders.append(o)
+                    order_node.set('expressions', new_orders)
+
+                # 5) SELECT 投影：将独立旧列替换为多个新列
+                #    仅当投影表达式为旧列（或列别名包装）时进行展开；
+                #    对包含在复杂表达式中的旧列不在此处改写（避免语义不明）。
+                new_projs = []
+                for proj in list(sel.expressions):
+                    node = proj
+                    alias_node = None
+                    if isinstance(proj, exp.Alias):
+                        alias_node = proj.args.get('alias')
+                        node = proj.this
+                    if isinstance(node, exp.Column):
+                        ok, prefix = is_target_col(node, alias_to_base, base_count)
+                        if ok:
+                            for nc in self.new_columns:
+                                new_projs.append(make_col(prefix, nc))
+                            continue
+                    new_projs.append(proj)
+                sel.set('expressions', new_projs)
+
+            return tree.sql(dialect='mysql')
         except Exception:
             return sql
 
-    def apply_to_data(self, row):
-        return row
+    

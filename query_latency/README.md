@@ -50,3 +50,5 @@ python3 LLM-for-DB-Tuning/query_latency/collect_latency.py \
 - 使用口令：请在 `db_config.ini` 的 `password` 行填入真实口令，避免出现 “using password: NO”。不要在密码两侧添加引号或在同一行追加注释。
 - 账号主机匹配：`host = localhost` 时要求 MySQL 中存在 `user@localhost`；如使用 `127.0.0.1`，需有 `user@127.0.0.1` 或 `user@'%'`。
 
+# 负载压缩  
+python3 LLM-for-DB-Tuning/prompt/PART2.py --schema-sql LLM-for-DB-Tuning/output_dir/schema/schema.sql --sql-dir LLM-for-DB-Tuning/output_dir --latency LLM-for-DB-Tuning/query_latency/latency_result.csv --config LLM-for-DB-Tuning/query_latency/db_config.ini --out LLM-for-DB-Tuning/prompt/part2.json
