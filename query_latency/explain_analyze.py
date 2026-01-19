@@ -38,31 +38,70 @@ def _run_explain_analyze(db, sql: str) -> str:
 
 _NODE_PAT = re.compile(
     r"^(?P<indent>[ \t\|\u2502\u251c\u2514\u2500]*)->\s*(?P<op>[^\(\n]+?)\s*"  # 允许空格/制表/竖线/Unicode 树形字符
-    r"(?:\([^\)]*\))?\s*"              # 可能存在的估计信息 (cost, rows, etc.)
-    r"\((?:actual\s+)?time\s*=\s*(?P<tlow>[\d.]+)\.\.(?P<thi>[\d.]+)\s*,\s*rows\s*=\s*(?P<rows>\d+)\s*,\s*loops\s*=\s*(?P<loops>\d+)\)"  # 实际信息
+    r"(?:\([^\)]*\)\s*)*"              # 可能存在 0-N 个括号段 (cost=..., rows=...)
+    r"\((?:actual\s+)?time\s*=\s*(?P<tlow>[\d.eE+\-]+)\.\.(?P<thi>[\d.eE+\-]+)\s*,?\s*rows\s*=\s*(?P<rows>[\d.eE+\-]+)\s*,?\s*loops\s*=\s*(?P<loops>[\d.eE+\-]+)\)"  # 实际信息；允许无逗号分隔与科学计数
     , re.IGNORECASE)
 
 
-def parse_explain_analyze(text: str) -> List[Dict[str, Any]]:
+def parse_explain_analyze(text: str, debug: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     # 先按缩进构建父子关系
     raw_nodes: List[Dict[str, Any]] = []
     stack: List[Tuple[int, int]] = []  # (indent_len, index_in_raw_nodes)
 
-    for line in text.splitlines():
+    lines = text.splitlines()
+    for idx_line, line in enumerate(lines):
         m = _NODE_PAT.search(line)
         if not m:
+            # 近似匹配：当正则未命中，但包含关键字和 (time=..rows=..loops=..)
+            lw = line.lower()
+            if ("join" in lw or "sort" in lw or "group" in lw or "filter" in lw or "scan" in lw or "count" in lw or "lookup" in lw or "hash" in lw or "aggregate" in lw):
+                # 提取操作名：去掉前导树形符与 '->'
+                op = re.sub(r"^[ \t\|\u2502\u251c\u2514\u2500]*->\s*", "", line).strip()
+                # 搜索 time/rows/loops 片段
+                mm = re.search(r"\((?:actual\s+)?time\s*=\s*([\d.eE+\-]+)\.\.([\d.eE+\-]+)\s*,?\s*rows\s*=\s*([\d.eE+\-]+)\s*,?\s*loops\s*=\s*([\d.eE+\-]+)\)", line, re.IGNORECASE)
+                if not mm:
+                    # 尝试在后续1-2行寻找 time 片段（处理换行拆分）
+                    lookahead = " ".join(lines[idx_line: idx_line+3])
+                    mm = re.search(r"\((?:actual\s+)?time\s*=\s*([\d.eE+\-]+)\.\.([\d.eE+\-]+)\s*,?\s*rows\s*=\s*([\d.eE+\-]+)\s*,?\s*loops\s*=\s*([\d.eE+\-]+)\)", lookahead, re.IGNORECASE)
+                if mm:
+                    try:
+                        thi = float(mm.group(2))
+                        loops = float(mm.group(4))
+                        rows = float(mm.group(3))
+                        avg_time = thi / loops if loops > 0 else None
+                        # 去掉末尾 actual time 段，保留其余文本作为 text（含谓词/lookup 等）
+                        text_no_time = re.sub(r"\((?:actual\s+)?time\s*=.*?loops\s*=.*?\)\s*$", "", line).rstrip()
+                        if debug is not None:
+                            debug.append(f"FALLBACK HIT l{idx_line+1}: op='{op}', thi={thi}, loops={loops}, rows={rows}, avg={avg_time}")
+                        raw_nodes.append({
+                            "op": op,
+                            "actual_time": thi,
+                            "avg_time": avg_time,
+                            "loops": loops,
+                            "rows": rows,
+                            "text": text_no_time,
+                            "indent": 0,
+                            "parent": None,
+                            "children": [],
+                        })
+                    except Exception:
+                        if debug is not None:
+                            debug.append(f"FALLBACK PARSE ERROR l{idx_line+1}: {line}")
+                        pass
             continue
         indent_len = len(m.group("indent") or "")
         op = m.group("op").strip()
         try:
             t_hi = float(m.group("thi"))
-            loops = int(m.group("loops"))
-            rows = int(m.group("rows"))
+            loops = float(m.group("loops"))
+            rows = float(m.group("rows"))
         except Exception:
             t_hi, loops, rows = None, None, None
         avg_time = None
         if t_hi is not None and loops and loops > 0:
             avg_time = t_hi / float(loops)
+        # 去掉末尾 actual time 段，保留其余文本作为 text（含谓词/lookup 等）
+        text_no_time = re.sub(r"\((?:actual\s+)?time\s*=.*?loops\s*=.*?\)\s*$", "", line).rstrip()
 
         # 维护父子栈
         while stack and indent_len <= stack[-1][0]:
@@ -75,6 +114,7 @@ def parse_explain_analyze(text: str) -> List[Dict[str, Any]]:
             "avg_time": avg_time,
             "loops": loops,
             "rows": rows,
+            "text": text_no_time,
             "indent": indent_len,
             "parent": parent_idx,
             "children": [],
@@ -82,6 +122,8 @@ def parse_explain_analyze(text: str) -> List[Dict[str, Any]]:
         if parent_idx is not None:
             raw_nodes[parent_idx]["children"].append(idx)
         stack.append((indent_len, idx))
+        if debug is not None:
+            debug.append(f"MATCH l{idx_line+1}: indent={indent_len}, op='{op}', thi={t_hi}, loops={loops}, rows={rows}, avg={avg_time}, parent={parent_idx}")
 
     # 计算独占时间（每 loop）：exclusive = avg_time - sum(child.avg_time * (child.loops/parent.loops))
     for idx in reversed(range(len(raw_nodes))):
@@ -102,6 +144,8 @@ def parse_explain_analyze(text: str) -> List[Dict[str, Any]]:
         if exclusive < 0:
             exclusive = 0.0
         node["exclusive_time"] = exclusive
+        if debug is not None:
+            debug.append(f"EXCLUSIVE idx={idx}: op='{node.get('op')}', avg={avg}, contrib={contrib}, exclusive={exclusive}")
 
     # 输出扁平节点列表（保留 exclusive_time）
     nodes: List[Dict[str, Any]] = []

@@ -550,7 +550,7 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
     total_excl = 0.0
     matched = 0
     for n in nodes:
-        optext = (n.get("op") or "").strip()
+        optext = (n.get("text") or n.get("op") or "").strip()
         # 使用独占时间（若可用）；否则回退到 avg_time（父子未去重）
         avg_time = n.get("exclusive_time", None)
         if avg_time is None:
@@ -566,7 +566,7 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
         low = optext.lower()
 
         # 1) Filters (含连接条件)：优先将等值条件归因到 join(col)，否则归因到 filter()/select
-        if "filter" in low or "where" in low:
+        if "filter" in low or " where " in low or low.startswith("filter"):
             # 1a) 先尝试识别 a.b = c.d 作为连接条件，分摊到两侧 join 操作
             eq_pairs = _extract_ident_pairs_from_text(optext)
             if eq_pairs:
@@ -605,7 +605,7 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
             continue
 
         # 2) Sort: distribute to ORDER BY columns present in this SQL
-        if "sort" in low or "order" in low:
+        if "sort" in low or " order " in low or low.startswith("sort"):
             if order_cols:
                 share = float(avg_time) / float(len(order_cols))
                 for key in order_cols:
@@ -614,7 +614,7 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
             continue
 
         # 3) Group/Aggregate: distribute to GROUP BY columns
-        if "group" in low or "aggregate" in low:
+        if " group " in low or "aggregate" in low or low.startswith("group"):
             if group_cols:
                 share = float(avg_time) / float(len(group_cols))
                 for key in group_cols:
@@ -622,8 +622,8 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
                         per_key_time[key] = per_key_time.get(key, 0.0) + share
             continue
 
-        # 4) Join: try to attribute using equality pairs a.b = c.d
-        if "join" in low or "nested loop" in low:
+        # 4) Join/Lookup/Hash: try to attribute using equality pairs a.b = c.d
+        if "join" in low or "nested loop" in low or "lookup" in low or "index lookup" in low or "hash join" in low:
             for left, right in _extract_ident_pairs_from_text(optext):
                 for tok in (left, right):
                     base_table = _resolve_table_for_column(tok, aliases, schema)
@@ -639,6 +639,19 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
                             key = any_join_key  # type: ignore
                     if key in ops_present:
                         per_key_time[key] = per_key_time.get(key, 0.0) + float(avg_time) / 2.0  # split between two sides
+            continue
+
+        # 5) Table scan on <table>: attribute to that table's involved columns in this SQL
+        m_scan = re.search(r"table\s+scan\s+on\s+(`?[A-Za-z0-9_]+`?)", optext, re.IGNORECASE)
+        if m_scan:
+            tbl = _norm_table(m_scan.group(1))
+            # 该表在本 SQL 的相关列（优先 filter/join，再到 group/order）
+            related = [(e.table, e.column, e.operation) for e in evt_list if e.table == tbl and (e.operation.startswith("filter(") or e.operation.startswith("join(") or e.operation in ("group by", "order by"))]
+            if related:
+                share = float(avg_time) / float(len(related))
+                for key in related:
+                    if key in ops_present:
+                        per_key_time[key] = per_key_time.get(key, 0.0) + share
             continue
 
         # 5) Insert/Update: attribute to involved columns evenly
