@@ -1,0 +1,5 @@
+-> Aggregate: sum(orderline.ol_amount), sum((case when (item.i_data like 'PR%') then orderline.ol_amount else 0 end))  (cost=705039 rows=1) (actual time=994..994 rows=1 loops=1)
+    -> Nested loop inner join  (cost=672278 rows=327610) (actual time=994..994 rows=0 loops=1)
+        -> Filter: ((orderline.ol_delivery_d >= DATE'2007-01-02') and (orderline.ol_delivery_d < DATE'2020-01-02') and (orderline.ol_i_id is not null))  (cost=312263 rows=327610) (actual time=994..994 rows=0 loops=1)
+            -> Table scan on orderline  (cost=312263 rows=2.95e+6) (actual time=1.19..811 rows=3e+6 loops=1)
+        -> Single-row index lookup on item using PRIMARY (i_id=orderline.ol_i_id)  (cost=0.999 rows=1) (never executed)

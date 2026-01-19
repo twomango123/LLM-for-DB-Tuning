@@ -1,0 +1,1 @@
+-> Count rows in district  (actual time=0.0909..0.0909 rows=1 loops=1)

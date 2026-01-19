@@ -1,0 +1,1 @@
+-> Count rows in neworder  (actual time=5.32..5.32 rows=1 loops=1)

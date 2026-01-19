@@ -1,0 +1,1 @@
+-> Count rows in orders  (actual time=33.6..33.6 rows=1 loops=1)

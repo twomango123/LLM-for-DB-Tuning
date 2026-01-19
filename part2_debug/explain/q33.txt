@@ -1,0 +1,7 @@
+-> Sort: orders.o_ol_cnt  (actual time=2243..2243 rows=0 loops=1)
+    -> Table scan on <temporary>  (actual time=2243..2243 rows=0 loops=1)
+        -> Aggregate using temporary table  (actual time=2243..2243 rows=0 loops=1)
+            -> Nested loop inner join  (cost=575866 rows=286502) (actual time=2243..2243 rows=0 loops=1)
+                -> Table scan on orders  (cost=29609 rows=284230) (actual time=1.6..91.1 rows=300000 loops=1)
+                -> Filter: ((orders.o_entry_d <= orderline.ol_delivery_d) and (orderline.ol_delivery_d < DATE'2020-01-01'))  (cost=1.01 rows=1.01) (actual time=0.00708..0.00708 rows=0 loops=300000)
+                    -> Index lookup on orderline using PRIMARY (ol_w_id=orders.o_w_id, ol_d_id=orders.o_d_id, ol_o_id=orders.o_id)  (cost=1.01 rows=9.07) (actual time=0.00492..0.00625 rows=10 loops=300000)

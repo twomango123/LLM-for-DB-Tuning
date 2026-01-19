@@ -1,0 +1,8 @@
+-> Sort: orders.o_ol_cnt  (actual time=90.5..90.5 rows=0 loops=1)
+    -> Table scan on <temporary>  (actual time=90.5..90.5 rows=0 loops=1)
+        -> Aggregate using temporary table  (actual time=90.5..90.5 rows=0 loops=1)
+            -> Nested loop semijoin  (cost=89441 rows=95491) (actual time=90.4..90.4 rows=0 loops=1)
+                -> Filter: ((orders.o_entry_d >= DATE'2007-01-02') and (orders.o_entry_d < DATE'2012-01-02'))  (cost=29446 rows=31575) (actual time=90.4..90.4 rows=0 loops=1)
+                    -> Table scan on orders  (cost=29446 rows=284230) (actual time=1.54..69.9 rows=300000 loops=1)
+                -> Filter: (orderline.ol_delivery_d >= orders.o_entry_d)  (cost=3 rows=3.02) (never executed)
+                    -> Index lookup on orderline using PRIMARY (ol_w_id=orders.o_w_id, ol_d_id=orders.o_d_id, ol_o_id=orders.o_id)  (cost=3 rows=9.07) (never executed)

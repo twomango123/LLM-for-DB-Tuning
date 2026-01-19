@@ -1,0 +1,3 @@
+-> Aggregate: sum(orderline.ol_amount)  (cost=315011 rows=1) (actual time=826..826 rows=1 loops=1)
+    -> Filter: ((orderline.ol_delivery_d >= DATE'1999-01-01') and (orderline.ol_delivery_d < DATE'2020-01-01') and (orderline.ol_quantity between 1 and 100000))  (cost=311372 rows=36397) (actual time=826..826 rows=0 loops=1)
+        -> Table scan on orderline  (cost=311372 rows=2.95e+6) (actual time=1.1..646 rows=3e+6 loops=1)

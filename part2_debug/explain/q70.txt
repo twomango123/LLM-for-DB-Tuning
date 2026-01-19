@@ -1,0 +1,1 @@
+-> Count rows in item  (actual time=5.76..5.76 rows=1 loops=1)
