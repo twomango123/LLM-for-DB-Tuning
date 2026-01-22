@@ -3,6 +3,7 @@
 
 import argparse
 import configparser
+import csv
 import json
 import re
 import os
@@ -274,38 +275,93 @@ def _extract_where_predicates(sql: str) -> List[Tuple[str, str]]:
 
 
 def _extract_insert_columns(sql: str, schema: Dict[str, Dict[str, str]]) -> List[Tuple[str, List[str]]]:
-    # returns list of (table, [cols]) for each INSERT INTO
+    """返回 list[(table, [cols])]
+    支持：
+      - INSERT [IGNORE] INTO t(col,...) VALUES(...)
+      - INSERT [IGNORE] INTO t VALUES(...)
+      - INSERT [IGNORE] INTO t(col,...) SELECT ...
+      - REPLACE INTO t(col,...) VALUES/SELECT ... 视作 insert
+      - ON DUPLICATE KEY UPDATE col=...（仅用于后续 _extract_update_sets_on_dup 处理）
+    """
     results: List[Tuple[str, List[str]]] = []
-    # INSERT INTO t(col, ...) VALUES (...)
-    for m in re.finditer(r"\bINSERT\s+INTO\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*\(([^)]*)\)\s*VALUES\b", sql, re.IGNORECASE | re.DOTALL):
-        tbl = _norm_table(m.group(1))
-        cols = [
-            _unquote_ident(x.strip()) for x in m.group(2).split(",") if x.strip()
-        ]
-        results.append((tbl, cols))
-    # INSERT INTO t VALUES (...): 退化为全列（按 schema 中列）
-    for m in re.finditer(r"\bINSERT\s+INTO\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*VALUES\s*\(", sql, re.IGNORECASE | re.DOTALL):
-        tbl = _norm_table(m.group(1))
+    # 带列清单
+    for m in re.finditer(r"\b(INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*\(([^)]*)\)\s*(VALUES|SELECT)\b", sql, re.IGNORECASE | re.DOTALL):
+        tbl = _norm_table(m.group(2))
+        cols = [_unquote_ident(x.strip()) for x in m.group(3).split(",") if x.strip()]
+        if cols:
+            results.append((tbl, cols))
+    # 无列清单：退化为全列表
+    for m in re.finditer(r"\b(INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*(VALUES|SELECT)\b", sql, re.IGNORECASE | re.DOTALL):
+        tbl = _norm_table(m.group(2))
         cols = list(schema.get(tbl, {}).keys())
         if cols:
             results.append((tbl, cols))
     return results
 
 
-def _extract_update_sets(sql: str) -> List[Tuple[str, List[str]]]:
-    # returns list of (table, [cols]) for each UPDATE ... SET ...
+def _extract_update_sets(sql: str, schema: Dict[str, Dict[str, str]]) -> List[Tuple[str, List[str]]]:
+    """返回 list[(table, [cols])] 对每个 UPDATE。
+    支持：
+      - 简单 UPDATE t SET col=...
+      - UPDATE t1 JOIN t2 ... SET t1.c=..., t2.c2=...
+      - 多表 UPDATE：UPDATE t1, t2 SET t1.c=..., t2.c2=...
+      - INSERT ... ON DUPLICATE KEY UPDATE col=...（由本函数提取更新列）
+    """
     results: List[Tuple[str, List[str]]] = []
-    # 支持可选别名与无 WHERE 的 UPDATE
+    # 1) 简单 UPDATE t SET ...
     for m in re.finditer(r"\bUPDATE\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)(?:\s+(?:AS\s+)?" + _Q_IDENT + r")?\s+SET\s+(.+?)(?=\bWHERE\b|$)", sql, re.IGNORECASE | re.DOTALL):
         tbl = _norm_table(m.group(1))
         sets = m.group(2)
         cols: List[str] = []
         for s in sets.split(","):
             s = s.strip()
-            m2 = re.match(r"(" + _Q_IDENT + r")\s*=", s)
+            m2 = re.match(r"(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*=", s)
             if m2:
-                cols.append(_unquote_ident(m2.group(1)))
-        results.append((tbl, cols))
+                lhs = _unquote_ident(m2.group(1)).replace(" ", "")
+                col = lhs.split(".")[-1]
+                cols.append(col)
+        if cols:
+            results.append((tbl, cols))
+
+    # 2) UPDATE ... JOIN ... SET ... 或 UPDATE t1, t2 SET ...
+    for m in re.finditer(r"\bUPDATE\s+(.+?)\s+SET\s+(.+?)(?=\bWHERE\b|$)", sql, re.IGNORECASE | re.DOTALL):
+        head = m.group(1)
+        sets = m.group(2)
+        # 粗略跳过已被简单 UPDATE 匹配的情况：如果 head 是单表且前面没有 JOIN/逗号，则已处理过
+        if re.fullmatch(r"\s*(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)(?:\s+(?:AS\s+)?" + _Q_IDENT + r")?\s*", head, re.IGNORECASE):
+            continue
+        # 用全 SQL 构造别名映射
+        aliases = _collect_aliases(sql)
+        tb2cols: Dict[str, Set[str]] = {}
+        for s in sets.split(","):
+            s = s.strip()
+            m2 = re.match(r"(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*=", s)
+            if not m2:
+                continue
+            lhs = _unquote_ident(m2.group(1)).replace(" ", "")
+            base = _resolve_table_for_column(lhs, aliases, schema)
+            col = lhs.split(".")[-1]
+            if base and col in schema.get(base, {}):
+                tb2cols.setdefault(base, set()).add(col)
+        for tname, cols in tb2cols.items():
+            results.append((tname, sorted(cols)))
+
+    # 3) INSERT ... ON DUPLICATE KEY UPDATE col=...
+    for m in re.finditer(r"\b(INSERT|REPLACE)\b.+?\bINTO\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?).+?\bON\s+DUPLICATE\s+KEY\s+UPDATE\s+(.+)$", sql, re.IGNORECASE | re.DOTALL):
+        tbl = _norm_table(m.group(2))
+        upd = m.group(3)
+        cols: Set[str] = set()
+        for s in upd.split(","):
+            s = s.strip()
+            m2 = re.match(r"(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*=", s)
+            if m2:
+                lhs = _unquote_ident(m2.group(1)).replace(" ", "")
+                col = lhs.split(".")[-1]
+                if col in schema.get(tbl, {}):
+                    cols.add(col)
+        if cols:
+            results.append((tbl, sorted(cols)))
+
     return results
 
 
@@ -350,17 +406,15 @@ def _extract_operations_block(sql: str, schema: Dict[str, Dict[str, str]]) -> Li
         if base_table and col in schema.get(base_table, {}):
             ops.append(OpEvent(table=base_table, column=col, operation="group by"))
 
-    # INSERT columns
+    # INSERT columns（无论是否在 schema 中，都记录该列，便于统计 count）
     for tbl, cols in _extract_insert_columns(sql, schema):
         for c in cols:
-            if c in schema.get(tbl, {}):
-                ops.append(OpEvent(table=tbl, column=c, operation="insert"))
+            ops.append(OpEvent(table=tbl, column=_unquote_ident(c), operation="insert"))
 
-    # UPDATE sets and predicates
-    for tbl, cols in _extract_update_sets(sql):
+    # UPDATE sets and predicates（无论是否在 schema 中，都记录该列，便于统计 count）
+    for tbl, cols in _extract_update_sets(sql, schema):
         for c in cols:
-            if c in schema.get(tbl, {}):
-                ops.append(OpEvent(table=tbl, column=c, operation="update"))
+            ops.append(OpEvent(table=tbl, column=_unquote_ident(c), operation="update"))
     return ops
 
 
@@ -682,6 +736,7 @@ def _aggregate_operations(
     analyze_driver,
     debug: bool = False,
     debug_dir: Optional[str] = None,
+    exec_counts: Optional[Dict[str, int]] = None,
 ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
     # stats: (table, column, operation) -> {count, sum_time, rows, filtered}
     stats: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
@@ -701,7 +756,9 @@ def _aggregate_operations(
                 stats[key]["rows"] = rows
                 stats[key]["filtered"] = filtered
         # Attribute EXPLAIN ANALYZE time to per-column ops for this SQL
-        if qa_analyze_sql is not None and analyze_driver is not None:
+        # 跳过对 DML 的 EXPLAIN 分析；UPDATE/INSERT 只做计数统计
+        is_dml = bool(re.match(r"^\s*(INSERT|UPDATE|REPLACE|DELETE)\b", sql, re.IGNORECASE))
+        if (qa_analyze_sql is not None) and (analyze_driver is not None) and (not is_dml):
             try:
                 res = qa_analyze_sql(analyze_driver, sql)
                 nodes = res.get("nodes") or []
@@ -742,10 +799,17 @@ def _aggregate_operations(
         else:
             per_key_time = {}
         # Update counts and sum_time per SQL (count only once per key per SQL)
-        for key in set((e.table, e.column, e.operation) for e in ops):
-            stats[key]["count"] += 1
+        # 对本条 SQL 命中的每个列操作，仅计一次；其出现次数按“该 SQL 的执行频率”加权
+        base = os.path.basename(path)
+        mult = int((exec_counts or {}).get(base, 1))
+        for e in ops:
+            key = (e.table, e.column, e.operation)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            stats[key]["count"] += mult
             if key in per_key_time:
-                stats[key]["sum_time"] += float(per_key_time[key])
+                stats[key]["sum_time"] += float(per_key_time[key]) * mult
 
     # initialize result with all tables/columns to ensure 字段长度 可插入
     result: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
@@ -756,14 +820,24 @@ def _aggregate_operations(
         rows_val = info.get("rows")
         if rows_val is None:
             rows_val = 1
+        # 只需要输出 update 次数；跳过 insert 项
+        if op == "insert":
+            continue
+        cnt = int(info.get("count") or 0)
+        if op == "update":
+            # 仅输出更新次数
+            item = {"operation": op}
+            if cnt > 0:
+                item["count"] = cnt
+            result.setdefault(table, {}).setdefault(column, []).append(item)
+            continue
+        # 其它操作保持 rows/avg_time/count 输出
         item = {
             "operation": op,
             "rows": rows_val if isinstance(rows_val, (int, float)) else 1,
         }
-        if info.get("filtered") is not None:
-            item["filtered"] = info.get("filtered")
+        # 不再输出 filtered 字段
         # avg_time 和 count：avg_time = 总时间 / 次数
-        cnt = int(info.get("count") or 0)
         if cnt > 0:
             avg_time_s = (float(info.get("sum_time") or 0.0)) / float(cnt)
             avg_time_ms = avg_time_s * 1000.0
@@ -795,6 +869,40 @@ def _connect_mysql_driver(dialect: str, host: str, port: int, user: str, passwor
     if not drv.connect():
         raise SystemExit("无法连接 MySQL，用于字段长度估算")
     return drv
+
+
+def _load_exec_counts(path_or_none: Optional[str]) -> Dict[str, int]:
+    """加载执行次数映射：filename -> count。
+    - 如果给定路径是文件，直接读取；
+    - 如果是目录，优先寻找 sample_execution_counts_chbench.csv；
+    - 若不存在或读取失败，返回空映射。
+    """
+    mapping: Dict[str, int] = {}
+    try:
+        if not path_or_none:
+            # 默认位置：项目内示例统计
+            cand = Path(_ROOT_DIR) / "Data" / "cleaned_sql" / "query_and_update" / "sample_execution_counts_chbench.csv"
+        else:
+            cand = Path(path_or_none)
+        if cand.is_dir():
+            f = cand / "sample_execution_counts_chbench.csv"
+        else:
+            f = cand
+        if not f.exists():
+            return mapping
+        with f.open("r", encoding="utf-8") as fh:
+            rdr = csv.DictReader(fh)
+            for row in rdr:
+                fn = (row.get("filename") or "").strip()
+                try:
+                    cnt = int(float(row.get("count") or 0))
+                except Exception:
+                    continue
+                if fn:
+                    mapping[fn] = cnt
+    except Exception:
+        return {}
+    return mapping
 
 
 def _load_mysql_config(config_path: Optional[str]) -> Optional[Dict[str, Any]]:
@@ -830,7 +938,8 @@ def build_part2(schema_sql_path: str, sql_dir: str,
                 user: str = "root", password: str = "", database: str = "",
                 config_path: Optional[str] = None,
                 debug: bool = False,
-                debug_dir: Optional[str] = None) -> str:
+                debug_dir: Optional[str] = None,
+                exec_counts_path: Optional[str] = None) -> str:
     # Load schema
     tables = parse_schema(schema_sql_path)
     if not tables:
@@ -878,7 +987,10 @@ def build_part2(schema_sql_path: str, sql_dir: str,
     # 聚合操作
     # 构建用于 EXPLAIN ANALYZE 的连接（与字段长度共用一个驱动即可）
     analyze_driver = col_driver
-    mapping = _aggregate_operations(tables, queries, lat_map, estimator, analyze_driver, debug=debug, debug_dir=debug_dir)
+    # 加载 DML 执行次数映射，用于 INSERT/UPDATE 的 count
+    exec_counts = _load_exec_counts(exec_counts_path)
+
+    mapping = _aggregate_operations(tables, queries, lat_map, estimator, analyze_driver, debug=debug, debug_dir=debug_dir, exec_counts=exec_counts)
 
     # 将 字段长度 插入到每个列的列表首位；没有操作的列也要输出
     for t, cols in tables.items():
@@ -888,6 +1000,19 @@ def build_part2(schema_sql_path: str, sql_dir: str,
             # 仅在未插入过时添加（避免重复）
             if not arr or (arr and "字段长度" not in arr[0]):
                 arr.insert(0, {"字段长度": length_val})
+
+    # 在每个表级别增加 表行数 字段（使用 INFORMATION_SCHEMA 估算）
+    try:
+        table_rows_map = _fetch_table_rows(col_driver, database, list(tables.keys()))
+        # 将表行数挂到 mapping[t]["表行数"]，并将列仍保持为列表
+        for t in list(mapping.keys()):
+            # 确保表存在
+            mapping.setdefault(t, {})
+            mapping[t]["表行数"] = int(table_rows_map.get(t, 0) or 0)
+    except Exception:
+        for t in list(mapping.keys()):
+            mapping.setdefault(t, {})
+            mapping[t]["表行数"] = 0
 
     # 关闭连接
     try:
@@ -900,12 +1025,14 @@ def build_part2(schema_sql_path: str, sql_dir: str,
     except Exception:
         pass
 
-    # 调试：记录无法读取的 SQL 文件
-    if debug and skipped:
+    # 调试：记录无法读取的 SQL 文件 + 执行次数与倍率
+    if debug:
         try:
             base = Path(debug_dir or (Path(_ROOT_DIR) / "debug" / "part2"))
             base.mkdir(parents=True, exist_ok=True)
-            (base / "skipped.json").write_text(json.dumps(skipped, ensure_ascii=False, indent=2), encoding="utf-8")
+            if skipped:
+                (base / "skipped.json").write_text(json.dumps(skipped, ensure_ascii=False, indent=2), encoding="utf-8")
+            (base / "exec_counts.json").write_text(json.dumps(exec_counts or {}, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
             pass
 
@@ -929,6 +1056,7 @@ def main() -> None:
     ap.add_argument("--config", default=str(Path(_ROOT_DIR) / "query_latency" / "db_config.ini"), help="INI 配置路径（含 [mysql] 段）")
     ap.add_argument("--debug", action="store_true", help="开启调试输出（保存 EXPLAIN 文本、节点与归因）")
     ap.add_argument("--debug-dir", default=str(Path(_ROOT_DIR) / "debug" / "part2"), help="调试输出目录")
+    ap.add_argument("--exec-counts", default=str(Path(_ROOT_DIR) / "Data" / "cleaned_sql" / "query_and_update" / "sample_execution_counts_chbench.csv"), help="执行次数 CSV（filename,count）")
     args = ap.parse_args()
 
     content = build_part2(
@@ -943,6 +1071,7 @@ def main() -> None:
         config_path=args.config,
         debug=args.debug,
         debug_dir=args.debug_dir,
+        exec_counts_path=args.exec_counts,
     )
     if args.out:
         Path(args.out).write_text(content, encoding="utf-8")

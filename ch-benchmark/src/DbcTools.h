@@ -32,7 +32,7 @@ class DbcTools{
 		static bool setEnv(SQLHENV& hEnv);
 		static bool connect(SQLHENV& hEnv, SQLHDBC& hDBC);
 		static bool autoCommitOff(SQLHDBC& hDBC);
-		static bool allocAndPrepareStmt(SQLHDBC& hDBC, SQLHSTMT& hStmt, const char* stmt);
+        static bool allocAndPrepareStmt(SQLHDBC& hDBC, SQLHSTMT& hStmt, const char* stmt);
 		static bool resetStatement(SQLHSTMT& hStmt);
 		static bool bind(SQLHSTMT& hStmt, int pos, int& value);
 		static bool bind(SQLHSTMT& hStmt, int pos, double& value);

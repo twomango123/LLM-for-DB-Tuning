@@ -44,16 +44,16 @@ bool DbcTools::setEnv(SQLHENV& hEnv){
 }
 
 bool DbcTools::connect(SQLHENV& hEnv, SQLHDBC& hDBC){
-	SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &hDBC);
-	if(reviewReturn(hDBC,SQL_HANDLE_DBC,ret,1)){
-		ret = SQLConnect(hDBC, (SQLCHAR*) Config::getDataSourceName().c_str(), SQL_NTS, (SQLCHAR*) Config::getDbsUser().c_str(), SQL_NTS, (SQLCHAR*) Config::getDbsPassword().c_str(), SQL_NTS);
-		if(reviewReturn(hDBC,SQL_HANDLE_DBC,ret,1)){
-			Log::l1() << Log::tm() << "-dbs connected\n";
-			return 1;
-		}
-	}
-	Log::l2() << Log::tm() << "-dbs not connected\n";
-	return 0;
+    SQLRETURN ret = SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &hDBC);
+    if(reviewReturn(hDBC,SQL_HANDLE_DBC,ret,1)){
+        ret = SQLConnect(hDBC, (SQLCHAR*) Config::getDataSourceName().c_str(), SQL_NTS, (SQLCHAR*) Config::getDbsUser().c_str(), SQL_NTS, (SQLCHAR*) Config::getDbsPassword().c_str(), SQL_NTS);
+        if(reviewReturn(hDBC,SQL_HANDLE_DBC,ret,1)){
+            Log::l1() << Log::tm() << "-dbs connected\n";
+            return 1;
+        }
+    }
+    Log::l2() << Log::tm() << "-dbs not connected\n";
+    return 0;
 }
 
 bool DbcTools::autoCommitOff(SQLHDBC& hDBC){
@@ -86,6 +86,8 @@ bool DbcTools::allocAndPrepareStmt(SQLHDBC& hDBC, SQLHSTMT& hStmt, const char* s
     Log::l1() << Log::tm() << "-prepare statement failed:\n" << stmt << "\n";
     return 0;
 }
+
+ 
 
 bool DbcTools::resetStatement(SQLHSTMT& hStmt){
 	SQLRETURN ret = SQLFreeStmt(hStmt, SQL_CLOSE);
@@ -143,11 +145,11 @@ bool DbcTools::executePreparedStatement(SQLHSTMT& hStmt){
 }
 
 bool DbcTools::executeServiceStatement(SQLHSTMT& hStmt, const char* stmt, bool showError){
-	if(resetStatement(hStmt)){
-		SQLRETURN ret = SQLExecDirect(hStmt, (SQLCHAR*) stmt, SQL_NTS);
-		if(reviewReturn(hStmt, SQL_HANDLE_STMT, ret, 1))
-			return 1;
-	}
+    if(resetStatement(hStmt)){
+        SQLRETURN ret = SQLExecDirect(hStmt, (SQLCHAR*) stmt, SQL_NTS);
+        if(reviewReturn(hStmt, SQL_HANDLE_STMT, ret, 1))
+            return 1;
+    }
 	if(showError)
 		Log::l2() << Log::tm() << "-service statement failed:\n    " << stmt << "\n";
 	else

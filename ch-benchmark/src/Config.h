@@ -40,11 +40,11 @@ class Config{
 		static int ANALYTICAL_CLIENTS;
 		static int TRANSACTIONAL_CLIENTS;
 
-		static int WARMUP_DURATION_IN_S;
-		static int TEST_DURATION_IN_S;
-		static int WAREHOUSE_COUNT;
-		static std::string INITIAL_DB_CREATION_PATH;
-		static std::string OUTPUT_PATH;
+        static int WARMUP_DURATION_IN_S;
+        static int TEST_DURATION_IN_S;
+        static int WAREHOUSE_COUNT;
+        static std::string INITIAL_DB_CREATION_PATH;
+        static std::string OUTPUT_PATH;
 
 		// Schema tuning mappings (optional). When empty, rewriting is skipped.
 		static std::map<std::string, std::vector<std::string>> OLD2NEW;
@@ -98,9 +98,9 @@ class Config{
 		static int getAnalyticalClients();
 		static int getTransactionalClients();
 
-		static int getWarmupDurationInS();
-		static int getTestDurationInS();
-		static int getWarehouseCount();
+        static int getWarmupDurationInS();
+        static int getTestDurationInS();
+        static int getWarehouseCount();
 
 		static std::string getOutputPath();
 		static std::string getInitialDbCreationPath();

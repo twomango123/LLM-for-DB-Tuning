@@ -20,133 +20,145 @@ TRUNCATE TABLE `customers`;
 TRUNCATE TABLE `addresses`;
 TRUNCATE TABLE `products`;
 
+
+-- 1. 禁用外键检查
+SET FOREIGN_KEY_CHECKS = 0;
+-- 2. 禁用唯一/主键检查（减少索引验证）
+SET UNIQUE_CHECKS = 0;
+-- 3. 关闭自动提交（避免逐行刷磁盘）
+SET AUTOCOMMIT = 0;
+-- 4. 临时关闭二进制日志（如果不需要主从同步/数据恢复，必开！提速最明显）
+SET SQL_LOG_BIN = 0;
 -- 加载基础维表/被引用表
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Products.csv'
-INTO TABLE `products`
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/products.csv'
+IGNORE INTO TABLE `products`
 CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
-(`product_id`, @product_name, `product_price`, @product_description)
-SET `product_name` = LEFT(@product_name, 20),
-    `product_description` = LEFT(@product_description, 255);
+(`product_id`,`product_name`,`product_price`,`product_description`);
+COMMIT;
 
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Addresses.csv'
-INTO TABLE `addresses`
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/addresses.csv'
+IGNORE INTO TABLE `addresses`
 CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
-(`address_id`, @address_details, @city, @zip_postcode, @state_province_county, @country)
-SET `address_details`=LEFT(@address_details,80),
-    `city`=LEFT(@city,50),
-    `zip_postcode`=LEFT(@zip_postcode,20),
-    `state_province_county`=LEFT(@state_province_county,50),
-    `country`=LEFT(@country,50);
+(`address_id`, `address_details`, `city`, `zip_postcode`, `state_province_county`, `country`);
+COMMIT;
 
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Customers.csv'
-INTO TABLE `customers`
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/customers.csv'
+IGNORE INTO TABLE `customers`
 CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
-(`customer_id`, @payment_method, @customer_name, @customer_phone, @customer_email, `date_became_customer`)
-SET `payment_method`=LEFT(@payment_method,10),
-    `customer_name`=LEFT(@customer_name,80),
-    `customer_phone`=LEFT(@customer_phone,80),
-    `customer_email`=LEFT(@customer_email,80);
+(`customer_id`, @payment_method, @customer_name, @customer_phone, @customer_email, `date_became_customer`);
+COMMIT;
 
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Delivery_Routes.csv'
-INTO TABLE `delivery_routes`
-CHARACTER SET utf8mb4
-FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
-LINES TERMINATED BY '\n'
-IGNORE 1 LINES
-(`route_id`, @route_name, @other_route_details)
-SET `route_name`=LEFT(@route_name,50),
-    `other_route_details`=LEFT(@other_route_details,255);
 
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Trucks.csv'
-INTO TABLE `trucks`
-CHARACTER SET utf8mb4
-FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
-LINES TERMINATED BY '\n'
-IGNORE 1 LINES
-(`truck_id`, @truck_licence_number, @truck_details)
-SET `truck_licence_number`=LEFT(@truck_licence_number,20),
-    `truck_details`=LEFT(@truck_details,255);
-
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Employees.csv'
-INTO TABLE `employees`
-CHARACTER SET utf8mb4
-FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
-LINES TERMINATED BY '\n'
-IGNORE 1 LINES
-(`employee_id`,`employee_address_id`, @employee_name, @employee_phone)
-SET `employee_name`=LEFT(@employee_name,80),
-    `employee_phone`=LEFT(@employee_phone,80);
-
--- 加载依赖这些表的从表/关系表（按外键顺序）
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Regular_Orders.csv'
-INTO TABLE `regular_orders`
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/regular_orders.csv'
+IGNORE INTO TABLE `regular_orders`
 CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
 (`regular_order_id`,`distributer_id`);
+COMMIT;
 
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Customer_Addresses.csv'
-INTO TABLE `customer_addresses`
-CHARACTER SET utf8mb4
-FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
-LINES TERMINATED BY '\n'
-IGNORE 1 LINES
-(`customer_id`,`address_id`,`date_from`, @address_type, `date_to`)
-SET `address_type`=LEFT(@address_type,10);
-
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Delivery_Route_Locations.csv'
-INTO TABLE `delivery_route_locations`
-CHARACTER SET utf8mb4
-FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
-LINES TERMINATED BY '\n'
-IGNORE 1 LINES
-(@location_code,`route_id`,`location_address_id`, @location_name)
-SET `location_code`=LEFT(@location_code,10),
-    `location_name`=LEFT(@location_name,50);
-
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Actual_Orders.csv'
-INTO TABLE `actual_orders`
-CHARACTER SET utf8mb4
-FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
-LINES TERMINATED BY '\n'
-IGNORE 1 LINES
-(`actual_order_id`, @order_status_code, `regular_order_id`,`actual_order_date`)
-SET `order_status_code`=LEFT(@order_status_code,10);
-
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Regular_Order_Products.csv'
-INTO TABLE `regular_order_products`
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/regular_order_products.csv'
+IGNORE INTO TABLE `regular_order_products`
 CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
 (`regular_order_id`,`product_id`);
+COMMIT;
 
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Order_Deliveries.csv'
-INTO TABLE `order_deliveries`
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/actual_orders.csv'
+IGNORE INTO TABLE `actual_orders`
 CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
-(@location_code,`actual_order_id`, @delivery_status_code,`driver_employee_id`,`truck_id`,`delivery_date`)
-SET `location_code`=LEFT(@location_code,10),
-    `delivery_status_code`=LEFT(@delivery_status_code,10);
+(`actual_order_id`, @order_status_code, `regular_order_id`,`actual_order_date`);
+COMMIT;
 
-LOAD DATA INFILE '/var/lib/mysql-files/output_dir/Actual_Order_Products.csv'
-INTO TABLE `actual_order_products`
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/actual_order_products.csv'
+IGNORE INTO TABLE `actual_order_products`
 CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
 (`actual_order_id`,`product_id`);
+COMMIT;
 
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/customer_addresses.csv'
+IGNORE INTO TABLE `customer_addresses`
+CHARACTER SET utf8mb4
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(`customer_id`,`address_id`,`date_from`, @address_type, `date_to`);
+COMMIT;
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/delivery_routes.csv'
+IGNORE INTO TABLE `delivery_routes`
+CHARACTER SET utf8mb4
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(`route_id`, @route_name, @other_route_details);
+COMMIT;
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/delivery_route_locations.csv'
+IGNORE INTO TABLE `delivery_route_locations`
+CHARACTER SET utf8mb4
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(@location_code,`route_id`,`location_address_id`, @location_name);
+COMMIT;
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/trucks.csv'
+IGNORE INTO TABLE `trucks`
+CHARACTER SET utf8mb4
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(`truck_id`, @truck_licence_number, @truck_details);
+COMMIT;
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/employees.csv'
+IGNORE INTO TABLE `employees`
+CHARACTER SET utf8mb4
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(`employee_id`,`employee_address_id`, @employee_name, @employee_phone);
+COMMIT;
+
+
+
+LOAD DATA INFILE '/var/lib/mysql-files/output_dir/order_deliveries.csv'
+IGNORE INTO TABLE `order_deliveries`
+CHARACTER SET utf8mb4
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(@location_code,`actual_order_id`, @delivery_status_code,`driver_employee_id`,`truck_id`,`delivery_date`);
+COMMIT;
+
+
+SET SQL_LOG_BIN = 1;
+SET AUTOCOMMIT = 1;
+SET UNIQUE_CHECKS = 1;
 SET FOREIGN_KEY_CHECKS = 1;

@@ -373,6 +373,7 @@ class MySqlDialect : public Dialect {
 
     bool init(){
         const std::string base = "/LLM-for-DB-Tuning/DataBase/cleaned_sql/query_sql/";
+        const std::string baseupdate = "/LLM-for-DB-Tuning/DataBase/cleaned_sql/update_sql/";
 
         // Database check
         getSelectCountWarehouseString = readFileToString(base + "getSelectCountWarehouse.sql");
@@ -572,7 +573,7 @@ class MySqlDialect : public Dialect {
     }
 
     virtual const char* getNoOrderInsert() {
-        return "insert into tpcch.order values (?,?,?,?,?,NULL,?,?)";
+        return "insert into tpcch.orders values (?,?,?,?,?,NULL,?,?)";
     }
 
     virtual const char* getNoNewOrderInsert() {

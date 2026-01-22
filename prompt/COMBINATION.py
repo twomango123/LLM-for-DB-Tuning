@@ -110,10 +110,12 @@ TAIL_TEXT = """## 操作集合
 现在，请给出你认为有助于在当前场景下缩短历史负载查询执行时间的Schema调整动作序列，要求：
 
 ~~~
-1.按照支持的操作接口，给出操作序列，短横线分隔，无需回答其他内容
-2.可参考给出的经验进行schema变化操作
-3.每一项操作前后可能有表被删除，请根据操作顺序，在后续操作中使用变化后的新表进行操作  
-4.在给出一个操作时，需要确定当前被操作的表和列经过前序操作仍包含其中  
+1.按照支持的操作接口，给出操作序列，换行分隔，无需回答其他内容
+2.可参考给出的经验进行schema变化操作  
+3.需要在历史负载查询执行时间更短时使用的存储空间尽可能小，请平衡两者代价  
+4.需要注意读操作和写操作的频率，确保读写操作的总性能得到提升，请平衡两者代价
+5.每一项操作前后可能有表被删除，请根据操作顺序，在后续操作中使用变化后的新表进行操作  
+6.在给出一个操作时，需要确定当前被操作的表和列经过前序操作仍包含其中  
 ~~~
 """
 
@@ -134,7 +136,8 @@ def build_combined(schema_sql: str, csv_dir: str, sql_dir: str) -> str:
         database=os.environ.get("DB_NAME", ""),
         config_path=os.environ.get("DB_CONFIG", str(Path(_THIS_DIR).with_name("query_latency") / "db_config.ini")),
         debug=bool(int(os.environ.get("PART2_DEBUG", "0"))),
-        debug_dir=os.environ.get("PART2_DEBUG_DIR", str(Path(_THIS_DIR).with_name("debug") / "part2"))
+        debug_dir=os.environ.get("PART2_DEBUG_DIR", str(Path(_THIS_DIR).with_name("debug") / "part2")),
+        exec_counts_path=os.environ.get("EXEC_COUNTS", str(Path(_THIS_DIR).with_name("Data") / "cleaned_sql" / "query_and_update" / "sample_execution_counts_chbench.csv"))
     ).rstrip()
     # PART3 已简化为不再读取历史负载与延迟，这里调用将返回空字符串
     part3 = build_part3().rstrip()

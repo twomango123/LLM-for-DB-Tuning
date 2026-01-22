@@ -1,38 +1,4 @@
-# rewrite各个功能手动测试/执行  
-VerticalSplit(Addresses, True):Addresses_core(address_id, state_province_county, country),Addresses_details(address_id, address_details, city, zip_postcode)-
-
-TableJoin(Addresses_core, Customer_Addresses, address_id, address_id, False):Customer_Address_States-
-
-RedundantColumnAdd(Customers.customer_name, Customer_Address_States)
-
-
--TableJoin(Customers, Customer_Address_States, customer_id, customer_id, False):Customer_Complete
-
--TableJoin(Regular_Order_Products, Products, product_id, product_id, False):Regular_Products_Complete
-
--TableJoin(Actual_Order_Products, Products, product_id, product_id, False):Actual_Products_Complete
-
-op = TableSplit('addresses', ['Addresses_core', 'Addresses_details'], {'Addresses_core':['address_id', 'state_province_county', 'country'], 'Addresses_details':['address_id', 'address_details', 'city', 'zip_postcode']}, {'Addresses_core':['address_id'], 'Addresses_details':['address_id']},new_view = 'view_address', is_retained = True)
-
-orderline_cols = ['address_id','state_province_county','country']
-
-orders_cols = ['customer_id','address_id','date_from','address_type','date_to']
-
-op = TableJoin(['Addresses_core','customer_addresses'],'Customer_Address_States',[orderline_cols,orders_cols], sign=2, join_key=[('address_id','address_id')])
-
-op = RedundantColumnAdd('customers','customer_name','Customer_Address_States','customer_name', join_keys=[('customer_id','customer_id')])
-
-orderline_cols = ['customer_id','payment_method','customer_name','customer_phone','customer_email','date_became_customer']
-
-orders_cols = ['address_id','state_province_county','country','customer_id','date_from','address_type','date_to','customer_name']
-
-op = TableJoin(['customers','Customer_Address_States'],'Customer_Complete',[orderline_cols,orders_cols], sign=1, join_key=[('customer_id','customer_id')])
-
-orderline_cols = ['regular_order_id','product_id']
-
-orders_cols = ['product_id','product_name','product_price','product_description']
-
-op = TableJoin(['regular_order_products','products'],'Regular_Products_Complete',[orderline_cols,orders_cols], sign=2, join_key=[('product_id','product_id')])
+# rewrite各个功能调用标准写法示例
 
 
 创建公用数据库连接  
@@ -187,12 +153,3 @@ op = RedundantColumnDrop('stock','i_name','item','i_name', join_keys=[('i_id','s
 new_sql = op.apply_to_sql(sql)
 print(new_sql) 
 ```  
-
-SELECT 
-    COLUMN_NAME
-FROM 
-    INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-WHERE 
-    TABLE_SCHEMA = 'database_name' 
-    AND TABLE_NAME = 'table_name'
-    AND CONSTRAINT_NAME = 'PRIMARY';

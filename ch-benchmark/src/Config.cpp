@@ -156,6 +156,8 @@ bool Config::initialize(int argc, char* argv[]){
 		if(!is("-op",argc,argv,&OUTPUT_PATH))
 			return 0;
 
+        
+
 		Log::l1() << Log::tm() << "Config:\n";
 		Log::l1() << Log::tm() << "-data source name: " << DATA_SOURCE_NAME << "\n";
 		Log::l1() << Log::tm() << "-dbs user: " << DBS_USER << "\n";
@@ -215,6 +217,8 @@ bool Config::initialize(int argc, char* argv[]){
 		if(!is("-op",argc,argv,&OUTPUT_PATH))
 			return 0;
 
+        
+
 		Log::l1() << Log::tm() << "Config:\n";
 		Log::l1() << Log::tm() << "-data source name: " << DATA_SOURCE_NAME << "\n";
 		Log::l1() << Log::tm() << "-dbs user: " << DBS_USER << "\n";
@@ -233,17 +237,37 @@ bool Config::warehouseDetection(SQLHSTMT& hStmt){
 
 	WAREHOUSE_COUNT = 0;
 
+	// Primary: query the database
 	DbcTools::executeServiceStatement(hStmt, DialectStrategy::getInstance()->getSelectCountWarehouse());
 
 	int temp = 0;
 	SQLLEN nIdicator = 0;
 	SQLCHAR buf[1024] = {0};
-	DbcTools::fetch(hStmt, buf, &nIdicator, 1, temp);
-	WAREHOUSE_COUNT = temp;
-	if(WAREHOUSE_COUNT == 0){
+	if (DbcTools::fetch(hStmt, buf, &nIdicator, 1, temp)) {
+		WAREHOUSE_COUNT = temp;
+	}
+
+	// Fallback: if query failed or returned 0, infer from CSV
+	if (WAREHOUSE_COUNT == 0) {
+		const std::string whFile = INITIAL_DB_CREATION_PATH + "/warehouse.tbl";
+		std::ifstream ifs(whFile);
+		if (ifs.is_open()) {
+			std::string line;
+			int lines = 0;
+			while (std::getline(ifs, line)) {
+				if (!line.empty()) ++lines;
+			}
+			ifs.close();
+			if (lines > 0) {
+				WAREHOUSE_COUNT = lines;
+				Log::l1() << Log::tm() << "-detected warehouses from CSV: " << WAREHOUSE_COUNT << "\n";
+				return 1;
+			}
+		}
 		Log::l2() << Log::tm() << "-detecting warehouses failed\n";
 		return 0;
 	}
+
 	Log::l1() << Log::tm() << "-detected warehouses: " << WAREHOUSE_COUNT << "\n";
 
 	return 1;
@@ -279,8 +303,10 @@ int Config::getWarmupDurationInS(){
 }
 
 int Config::getTestDurationInS(){
-	return TEST_DURATION_IN_S;
+    return TEST_DURATION_IN_S;
 }
+
+
 
 int Config::getWarehouseCount(){
 	return WAREHOUSE_COUNT;
