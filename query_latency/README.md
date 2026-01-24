@@ -39,12 +39,33 @@ python3 LLM-for-DB-Tuning/query_latency/collect_latency.py \
 - `--config`：INI 配置文件路径（必须包含 `[mysql]` 段）
 - `--output`：成功结果 CSV 输出路径（默认同目录 `latency_results.csv`）
 - `--error-output`：失败结果 CSV 输出路径（默认同目录 `latency_errors.csv`）
+- `--all-sql`：包含目录下所有 `.sql` 文件（默认关闭；默认仅执行 `queryN.sql`）
+- `--frequencies`：可选；提供一个 CSV，脚本按比例/次数多次执行对应 SQL，并输出聚合耗时。支持列名：
+  - 文件列别名：`file`/`filename`/`path`/`sql`/`name`
+  - 权重列别名：`relative_frequency_percent`/`relative_frequency`/`frequency`/`freq`/`percent`/`pct`/`count`/`weight`/`ratio`
+- `--total-runs`：可选；与 `--frequencies` 搭配使用，表示本轮总执行次数（默认 100，相当于用“百分比≈次数”）。
 
 ## 行为说明
+- 默认仅执行文件名形如 `queryN.sql` 的查询；若指定 `--all-sql`，则会执行目录内的全部 `.sql` 文件（注意：这可能包含 DDL/DML 脚本，请谨慎使用）。
 - 只执行每个文件中第一条非空语句（分号 `;` 之前）；没有分号则执行整个文件内容。
 - 自动提取 `queryN` 作为 `query_id`；若无法匹配，则使用文件名（不含扩展名）。
 - SELECT/EXPLAIN 等查询会取回所有结果，确保耗时覆盖结果读取；其他语句使用非查询接口执行。
 - 脚本通过项目内 `MySQLDriver` 建立连接与执行，与你的其他模块保持一致。
+
+### 频率模式输出
+- 当指定 `--frequencies` 时，输出 CSV 字段为：`query_id,total_elapsed_ms,count,avg_elapsed_ms`。
+- `total_elapsed_ms` 为该 `query_id` 按分配次数执行后的总耗时；`count` 为执行次数；`avg_elapsed_ms` 为平均单次耗时（四舍五入整毫秒）。
+
+## 频率模式示例
+```
+python3 LLM-for-DB-Tuning/query_latency/collect_latency.py \
+  --sql-dir LLM-for-DB-Tuning/output_dir/sql \
+  --frequencies LLM-for-DB-Tuning/output_dir/sql/frequencies.csv \
+  --total-runs 1000 \
+  --config LLM-for-DB-Tuning/query_latency/db_config.ini \
+  --output LLM-for-DB-Tuning/query_latency/latency_weighted.csv \
+  --error-output LLM-for-DB-Tuning/query_latency/latency_errors.csv
+```
 
 ## 常见问题
 - 使用口令：请在 `db_config.ini` 的 `password` 行填入真实口令，避免出现 “using password: NO”。不要在密码两侧添加引号或在同一行追加注释。

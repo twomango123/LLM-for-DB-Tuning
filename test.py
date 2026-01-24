@@ -45,8 +45,8 @@ def apply_op_to_sql_dir(sql_dir: str, op, write_back: bool = False, out_dir: Opt
     import re
     root = Path(sql_dir).resolve()
     out_root = Path(out_dir).resolve() if out_dir else None
-    # 仅改写形如 queryN.sql 的文件
-    query_file_re = re.compile(r'^query\d+\.sql$', re.IGNORECASE)
+    # 仅改写形如 queryN.sql 或 query_N.sql 的文件
+    query_file_re = re.compile(r'^query_?\d+\.sql$', re.IGNORECASE)
 
     for sql_file in find_sql_files(sql_dir):
         # 若 out_dir 位于 sql_dir 内部，跳过对输出目录中文件的再次处理，避免
@@ -125,12 +125,12 @@ def main():
     args = parser.parse_args()
 
     # 根据需要创建具体改写操作：Addresses_core + customer_addresses → Customer_Address_States
-    orderline_cols = ['regular_order_id','product_id']
-
-    orders_cols = ['product_id','product_name','product_price','product_description']
-
-    op = TableJoin(['regular_order_products','products'],'Regular_Products_Complete',[orderline_cols,orders_cols], sign=2, join_key=[('product_id','product_id')])
-
+    actual_orders_cols = ['actual_order_id','order_status_code','regular_order_id','actual_order_date']
+    order_deliveries_cols = ['location_code','actual_order_id','delivery_status_code','driver_employee_id','truck_id','delivery_date']
+    op7 = RedundantColumnAdd('customer', 'c_state', 'orders_orderline_active', 'o_c_state', join_keys=[('c_w_id','o_w_id'),('c_d_id','o_d_id'),('c_id','o_c_id')])
+    op9 = RedundantColumnAdd('customer', 'c_balance', 'orders_orderline_active', 'o_c_balance', join_keys=[('c_w_id','o_w_id'),('c_d_id','o_d_id'),('c_id','o_c_id')])
+    op8 = HorizontalSplit('orders_orderline_active', [('orders_orderline_active_west', "o_w_id IN (1,2,3,4,5)"), ('orders_orderline_active_east', "o_w_id IN (6,7,8,9,10)")], is_retained=True)
+    op = RedundantColumnAdd('customer', 'c_last', 'orders_orderline_active', 'o_c_last', join_keys=[('c_w_id','o_w_id'),('c_d_id','o_d_id'),('c_id','o_c_id')])
     apply_op_to_sql_dir(args.sql_dir, op, write_back=args.write_back, out_dir=args.out_dir)
 
     # 2) 如需：真实数据库执行 schema 变更

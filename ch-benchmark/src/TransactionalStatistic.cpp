@@ -19,14 +19,17 @@ limitations under the License.
 using namespace std;
 
 TransactionalStatistic::TransactionalStatistic(){
-	for(int i=0; i<5; i++){
-		executeTPCCSuccessCount[i] = 0;
-		executeTPCCFailCount[i] = 0;
-	}
+    for(int i=0; i<5; i++){
+        executeTPCCSuccessCount[i] = 0;
+        executeTPCCFailCount[i] = 0;
+    }
+    totalDurationMs = 0;
 }
 
 void TransactionalStatistic::addResult(unsigned long long& transcationalResults){
-	transcationalResults += executeTPCCSuccessCount[0];
+	unsigned long long s = 0;
+	for (int i=0; i<5; ++i) s += executeTPCCSuccessCount[i];
+	transcationalResults += s;
 }
 
 void TransactionalStatistic::executeTPCCSuccess(int transactionNumber, bool success){

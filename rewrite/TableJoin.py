@@ -54,6 +54,36 @@ class TableJoin(SMO):
         t1_cols_set = set(self.old_columns_list[0])
         t2_cols_set = set(self.old_columns_list[1])
 
+        # 针对 MySQL 严格模式下的零日期（'0000-00-00' / '0000-00-00 00:00:00'）做安全包装，
+        # 避免 CTAS 时因 NO_ZERO_DATE / NO_ZERO_IN_DATE 报错。
+        def _dtype_map(cons):
+            mp = {}
+            for cm in (cons.get('columns') or []):
+                nm = cm.get('COLUMN_NAME')
+                dt = (cm.get('DATA_TYPE') or '').lower()
+                if nm:
+                    mp[nm] = dt
+            return mp
+
+        dtype_t1 = _dtype_map(c1)
+        dtype_t2 = _dtype_map(c2)
+
+        def _safe_dt_expr(alias: str, col: str, dtype: str) -> str:
+            """返回一个在严格模式下也安全的日期/时间表达式。
+            - 对于 DATE：CAST(NULLIF(CONCAT(alias.`col`),'0000-00-00') AS DATE)
+            - 对于 DATETIME/TIMESTAMP：CAST(NULLIF(CONCAT(alias.`col`),'0000-00-00 00:00:00') AS DATETIME)
+            - 其他类型：alias.`col`
+            解释：先用 CONCAT 强制转成字符串再与零日期比较，避免直接将无效零日期字面量转为 datetime 类型引发错误；
+            NULLIF 零日期 → NULL；随后 CAST 回目标类型。
+            """
+            d = (dtype or '').lower()
+            q = f"{alias}.`{col}`"
+            if d == 'date':
+                return f"CAST(NULLIF(CONCAT({q}), '0000-00-00') AS DATE)"
+            if d in ('datetime', 'timestamp'):
+                return f"CAST(NULLIF(CONCAT({q}), '0000-00-00 00:00:00') AS DATETIME)"
+            return q
+
         # 解析 join_key → join_pairs, unify_cols
         # - join_pairs: [(t1_col, t2_col), ...] 用于 ON 条件
         # - unify_cols: {col} 当且仅当 t1_col == t2_col 时，选择使用 COALESCE 合并为单列
@@ -82,18 +112,26 @@ class TableJoin(SMO):
                     join_pairs = [(join_key, join_key)]
                     unify_cols.add(join_key)
 
-        # t1 列映射（基本保持同名；unify 列使用 COALESCE(t1.c, t2.c) 统一）
+        # t1 列映射（基本保持同名；unify 列使用 COALESCE(t1.c, t2.c) 统一），
+        # 同时对日期/时间列应用零日期安全包装。
         rename_map_t1 = {}
         for col in self.old_columns_list[0]:
             if col in unify_cols:
-                select_columns.append(f"COALESCE(t1.{col}, t2.{col}) AS `{col}`")
+                dt1 = dtype_t1.get(col, '')
+                dt2 = dtype_t2.get(col, '')
+                e1 = _safe_dt_expr('t1', col, dt1)
+                e2 = _safe_dt_expr('t2', col, dt2)
+                select_columns.append(f"COALESCE({e1}, {e2}) AS `{col}`")
                 rename_map_t1[col] = col
             else:
-                select_columns.append(f"t1.{col} AS `{col}`")
+                dt = dtype_t1.get(col, '')
+                e = _safe_dt_expr('t1', col, dt)
+                select_columns.append(f"{e} AS `{col}`")
                 rename_map_t1[col] = col
             seen_columns.add(col)
 
-        # t2 列映射（冲突列加 _2 后缀；unify 列跳过，因为已由 t1 统一）
+        # t2 列映射（冲突列加 _2 后缀；unify 列跳过，因为已由 t1 统一），
+        # 同样对日期/时间列应用零日期安全包装。
         rename_map_t2 = {}
         for col in self.old_columns_list[1]:
             if col in unify_cols:
@@ -104,7 +142,9 @@ class TableJoin(SMO):
                 new_col_name = f"{col}_2"
             else:
                 new_col_name = col
-            select_columns.append(f"t2.{col} AS `{new_col_name}`")
+            dt = dtype_t2.get(col, '')
+            e = _safe_dt_expr('t2', col, dt)
+            select_columns.append(f"{e} AS `{new_col_name}`")
             rename_map_t2[col] = new_col_name
 
         # 连接条件

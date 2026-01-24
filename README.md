@@ -153,6 +153,7 @@ CREATE TABLE tpcch.orderline_orders_infrequent AS SELECT DISTINCT ol_o_id, ol_w_
 cd ch-benchmark  
 make  
 ```  
+./chBenchmark -csv -wh 1 -pa /var/lib/mysql-files
 `mysql -u root -p tpcch`
 ALTER TABLE table_name 
 RENAME COLUMN old_column_name TO new_column_name;
@@ -166,7 +167,7 @@ WHERE
     AND TABLE_NAME = 'nation'
     AND CONSTRAINT_NAME = 'PRIMARY';
 ### 运行生成数据命令 可指定warehouse数量（-wh 1） 最好不要更改csv输出目录
-`./chBenchmark -mode generate -csv -wh 10 -pa /var/lib/mysql-files  `  
+`./chBenchmark -csv -wh 10 -pa /var/lib/mysql-files  `  
 
 ### 运行数据库初始化，创建schema导入数据  
 `./chBenchmark -init -dsn mysql-bench -usr root -pwd '123!@#200' -a 1 -t 0 -wd 30 -td 100 -pa /var/lib/mysql-files -op /var/lib/mysql-files `  
@@ -180,7 +181,7 @@ WHERE
 ./chBenchmark -mode import -dsn MyDB -usr user -pwd password -pa ./data
 
 # 只运行基准测试
-./chBenchmark -mode benchmark -run -dsn mysql-bench -usr root -pwd '123!@#200' -a 1 -t 0 -wd 10 -td 30 -pa /var/lib/mysql-files -op /var/lib/mysql-files
+./chBenchmark -mode benchmark -run -dsn mysql-bench -usr root -pwd '123!@#200' -a 0 -t 1 -wd 10 -td 30 -pa /var/lib/mysql-files -op /var/lib/mysql-files
 ### 负载生成压缩  
 拷贝查看  
 docker cp d5aae99505cd:LLM-for-DB-Tuning/prompt/final_prompt.md ./final_prompt.md
@@ -188,7 +189,7 @@ docker cp d5aae99505cd:LLM-for-DB-Tuning/prompt/final_prompt.md ./final_prompt.m
 -a是OLAP线程数量，-t是TP线程数，a=1,t=0时仅顺序执行22个查询测试AP_latency，a=0,t=1时仅顺序执行5个事务测试TP_latency。  
 -wd是warmup duration，-td是test duration，限定了并发执行的时间，当测试latency时不受test duration控制，执行完毕后直接结束线程不会等待。  
 一个测试AP_latency的示例  
-`./chBenchmark -run -dsn mysql-bench -usr root -pwd '123!@#200' -a 3 -t 0 -wd 30 -td 30 -pa /var/lib/mysql-files -op /var/lib/mysql-files `  
+`./chBenchmark -run -dsn mysql-bench -usr root -pwd '123!@#200' -a 0 -t 1 -wd 30 -td 30 -pa /var/lib/mysql-files -op /var/lib/mysql-files `  
 查看结果  
 `cat /var/lib/mysql-files/latency_AP.txt  `  
 一个测试TP_latency的示例  

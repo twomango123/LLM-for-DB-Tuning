@@ -1,0 +1,15 @@
+-- Link the newest customer to the newest address as BILLING
+INSERT INTO customer_addresses (
+  customer_id,
+  address_id,
+  date_from,
+  address_type,
+  date_to
+) VALUES (
+  (SELECT MAX(customer_id) FROM customers),
+  (SELECT MAX(address_id) FROM addresses),
+  NOW(),
+  'BILLING',
+  NULL
+);
+

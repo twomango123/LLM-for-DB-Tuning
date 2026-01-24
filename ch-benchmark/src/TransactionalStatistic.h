@@ -22,11 +22,19 @@ class TransactionalStatistic{
 	private:
 		unsigned long long executeTPCCSuccessCount[5];
 		unsigned long long executeTPCCFailCount[5];
+		unsigned long long totalDurationMs = 0; // sum of all txn durations
 
 	public:
 		TransactionalStatistic();
 		void addResult(unsigned long long& transcationalResults);
 		void executeTPCCSuccess(int transactionNumber, bool success);
+		void addDurationMs(unsigned long long ms) { totalDurationMs += ms; }
+		unsigned long long getTotalDurationMs() const { return totalDurationMs; }
+		unsigned long long getTotalSuccessCount() const {
+			unsigned long long s = 0;
+			for (int i=0;i<5;i++) s += executeTPCCSuccessCount[i];
+			return s;
+		}
 
 };
 

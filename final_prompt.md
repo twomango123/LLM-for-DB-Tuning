@@ -1309,7 +1309,7 @@
 	"TableJoin": {
 	"操作含义": "将两个表通过连接条件合并为一个表，可选保留或删除原表",
 	"接口": "TableJoin(Table1,Table2, table1_join_key, table2_join_key, is_retained): NewTable",
-	"举例": "TableJoin(customer,customer_ext, customer):customer_all",
+	"举例": "TableJoin(customer,customer_ext, c_id, ce_c_id, True):customer_all",
 	},
 
 	"HorizontalSplit": {

@@ -46,12 +46,12 @@ if _ROOT not in sys.path:
 
 try:
     from rewrite.ColumnSplit import ColumnSplit
-    from rewrite.TableSplit import TableSplit as VerticalSplitOp
+    from rewrite.TableSplit import TableSplit as VerticalSplit
     from rewrite.HorizontalSplit import HorizontalSplit
     from rewrite.HorizontalMerge import HorizontalMerge
     from rewrite.RedundantColumnAdd import RedundantColumnAdd
     from rewrite.RedundantColumnDrop import RedundantColumnDrop
-    from rewrite.TableJoin import TableJoin as TableJoinOp
+    from rewrite.TableJoin import TableJoin as TableJoin
     from utils.schema_introspect import (
         get_table_columns,
         get_tables_columns,
@@ -247,6 +247,9 @@ def parse_horizontal_split(raw: str) -> ParsedOp:
     if len(args) == 0:
         return ParsedOp(kind='HorizontalSplit', raw=raw, missing=["缺少源表参数"])
     src_table = args[0].strip().split('.')[-1]
+    is_retained = False
+    if len(args) >= 2:
+        is_retained = args[1].strip().lower() in ('true', '1', 'yes')
     parts = _tokenize_top_level(m.group(2))
     preds: List[Tuple[str, str]] = []
     for p in parts:
@@ -259,7 +262,7 @@ def parse_horizontal_split(raw: str) -> ParsedOp:
     return ParsedOp(
         kind='HorizontalSplit',
         raw=raw,
-        params={'table': src_table, 'predicates': preds},
+        params={'table': src_table, 'predicates': preds, 'is_retained': is_retained},
     )
 
 
@@ -346,6 +349,30 @@ def parse_line_to_ops(line: str) -> List[ParsedOp]:
     return parsed
 
 
+# A minimal dry-run vertical split plan generator that outputs SQL script text
+class VerticalSplitDryOp:
+    def __init__(self, old_table: str, new_tables: List[str], column_lists: List[List[str]], primary_keys: dict[str, List[str]] | None = None):
+        self.old_table = old_table
+        self.new_tables = new_tables
+        self.column_lists = column_lists
+        self.primary_keys = primary_keys or {}
+
+    def apply_to_schema(self, db=None) -> str:
+        stmts: List[str] = []
+        oldq = f"`{self.old_table}`"
+        for i, newt in enumerate(self.new_tables):
+            cols = self.column_lists[i] if i < len(self.column_lists) else []
+            cols_sql = ", ".join(cols) if cols else "*"
+            stmts.append(
+                f"CREATE TABLE `{newt}` AS SELECT DISTINCT {cols_sql} FROM {oldq};"
+            )
+            pks = self.primary_keys.get(newt) or []
+            if pks:
+                pk_sql = ", ".join(pks)
+                stmts.append(f"ALTER TABLE `{newt}` ADD PRIMARY KEY ({pk_sql});")
+        return "\n".join(stmts)
+
+
 def _auto_fill_with_db(db, op: ParsedOp) -> None:
     """Use DB metadata to fill missing fields where feasible."""
     if not db:
@@ -372,6 +399,20 @@ def _auto_fill_with_db(db, op: ParsedOp) -> None:
         else:
             # multiple keys: TableMerge will fallback to full-outer-join simulation with ON 1=1; we warn by keeping params
             p['join_key'] = None
+    elif k == 'VerticalSplit':
+        # Prefer the original table's primary key for all child tables to avoid
+        # accidentally constructing PKs that include nullable business columns.
+        try:
+            from utils.schema_introspect import get_primary_key_columns  # local import
+        except Exception:
+            get_primary_key_columns = None  # type: ignore
+        if get_primary_key_columns is not None:
+            try:
+                orig_pk = get_primary_key_columns(db, p['src_table'])
+            except Exception:
+                orig_pk = []
+            if orig_pk:
+                p['primary_keys'] = {t: list(orig_pk) for t in p.get('new_tables', [])}
     elif k == 'RedundantColumnAdd':
         st, tt = p['source_table'], p['target_table']
         try:
@@ -381,6 +422,24 @@ def _auto_fill_with_db(db, op: ParsedOp) -> None:
                 # Map to (source_key, target_key)
                 p['join_keys'] = [(src, tgt) for (tgt, src) in fks]
                 op.missing = [m for m in op.missing if 'join_keys' not in m]
+            else:
+                # Heuristic fallback: if target has columns matching source PK names,
+                # use (source_pk, target_same_name) pairs as join_keys.
+                try:
+                    from utils.schema_introspect import get_primary_key_columns, get_table_columns  # local import
+                except Exception:
+                    get_primary_key_columns = None  # type: ignore
+                    get_table_columns = None  # type: ignore
+                if get_primary_key_columns and get_table_columns:
+                    try:
+                        spk = get_primary_key_columns(db, st) or []
+                        tcols = set(get_table_columns(db, tt) or [])
+                    except Exception:
+                        spk, tcols = [], set()
+                    pairs = [(c, c) for c in spk if c in tcols]
+                    if pairs:
+                        p['join_keys'] = pairs
+                        op.missing = [m for m in op.missing if 'join_keys' not in m]
         except Exception:
             pass
 
@@ -439,7 +498,7 @@ def plan_statements(db, op: ParsedOp) -> List[str]:
         return _split_script_to_stmts(script)
 
     if k == 'HorizontalSplit':
-        hs = HorizontalSplit(p['table'], p['predicates'])
+        hs = HorizontalSplit(p['table'], p['predicates'], is_retained=bool(p.get('is_retained', False)))
         script = hs.apply_to_schema(db=None)
         return _split_script_to_stmts(script)
 
@@ -563,8 +622,8 @@ def main() -> None:
     if cur_sql_dir:
         os.makedirs(out_base, exist_ok=True)
 
-    print("\n=== 事务预演（规划所有 Schema 语句并尝试 SQL 改写） ===")
-    all_statements: List[str] = []
+    print("\n=== 事务预演（规划每步 Schema 语句并尝试 SQL 改写） ===")
+    all_statements: List[str] = []  # 累计仅用于 dry-run 打印
     staging_dir = None
     if cur_sql_dir:
         staging_dir = out_base + '.staging'
@@ -576,10 +635,14 @@ def main() -> None:
     for idx, po in enumerate(all_parsed, 1):
         stmts = plan_statements(db, po)
         if not stmts:
-            print(f"- 规划失败或参数不全：OP #{idx} {po.kind}")
+            # 提供更具体的失败原因
+            why = "; ".join(po.missing) if getattr(po, 'missing', None) else "参数不全或该操作暂不支持规划"
+            print(f"- 规划失败或参数不全：OP #{idx} {po.kind} -> {why}")
             success = False
             break
-        all_statements.extend(stmts)
+        if db is None:
+            # dry-run 收集，用于后续统一打印
+            all_statements.extend(stmts)
         if next_sql_in and staging_dir:
             step_out = os.path.join(staging_dir, f"step_{idx:02d}_{po.kind}")
             os.makedirs(step_out, exist_ok=True)
@@ -591,6 +654,22 @@ def main() -> None:
             except Exception as e:
                 print(f"- SQL 改写失败：OP #{idx} {po.kind} -> {e}")
                 success = False
+                break
+
+        # 若连接了数据库，则按步执行本 OP 的 schema 语句，成功后继续下一步
+        if db is not None:
+            for i, s in enumerate(stmts, 1):
+                try:
+                    ok = db.execute_statement(s)
+                except Exception as e:
+                    print(f"执行异常（OP #{idx} {po.kind} 第{i}条）: {e}\nSQL: {s}")
+                    success = False
+                    break
+                if not ok:
+                    print(f"执行失败（OP #{idx} {po.kind} 第{i}条）: {s}")
+                    success = False
+                    break
+            if not success:
                 break
 
     if not success:
@@ -611,24 +690,12 @@ def main() -> None:
         print("\n完成（dry-run）。")
         return
 
-    # Execute all statements; if any fails, abort and keep staging for inspection
-    for i, s in enumerate(all_statements, 1):
-        try:
-            ok = db.execute_statement(s)
-        except Exception as e:
-            print(f"执行异常 #{i}: {e}\nSQL: {s}")
-            print("提交失败，已中止。")
-            return
-        if not ok:
-            print(f"执行失败 #{i}: {s}")
-            print("提交失败，已中止。")
-            return
-
+    # 已按步执行完成，搬运 SQL 改写目录
     if staging_dir:
         if os.path.exists(out_base):
             shutil.rmtree(out_base)
         shutil.move(staging_dir, out_base)
-    print("\n完成。所有 Schema 改写与 SQL 改写已提交。")
+    print("\n完成。所有步骤均已按序执行，Schema 改写与 SQL 改写已提交。")
 
 
 if __name__ == '__main__':
@@ -642,7 +709,7 @@ from sqlglot import expressions as _exp
 def instantiate_for_sql_rewrite(db, op: ParsedOp):
     k, p = op.kind, op.params
     if k == 'HorizontalSplit':
-        return HorizontalSplit(p['table'], p['predicates'])
+        return HorizontalSplit(p['table'], p['predicates'], is_retained=bool(p.get('is_retained', False)))
     if k == 'HorizontalMerge':
         return HorizontalMerge(p['sources'], p['new_table'])
     if k == 'VerticalSplit':

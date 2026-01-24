@@ -1,0 +1,14 @@
+INSERT INTO addresses (
+  address_details,
+  city,
+  zip_postcode,
+  state_province_county,
+  country
+) VALUES (
+  '123 Market St',
+  'Metropolis',
+  '90210',
+  'CA',
+  'USA'
+);
+

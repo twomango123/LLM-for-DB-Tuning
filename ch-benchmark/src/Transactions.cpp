@@ -24,17 +24,8 @@ limitations under the License.
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <algorithm>
 
 using namespace std;
-
-// Safe copy helper: copy up to dst_size-1 and NUL-terminate
-static inline void safe_copy_str(const std::string& src, char* dst, size_t dst_size) {
-    if (dst_size == 0) return;
-    size_t n = std::min(dst_size - 1, src.size());
-    if (n) memcpy(dst, src.data(), n);
-    dst[n] = '\0';
-}
 
 bool Transactions::prepare(SQLHDBC& hDBC){
 
@@ -459,9 +450,10 @@ bool Transactions::executeNewOrder(SQLHDBC& hDBC){
 		tmp2 = iPrice*oLines[i].olQuantity;
 		DbcTools::bind(noOrderlineInsert,8,tmp2);
 		//日志1
-        char buffer[24];
-        safe_copy_str(sDist, buffer, sizeof(buffer));
-        DbcTools::bind(noOrderlineInsert,9,24,buffer);
+		char buffer[24];
+		//strcpy(buffer,sDist.c_str());
+		memcpy(buffer,sDist.c_str(),sizeof(buffer));
+		DbcTools::bind(noOrderlineInsert,9,24,buffer);
 		if(!DbcTools::executePreparedStatement(noOrderlineInsert)){
 			DbcTools::rollback(hDBC);
 			return 0;
@@ -568,9 +560,10 @@ bool Transactions::executePayment(SQLHDBC& hDBC){
 	string cCredit;
 	if(y<=60){ //Case 2
 		DbcTools::resetStatement(pmCustomerSelect1);
-        char buffer1[16];
-        safe_copy_str(cLast, buffer1, sizeof(buffer1));
-        DbcTools::bind(pmCustomerSelect1,1,16,buffer1);
+		char buffer1[16];
+		memcpy(buffer1,cLast.c_str(),sizeof(buffer1));
+		//strcpy(buffer1,cLast.c_str());
+		DbcTools::bind(pmCustomerSelect1,1,16,buffer1);
 		DbcTools::bind(pmCustomerSelect1,2,cDId);
 		DbcTools::bind(pmCustomerSelect1,3,cWId);
 		if(!DbcTools::executePreparedStatement(pmCustomerSelect1)){
@@ -584,9 +577,10 @@ bool Transactions::executePayment(SQLHDBC& hDBC){
 		}
 
 		DbcTools::resetStatement(pmCustomerSelect2);
-        char buffer2[16];
-        safe_copy_str(cLast, buffer2, sizeof(buffer2));
-        DbcTools::bind(pmCustomerSelect2,1,16,buffer2);
+		char buffer2[16];
+		memcpy(buffer2,cLast.c_str(),sizeof(buffer2));
+		// strcpy(buffer2,cLast.c_str());
+		DbcTools::bind(pmCustomerSelect2,1,16,buffer2);
 		DbcTools::bind(pmCustomerSelect2,2,cDId);
 		DbcTools::bind(pmCustomerSelect2,3,cWId);
 		if(!DbcTools::executePreparedStatement(pmCustomerSelect2)){
@@ -663,9 +657,11 @@ bool Transactions::executePayment(SQLHDBC& hDBC){
 			cData = cData.substr(0,500);
 
 		DbcTools::resetStatement(pmCustomerUpdate2);
-        char buffer3[500];
-        safe_copy_str(cData, buffer3, sizeof(buffer3));
-        DbcTools::bind(pmCustomerUpdate2,1,500,buffer3);
+		char buffer3[500];
+		//strcpy(buffer3,cData.c_str());
+		memcpy(buffer3,cData.c_str(),sizeof(buffer3));
+
+		DbcTools::bind(pmCustomerUpdate2,1,500,buffer3);
 		DbcTools::bind(pmCustomerUpdate2,2,cId);
 		DbcTools::bind(pmCustomerUpdate2,3,cDId);
 		DbcTools::bind(pmCustomerUpdate2,4,cWId);
@@ -685,9 +681,10 @@ bool Transactions::executePayment(SQLHDBC& hDBC){
 	DbcTools::bind(pmHistoryInsert,5,wId);
 	DbcTools::bind(pmHistoryInsert,6,hDate);
 	DbcTools::bind(pmHistoryInsert,7,hAmount);
-    char buffer4[24];
-    safe_copy_str(hData, buffer4, sizeof(buffer4));
-    DbcTools::bind(pmHistoryInsert,8,24,buffer4);
+	char buffer4[24];
+	//strcpy(buffer4,hData.c_str());
+	memcpy(buffer4,hData.c_str(),sizeof(buffer4));
+	DbcTools::bind(pmHistoryInsert,8,24,buffer4);
 	if(!DbcTools::executePreparedStatement(pmHistoryInsert)){
 		DbcTools::rollback(hDBC);
 		return 0;
@@ -725,74 +722,76 @@ bool Transactions::executeOrderStatus(SQLHDBC& hDBC){
 
 	//BEGIN TRANSACTION
 	if(y<=60){ //Case 2
-		DbcTools::resetStatement(osCustomerSelect1);
-        char buffer1[16];
-        safe_copy_str(cLast, buffer1, sizeof(buffer1));
-        DbcTools::bind(osCustomerSelect1,1,16,buffer1);
-		DbcTools::bind(osCustomerSelect1,2,dId);
-		DbcTools::bind(osCustomerSelect1,3,wId);
-		if(!DbcTools::executePreparedStatement(osCustomerSelect1)){
+		DbcTools::resetStatement(this->osCustomerSelect1);
+		char buffer1[16];
+		//strcpy(buffer1,cLast.c_str());
+		memcpy(buffer1,cLast.c_str(),sizeof(buffer1));
+		DbcTools::bind(this->osCustomerSelect1,1,16,buffer1);
+		DbcTools::bind(this->osCustomerSelect1,2,dId);
+		DbcTools::bind(this->osCustomerSelect1,3,wId);
+		if(!DbcTools::executePreparedStatement(this->osCustomerSelect1)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 		int count = 0;
-		if(!DbcTools::fetch(osCustomerSelect1, buf, &nIdicator, 1, count)){
+		if(!DbcTools::fetch(this->osCustomerSelect1, buf, &nIdicator, 1, count)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 
-		DbcTools::resetStatement(osCustomerSelect2);
-        char buffer2[16];
-        safe_copy_str(cLast, buffer2, sizeof(buffer2));
-        DbcTools::bind(osCustomerSelect2,1,16,buffer2);
-		DbcTools::bind(osCustomerSelect2,2,dId);
-		DbcTools::bind(osCustomerSelect2,3,wId);
-		if(!DbcTools::executePreparedStatement(osCustomerSelect2)){
+		DbcTools::resetStatement(this->osCustomerSelect2);
+		char buffer2[16];
+		//strcpy(buffer2,cLast.c_str());
+		memcpy(buffer2,cLast.c_str(),sizeof(buffer2));
+		DbcTools::bind(this->osCustomerSelect2,1,16,buffer2);
+		DbcTools::bind(this->osCustomerSelect2,2,dId);
+		DbcTools::bind(this->osCustomerSelect2,3,wId);
+		if(!DbcTools::executePreparedStatement(this->osCustomerSelect2)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 
 		for(int i=0; i < ((count+1)/2)-1;i++){ //move cursor
-			SQLFetch(osCustomerSelect2);
+			SQLFetch(this->osCustomerSelect2);
 		}
-		if(!DbcTools::fetch(osCustomerSelect2, buf, &nIdicator, 1, cId)){
+		if(!DbcTools::fetch(this->osCustomerSelect2, buf, &nIdicator, 1, cId)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 	}
 	else{ //Case 1
-		DbcTools::resetStatement(osCustomerSelect3);
-		DbcTools::bind(osCustomerSelect3,1,cId);
-		DbcTools::bind(osCustomerSelect3,2,dId);
-		DbcTools::bind(osCustomerSelect3,3,wId);
-		if(!DbcTools::executePreparedStatement(osCustomerSelect3)){
+		DbcTools::resetStatement(this->osCustomerSelect3);
+		DbcTools::bind(this->osCustomerSelect3,1,cId);
+		DbcTools::bind(this->osCustomerSelect3,2,dId);
+		DbcTools::bind(this->osCustomerSelect3,3,wId);
+		if(!DbcTools::executePreparedStatement(this->osCustomerSelect3)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 	}
 
-	DbcTools::resetStatement(osOrderSelect);
-	DbcTools::bind(osOrderSelect,1,wId);
-	DbcTools::bind(osOrderSelect,2,dId);
-	DbcTools::bind(osOrderSelect,3,cId);
-	DbcTools::bind(osOrderSelect,4,wId);
-	DbcTools::bind(osOrderSelect,5,dId);
-	DbcTools::bind(osOrderSelect,6,cId);
-	if(!DbcTools::executePreparedStatement(osOrderSelect)){
+	DbcTools::resetStatement(this->osOrderSelect);
+	DbcTools::bind(this->osOrderSelect,1,wId);
+	DbcTools::bind(this->osOrderSelect,2,dId);
+	DbcTools::bind(this->osOrderSelect,3,cId);
+	DbcTools::bind(this->osOrderSelect,4,wId);
+	DbcTools::bind(this->osOrderSelect,5,dId);
+	DbcTools::bind(this->osOrderSelect,6,cId);
+	if(!DbcTools::executePreparedStatement(this->osOrderSelect)){
 		DbcTools::rollback(hDBC);
 		return 0;
 	}
 	int oId = 0;
-	if(!DbcTools::fetch(osOrderSelect, buf, &nIdicator, 1, oId)){
+	if(!DbcTools::fetch(this->osOrderSelect, buf, &nIdicator, 1, oId)){
 		DbcTools::rollback(hDBC);
 		return 0;
 	}
 
-	DbcTools::resetStatement(osOrderlineSelect);
-	DbcTools::bind(osOrderlineSelect,1,wId);
-	DbcTools::bind(osOrderlineSelect,2,dId);
-	DbcTools::bind(osOrderlineSelect,3,oId);
-	if(!DbcTools::executePreparedStatement(osOrderlineSelect)){
+	DbcTools::resetStatement(this->osOrderlineSelect);
+	DbcTools::bind(this->osOrderlineSelect,1,wId);
+	DbcTools::bind(this->osOrderlineSelect,2,dId);
+	DbcTools::bind(this->osOrderlineSelect,3,oId);
+	if(!DbcTools::executePreparedStatement(this->osOrderlineSelect)){
 		DbcTools::rollback(hDBC);
 		return 0;
 	}
@@ -826,18 +825,18 @@ bool Transactions::executeDelivery(SQLHDBC& hDBC){
 	double olAmount;
 	for(int dId=1; dId <=10; dId++){
 		prepareDelivery(hDBC);
-		DbcTools::resetStatement(dlNewOrderSelect);
-		DbcTools::bind(dlNewOrderSelect,1,wId);
-		DbcTools::bind(dlNewOrderSelect,2,dId);
-		DbcTools::bind(dlNewOrderSelect,3,wId);
-		DbcTools::bind(dlNewOrderSelect,4,dId);
-		if(!DbcTools::executePreparedStatement(dlNewOrderSelect)){
+	DbcTools::resetStatement(this->dlNewOrderSelect);
+	DbcTools::bind(this->dlNewOrderSelect,1,wId);
+	DbcTools::bind(this->dlNewOrderSelect,2,dId);
+	DbcTools::bind(this->dlNewOrderSelect,3,wId);
+	DbcTools::bind(this->dlNewOrderSelect,4,dId);
+	if(!DbcTools::executePreparedStatement(this->dlNewOrderSelect)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 		noOId = 0;
-		if(SQL_SUCCESS==SQLFetch(dlNewOrderSelect)){
-			if(SQL_SUCCESS==SQLGetData(dlNewOrderSelect,1,SQL_C_CHAR,buf,1024,&nIdicator))
+		if(SQL_SUCCESS==SQLFetch(this->dlNewOrderSelect)){
+			if(SQL_SUCCESS==SQLGetData(this->dlNewOrderSelect,1,SQL_C_CHAR,buf,1024,&nIdicator))
 				noOId = strtol ((char*)buf,NULL,0);
 			else{
 				DbcTools::rollback(hDBC);
@@ -847,69 +846,69 @@ bool Transactions::executeDelivery(SQLHDBC& hDBC){
 		else //If no matching row is found, then the delivery of an order for this district is skipped.
 			continue;
 
-		DbcTools::resetStatement(dlNewOrderDelete);
-		DbcTools::bind(dlNewOrderDelete,1,wId);
-		DbcTools::bind(dlNewOrderDelete,2,dId);
-		DbcTools::bind(dlNewOrderDelete,3,noOId);
-		if(!DbcTools::executePreparedStatement(dlNewOrderDelete)){
+	DbcTools::resetStatement(this->dlNewOrderDelete);
+	DbcTools::bind(this->dlNewOrderDelete,1,wId);
+	DbcTools::bind(this->dlNewOrderDelete,2,dId);
+	DbcTools::bind(this->dlNewOrderDelete,3,noOId);
+	if(!DbcTools::executePreparedStatement(this->dlNewOrderDelete)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 
-		DbcTools::resetStatement(dlOrderSelect);
-		DbcTools::bind(dlOrderSelect,1,wId);
-		DbcTools::bind(dlOrderSelect,2,dId);
-		DbcTools::bind(dlOrderSelect,3,noOId);
-		if(!DbcTools::executePreparedStatement(dlOrderSelect)){
+	DbcTools::resetStatement(this->dlOrderSelect);
+	DbcTools::bind(this->dlOrderSelect,1,wId);
+	DbcTools::bind(this->dlOrderSelect,2,dId);
+	DbcTools::bind(this->dlOrderSelect,3,noOId);
+	if(!DbcTools::executePreparedStatement(this->dlOrderSelect)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 		oCId = 0;
-		if(!DbcTools::fetch(dlOrderSelect, buf, &nIdicator, 1, oCId)){
+	if(!DbcTools::fetch(this->dlOrderSelect, buf, &nIdicator, 1, oCId)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 
-		DbcTools::resetStatement(dlOrderUpdate);
-		DbcTools::bind(dlOrderUpdate,1,oCarrierId);
-		DbcTools::bind(dlOrderUpdate,2,wId);
-		DbcTools::bind(dlOrderUpdate,3,dId);
-		DbcTools::bind(dlOrderUpdate,4,noOId);
-		if(!DbcTools::executePreparedStatement(dlOrderUpdate)){
+	DbcTools::resetStatement(this->dlOrderUpdate);
+	DbcTools::bind(this->dlOrderUpdate,1,oCarrierId);
+	DbcTools::bind(this->dlOrderUpdate,2,wId);
+	DbcTools::bind(this->dlOrderUpdate,3,dId);
+	DbcTools::bind(this->dlOrderUpdate,4,noOId);
+	if(!DbcTools::executePreparedStatement(this->dlOrderUpdate)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 
-		DbcTools::resetStatement(dlOrderlineUpdate);
-		DbcTools::bind(dlOrderlineUpdate,1,olDeliveryD);
-		DbcTools::bind(dlOrderlineUpdate,2,wId);
-		DbcTools::bind(dlOrderlineUpdate,3,dId);
-		DbcTools::bind(dlOrderlineUpdate,4,noOId);
-		if(!DbcTools::executePreparedStatement(dlOrderlineUpdate)){
+	DbcTools::resetStatement(this->dlOrderlineUpdate);
+	DbcTools::bind(this->dlOrderlineUpdate,1,olDeliveryD);
+	DbcTools::bind(this->dlOrderlineUpdate,2,wId);
+	DbcTools::bind(this->dlOrderlineUpdate,3,dId);
+	DbcTools::bind(this->dlOrderlineUpdate,4,noOId);
+	if(!DbcTools::executePreparedStatement(this->dlOrderlineUpdate)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 
-		DbcTools::resetStatement(dlOrderlineSelect);
-		DbcTools::bind(dlOrderlineSelect,1,wId);
-		DbcTools::bind(dlOrderlineSelect,2,dId);
-		DbcTools::bind(dlOrderlineSelect,3,noOId);
-		if(!DbcTools::executePreparedStatement(dlOrderlineSelect)){
+	DbcTools::resetStatement(this->dlOrderlineSelect);
+	DbcTools::bind(this->dlOrderlineSelect,1,wId);
+	DbcTools::bind(this->dlOrderlineSelect,2,dId);
+	DbcTools::bind(this->dlOrderlineSelect,3,noOId);
+	if(!DbcTools::executePreparedStatement(this->dlOrderlineSelect)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 		olAmount = 0;
-		if(!DbcTools::fetch(dlOrderlineSelect, buf, &nIdicator, 1, olAmount)){
+	if(!DbcTools::fetch(this->dlOrderlineSelect, buf, &nIdicator, 1, olAmount)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
 
-		DbcTools::resetStatement(dlCustomerUpdate);
-		DbcTools::bind(dlCustomerUpdate,1,olAmount);
-		DbcTools::bind(dlCustomerUpdate,2,oCId);
-		DbcTools::bind(dlCustomerUpdate,3,dId);
-		DbcTools::bind(dlCustomerUpdate,4,wId);
-		if(!DbcTools::executePreparedStatement(dlCustomerUpdate)){
+	DbcTools::resetStatement(this->dlCustomerUpdate);
+	DbcTools::bind(this->dlCustomerUpdate,1,olAmount);
+	DbcTools::bind(this->dlCustomerUpdate,2,oCId);
+	DbcTools::bind(this->dlCustomerUpdate,3,dId);
+	DbcTools::bind(this->dlCustomerUpdate,4,wId);
+	if(!DbcTools::executePreparedStatement(this->dlCustomerUpdate)){
 			DbcTools::rollback(hDBC);
 			return 0;
 		}
@@ -938,29 +937,29 @@ bool Transactions::executeStockLevel(SQLHDBC& hDBC){
 	SQLCHAR buf[1024] = {0};
 
 	//BEGIN TRANSACTION
-	DbcTools::resetStatement(slDistrictSelect);
-	DbcTools::bind(slDistrictSelect,1,wId);
-	DbcTools::bind(slDistrictSelect,2,dId);
-	if(!DbcTools::executePreparedStatement(slDistrictSelect)){
+	DbcTools::resetStatement(this->slDistrictSelect);
+	DbcTools::bind(this->slDistrictSelect,1,wId);
+	DbcTools::bind(this->slDistrictSelect,2,dId);
+	if(!DbcTools::executePreparedStatement(this->slDistrictSelect)){
 		DbcTools::rollback(hDBC);
 		return 0;
 	}
 	int dNextOId=0;
-	if(!DbcTools::fetch(slDistrictSelect, buf, &nIdicator, 1, dNextOId)){
+	if(!DbcTools::fetch(this->slDistrictSelect, buf, &nIdicator, 1, dNextOId)){
 		DbcTools::rollback(hDBC);
 		return 0;
 	}
 
-	DbcTools::resetStatement(slStockSelect);
-	DbcTools::bind(slStockSelect,1,wId);
-	DbcTools::bind(slStockSelect,2,dId);
-	DbcTools::bind(slStockSelect,3,dNextOId);
+	DbcTools::resetStatement(this->slStockSelect);
+	DbcTools::bind(this->slStockSelect,1,wId);
+	DbcTools::bind(this->slStockSelect,2,dId);
+	DbcTools::bind(this->slStockSelect,3,dNextOId);
 	int tmp = dNextOId-20;
-	DbcTools::bind(slStockSelect,4,tmp);
-	DbcTools::bind(slStockSelect,5,wId);
-	DbcTools::bind(slStockSelect,6,threshold);
+	DbcTools::bind(this->slStockSelect,4,tmp);
+	DbcTools::bind(this->slStockSelect,5,wId);
+	DbcTools::bind(this->slStockSelect,6,threshold);
 	//日志4
-	if(!DbcTools::executePreparedStatement(slStockSelect)){
+	if(!DbcTools::executePreparedStatement(this->slStockSelect)){
 		DbcTools::rollback(hDBC);
 		return 0;
 	}

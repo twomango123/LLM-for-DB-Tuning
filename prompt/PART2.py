@@ -137,6 +137,11 @@ def collect_queries2(dir_path: str) -> Tuple[List[Tuple[int, str, str]], List[Di
 
 _IDENT = r"[A-Za-z_][A-Za-z0-9_]*"
 _Q_IDENT = r"`[^`]+`|\"[^\"]+\"|" + _IDENT
+# 带可选 schema 的限定名：schema.table 或 table
+_Q_NAME = (
+    r"(?:`[^`]+`|\"[^\"]+\"|" + _IDENT + r")"
+    r"(?:\s*\.\s*(?:`[^`]+`|\"[^\"]+\"|" + _IDENT + r"))?"
+)
 
 
 def _unquote_ident(name: str) -> str:
@@ -160,32 +165,32 @@ def _collect_aliases(sql: str) -> Dict[str, str]:
     aliases: Dict[str, str] = {}
     # FROM table [AS] alias  (avoid keyword like WHERE/GROUP/ORDER captured as alias)
     kw = r"WHERE|GROUP|ORDER|LIMIT|JOIN|LEFT|RIGHT|INNER|OUTER|ON|HAVING|UNION|EXCEPT|INTERSECT"
-    for m in re.finditer(r"\bFROM\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s+(?:AS\s+)?(?!" + kw + r"\b)(" + _Q_IDENT + r")\b", sql, re.IGNORECASE):
+    for m in re.finditer(r"\bFROM\s+(" + _Q_NAME + r")\s+(?:AS\s+)?(?!" + kw + r"\b)(" + _Q_IDENT + r")\b", sql, re.IGNORECASE):
         table = _norm_table(m.group(1))
         alias = _unquote_ident(m.group(2))
         aliases[alias] = table
         aliases[table] = table
     # JOIN table [AS] alias
-    for m in re.finditer(r"\bJOIN\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s+(?:AS\s+)?(?!" + kw + r"\b)(" + _Q_IDENT + r")\b", sql, re.IGNORECASE):
+    for m in re.finditer(r"\bJOIN\s+(" + _Q_NAME + r")\s+(?:AS\s+)?(?!" + kw + r"\b)(" + _Q_IDENT + r")\b", sql, re.IGNORECASE):
         table = _norm_table(m.group(1))
         alias = _unquote_ident(m.group(2))
         aliases[alias] = table
         aliases[table] = table
     # UPDATE table [AS] alias
-    for m in re.finditer(r"\bUPDATE\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s+(?:AS\s+)?(" + _Q_IDENT + r")\b", sql, re.IGNORECASE):
+    for m in re.finditer(r"\bUPDATE\s+(" + _Q_NAME + r")\s+(?:AS\s+)?(" + _Q_IDENT + r")\b", sql, re.IGNORECASE):
         table = _norm_table(m.group(1))
         alias = _unquote_ident(m.group(2))
         aliases[alias] = table
         aliases[table] = table
     # bare UPDATE table
-    for m in re.finditer(r"\bUPDATE\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\b", sql, re.IGNORECASE):
+    for m in re.finditer(r"\bUPDATE\s+(" + _Q_NAME + r")\b", sql, re.IGNORECASE):
         table = _norm_table(m.group(1))
         aliases[table] = table
     # Also capture bare FROM/JOINS without alias: FROM table
-    for m in re.finditer(r"\bFROM\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\b", sql, re.IGNORECASE):
+    for m in re.finditer(r"\bFROM\s+(" + _Q_NAME + r")\b", sql, re.IGNORECASE):
         table = _norm_table(m.group(1))
         aliases[table] = table
-    for m in re.finditer(r"\bJOIN\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\b", sql, re.IGNORECASE):
+    for m in re.finditer(r"\bJOIN\s+(" + _Q_NAME + r")\b", sql, re.IGNORECASE):
         table = _norm_table(m.group(1))
         aliases[table] = table
     return aliases
@@ -285,13 +290,13 @@ def _extract_insert_columns(sql: str, schema: Dict[str, Dict[str, str]]) -> List
     """
     results: List[Tuple[str, List[str]]] = []
     # 带列清单
-    for m in re.finditer(r"\b(INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*\(([^)]*)\)\s*(VALUES|SELECT)\b", sql, re.IGNORECASE | re.DOTALL):
+    for m in re.finditer(r"\b(INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+(" + _Q_NAME + r")\s*\(([^)]*)\)\s*(VALUES|SELECT)\b", sql, re.IGNORECASE | re.DOTALL):
         tbl = _norm_table(m.group(2))
         cols = [_unquote_ident(x.strip()) for x in m.group(3).split(",") if x.strip()]
         if cols:
             results.append((tbl, cols))
     # 无列清单：退化为全列表
-    for m in re.finditer(r"\b(INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*(VALUES|SELECT)\b", sql, re.IGNORECASE | re.DOTALL):
+    for m in re.finditer(r"\b(INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+(" + _Q_NAME + r")\s*(VALUES|SELECT)\b", sql, re.IGNORECASE | re.DOTALL):
         tbl = _norm_table(m.group(2))
         cols = list(schema.get(tbl, {}).keys())
         if cols:
@@ -742,6 +747,10 @@ def _aggregate_operations(
     stats: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
 
     index_map: List[Dict[str, Any]] = []
+    # 表级 DML 计数（insert/update），按 SQL 执行频率加权
+    table_dml_counts: Dict[str, Dict[str, int]] = {}
+    # 调试：记录每条 SQL 的 DML 命中（表级）
+    dml_hits: List[Dict[str, Any]] = []
     for qid, sql, path in queries:
         index_map.append({"id": qid, "path": path})
         ops = extract_operations_from_sql(sql, schema)
@@ -811,6 +820,28 @@ def _aggregate_operations(
             if key in per_key_time:
                 stats[key]["sum_time"] += float(per_key_time[key]) * mult
 
+        # 表级 DML：基于 SQL 中识别到的 INSERT/UPDATE 表集合进行累计
+        try:
+            ins_tbls = {t for (t, _cols) in _extract_insert_columns(sql, schema)}
+            upd_tbls = {t for (t, _cols) in _extract_update_sets(sql, schema)}
+        except Exception:
+            ins_tbls, upd_tbls = set(), set()
+        for t in ins_tbls:
+            d = table_dml_counts.setdefault(t, {})
+            d["insert"] = int(d.get("insert", 0)) + mult
+        for t in upd_tbls:
+            d = table_dml_counts.setdefault(t, {})
+            d["update"] = int(d.get("update", 0)) + mult
+        if debug:
+            dml_hits.append({
+                "id": qid,
+                "path": path,
+                "basename": base,
+                "mult": mult,
+                "insert_tables": sorted(list(ins_tbls)),
+                "update_tables": sorted(list(upd_tbls)),
+            })
+
     # initialize result with all tables/columns to ensure 字段长度 可插入
     result: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
         t: {c: [] for c in cols.keys()} for t, cols in schema.items()
@@ -820,17 +851,12 @@ def _aggregate_operations(
         rows_val = info.get("rows")
         if rows_val is None:
             rows_val = 1
-        # 只需要输出 update 次数；跳过 insert 项
+        # 跳过 DML 的列级输出：insert/update 都不在列级展示（表级统计见下）
         if op == "insert":
             continue
-        cnt = int(info.get("count") or 0)
         if op == "update":
-            # 仅输出更新次数
-            item = {"operation": op}
-            if cnt > 0:
-                item["count"] = cnt
-            result.setdefault(table, {}).setdefault(column, []).append(item)
             continue
+        cnt = int(info.get("count") or 0)
         # 其它操作保持 rows/avg_time/count 输出
         item = {
             "operation": op,
@@ -844,10 +870,29 @@ def _aggregate_operations(
             item["avg_time"] = avg_time_ms
             item["count"] = cnt
         result.setdefault(table, {}).setdefault(column, []).append(item)
+    # 在表级别挂接 DML 计数
+    for t in schema.keys():
+        dml = table_dml_counts.get(t) or {}
+        if dml.get("insert"):
+            result.setdefault(t, {})["insert"] = {"count": int(dml["insert"]) }
+        if dml.get("update"):
+            result.setdefault(t, {})["update"] = {"count": int(dml["update"]) }
+
+    # 调试：输出表级 DML 计数与逐 SQL 命中
+    if debug:
+        try:
+            base = Path(debug_dir or (Path(_ROOT_DIR) / "debug" / "part2"))
+            base.mkdir(parents=True, exist_ok=True)
+            (base / "dml_counts.json").write_text(json.dumps(table_dml_counts, ensure_ascii=False, indent=2), encoding="utf-8")
+            (base / "dml_hits.json").write_text(json.dumps(dml_hits, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
     # sort operations per column deterministically
     for t, cols in result.items():
         for c, arr in cols.items():
-            arr.sort(key=lambda x: (x.get("operation", ""), str(x.get("rows", 0))))
+            if isinstance(arr, list):
+                arr.sort(key=lambda x: (x.get("operation", ""), str(x.get("rows", 0))))
     return result
 
 
@@ -871,13 +916,15 @@ def _connect_mysql_driver(dialect: str, host: str, port: int, user: str, passwor
     return drv
 
 
-def _load_exec_counts(path_or_none: Optional[str]) -> Dict[str, int]:
-    """加载执行次数映射：filename -> count。
+def _load_exec_counts(path_or_none: Optional[str]) -> Dict[str, float]:
+    """加载执行频率/次数映射：filename -> float 值。
     - 如果给定路径是文件，直接读取；
     - 如果是目录，优先寻找 sample_execution_counts_chbench.csv；
     - 若不存在或读取失败，返回空映射。
+
+    注意：此处返回 float，后续会根据是否提供 total_runs 进行次数归一（四舍五入）。
     """
-    mapping: Dict[str, int] = {}
+    mapping: Dict[str, float] = {}
     try:
         if not path_or_none:
             # 默认位置：项目内示例统计
@@ -890,19 +937,117 @@ def _load_exec_counts(path_or_none: Optional[str]) -> Dict[str, int]:
             f = cand
         if not f.exists():
             return mapping
-        with f.open("r", encoding="utf-8") as fh:
-            rdr = csv.DictReader(fh)
-            for row in rdr:
-                fn = (row.get("filename") or "").strip()
-                try:
-                    cnt = int(float(row.get("count") or 0))
-                except Exception:
-                    continue
-                if fn:
-                    mapping[fn] = cnt
+
+        # 先尝试按带表头的 CSV 读取
+        text = f.read_text(encoding="utf-8").strip()
+        if not text:
+            return mapping
+        first_line = text.splitlines()[0]
+        used_header = False
+        if ("filename" in first_line.lower()) and ("count" in first_line.lower()):
+            # 有表头
+            used_header = True
+            with f.open("r", encoding="utf-8") as fh:
+                rdr = csv.DictReader(fh)
+                for row in rdr:
+                    fn = (row.get("filename") or "").strip()
+                    try:
+                        cnt = float(row.get("count") or 0)
+                    except Exception:
+                        continue
+                    if fn:
+                        mapping[fn] = cnt
+        if not used_header:
+            # 无表头：每行形如 filename,count
+            with f.open("r", encoding="utf-8") as fh:
+                rdr = csv.reader(fh)
+                for parts in rdr:
+                    if not parts:
+                        continue
+                    if len(parts) < 2:
+                        continue
+                    fn = str(parts[0]).strip()
+                    try:
+                        cnt = float(parts[1])
+                    except Exception:
+                        continue
+                    if fn:
+                        mapping[fn] = cnt
     except Exception:
         return {}
     return mapping
+
+def _normalize_exec_counts(raw: Optional[Dict[str, float]]) -> Dict[str, int]:
+    """将可能为频率的小数，按总运行次数（来自环境变量）放大为整数次数。
+
+    规则：
+    - 若值为整数（或近似整数）且 >=1，直接四舍五入为 int。
+    - 否则将其视为“每轮频率”，与 total_runs 相乘后四舍五入为 int。
+    - 当 total_runs 未提供时，回退如下：>0 的频率按 1 处理，<=0 视为 0。
+
+    total_runs 从环境变量读取，优先级：EXEC_TOTAL_RUNS > TOTAL_RUNS > PART2_TOTAL_RUNS。
+    """
+    raw = raw or {}
+    eff: Dict[str, int] = {}
+    env = os.environ
+    tr_val = env.get("EXEC_TOTAL_RUNS") or env.get("TOTAL_RUNS") or env.get("PART2_TOTAL_RUNS")
+    total_runs: Optional[int] = None
+    try:
+        if tr_val is not None and str(tr_val).strip():
+            total_runs = int(float(str(tr_val).strip()))
+            if total_runs <= 0:
+                total_runs = None
+    except Exception:
+        total_runs = None
+
+    for fn, v in raw.items():
+        try:
+            val = float(v)
+        except Exception:
+            continue
+        # 近似整数判断
+        is_int_like = abs(val - round(val)) < 1e-9
+        if val >= 1.0 and is_int_like:
+            eff[fn] = int(round(val))
+            continue
+        # 否则按频率放大
+        if total_runs is not None:
+            eff[fn] = int(val * total_runs + 0.5)
+        else:
+            # 没有 total_runs 时，防止被归零：>0 取 1，否则 0
+            eff[fn] = 1 if val > 0 else 0
+    return eff
+
+def _fetch_table_rows(driver, database: str, tables: List[str]) -> Dict[str, int]:
+    """读取 information_schema.tables 的 TABLE_ROWS 估计值。
+    返回 {table_name: rows}；失败时返回空映射。
+    """
+    if not driver or not database or not tables:
+        return {}
+    try:
+        # 仅允许安全表名（字母数字下划线）；不安全的跳过
+        safe = [t for t in tables if re.fullmatch(r"[A-Za-z0-9_]+", t)]
+        if not safe:
+            return {}
+        in_list = ",".join("'" + t.replace("'", "''") + "'" for t in safe)
+        db_esc = database.replace("'", "''")
+        sql = (
+            "SELECT table_name, table_rows FROM information_schema.tables "
+            f"WHERE table_schema = '{db_esc}' AND table_name IN ({in_list})"
+        )
+        rows = driver.execute_query(sql)
+        out: Dict[str, int] = {}
+        for r in rows:
+            tname = str(r.get("table_name") or r.get("TABLE_NAME") or "")
+            try:
+                val = int(r.get("table_rows") or r.get("TABLE_ROWS") or 0)
+            except Exception:
+                val = 0
+            if tname:
+                out[tname] = val
+        return out
+    except Exception:
+        return {}
 
 
 def _load_mysql_config(config_path: Optional[str]) -> Optional[Dict[str, Any]]:
@@ -988,7 +1133,9 @@ def build_part2(schema_sql_path: str, sql_dir: str,
     # 构建用于 EXPLAIN ANALYZE 的连接（与字段长度共用一个驱动即可）
     analyze_driver = col_driver
     # 加载 DML 执行次数映射，用于 INSERT/UPDATE 的 count
-    exec_counts = _load_exec_counts(exec_counts_path)
+    # 执行频率/次数：先加载 float，再按总轮次规范化为整数次数
+    exec_counts_float = _load_exec_counts(exec_counts_path)
+    exec_counts = _normalize_exec_counts(exec_counts_float)
 
     mapping = _aggregate_operations(tables, queries, lat_map, estimator, analyze_driver, debug=debug, debug_dir=debug_dir, exec_counts=exec_counts)
 
@@ -1032,6 +1179,8 @@ def build_part2(schema_sql_path: str, sql_dir: str,
             base.mkdir(parents=True, exist_ok=True)
             if skipped:
                 (base / "skipped.json").write_text(json.dumps(skipped, ensure_ascii=False, indent=2), encoding="utf-8")
+            # 同时输出原始频率与规范化后的次数
+            (base / "exec_counts_raw.json").write_text(json.dumps(exec_counts_float or {}, ensure_ascii=False, indent=2), encoding="utf-8")
             (base / "exec_counts.json").write_text(json.dumps(exec_counts or {}, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
             pass
