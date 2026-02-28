@@ -1,0 +1,42 @@
+[
+  {
+    "op": "Limit: 1 row",
+    "actual_time": 423.0,
+    "avg_time": 423.0,
+    "exclusive_time": 0.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=423..423 rows=1 loops=1)",
+    "actual_time": 423.0,
+    "avg_time": 423.0,
+    "exclusive_time": 423.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Table scan on <temporary>",
+    "actual_time": 423.0,
+    "avg_time": 423.0,
+    "exclusive_time": 0.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Aggregate using temporary table",
+    "actual_time": 423.0,
+    "avg_time": 423.0,
+    "exclusive_time": 261.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Table scan on customers",
+    "actual_time": 162.0,
+    "avg_time": 162.0,
+    "exclusive_time": 162.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  }
+]

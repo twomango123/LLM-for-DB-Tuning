@@ -1,0 +1,5 @@
+-> Table scan on <temporary>  (actual time=4824..4826 rows=9796 loops=1)
+    -> Aggregate using temporary table  (actual time=4824..4824 rows=9796 loops=1)
+        -> Nested loop inner join  (cost=1.16e+6 rows=996447) (actual time=0.0898..1317 rows=1e+6 loops=1)
+            -> Table scan on t1  (cost=102125 rows=996447) (actual time=0.0601..446 rows=1e+6 loops=1)
+            -> Single-row index lookup on t2 using PRIMARY (address_id=t1.address_id)  (cost=0.959 rows=1) (actual time=733e-6..754e-6 rows=1 loops=1e+6)

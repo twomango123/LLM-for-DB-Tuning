@@ -1,0 +1,1 @@
+SELECT t1.customer_name, t1.customer_phone FROM view_customers AS t1 JOIN customer_addresses AS t2 ON t1.customer_id = t2.customer_id JOIN addresses AS t3 ON t2.address_id = t3.address_id WHERE t3.state_province_county = 'California'

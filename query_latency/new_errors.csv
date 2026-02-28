@@ -1,0 +1,5 @@
+query_id,error
+ins_actual_order,statement execution failed
+ins_address,statement execution failed
+ins_order_delivery,statement execution failed
+ins_regular_order_product,statement execution failed

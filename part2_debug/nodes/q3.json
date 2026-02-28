@@ -1,0 +1,10 @@
+[
+  {
+    "op": "Count rows in customers",
+    "actual_time": 47.5,
+    "avg_time": 47.5,
+    "exclusive_time": 47.5,
+    "loops": 1.0,
+    "rows": 1.0
+  }
+]

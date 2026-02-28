@@ -1,0 +1,1 @@
+SELECT customer_name FROM view_customers ORDER BY date_became_customer LIMIT 5

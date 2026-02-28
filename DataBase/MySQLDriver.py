@@ -37,18 +37,41 @@ class MySQLDriver(DatabaseDriver):
     def execute_query(self, query: str) -> List[Dict[str, Any]]:
         if not self.is_connected:
             raise RuntimeError("数据库未连接")
-        cursor = self.connection.cursor(dictionary=True)
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        cursor.close()
-        return rows
+        # 使用 buffered=True 以确保读取了所有结果集，避免后续出现
+        # "Unread result found" 错误（尤其是包含 SELECT 的 PREPARE/EXECUTE 场景）。
+        cursor = self.connection.cursor(dictionary=True, buffered=True)
+        try:
+            cursor.execute(query)
+            rows = cursor.fetchall() if cursor.with_rows else []
+            # 消耗可能存在的后续结果集（防御性处理）
+            while True:
+                more = cursor.nextset()
+                if not more:
+                    break
+                if cursor.with_rows:
+                    _ = cursor.fetchall()
+            return rows
+        finally:
+            cursor.close()
 
     def execute_statement(self, statement: str) -> bool:
         if not self.is_connected:
             raise RuntimeError("数据库未连接")
         try:
-            cursor = self.connection.cursor()
+            # buffered=True 确保任何结果集（例如 EXECUTE 执行到 SELECT 1）被消费
+            cursor = self.connection.cursor(buffered=True)
             cursor.execute(statement)
+            # 若该语句产生结果集（例如 SELECT），需将其读取完毕，否则
+            # mysql-connector 会在下一条语句时报 "Unread result found"
+            if cursor.with_rows:
+                _ = cursor.fetchall()
+            # 消耗可能存在的后续结果集（极少见，但做防御）
+            while True:
+                more = cursor.nextset()
+                if not more:
+                    break
+                if cursor.with_rows:
+                    _ = cursor.fetchall()
             self.connection.commit()
             cursor.close()
             return True
@@ -61,4 +84,3 @@ class MySQLDriver(DatabaseDriver):
         return self.execute_statement(f"DROP DATABASE IF EXISTS {dbname}")
 
     
-

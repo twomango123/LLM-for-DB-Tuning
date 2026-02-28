@@ -40,3 +40,23 @@ python LLM-for-DB-Tuning/storage/cli.py \
 - 抽样为近似估计；结果依赖统计信息与样本命中情况。`--min-sample-rows` 可降低抽样误差。
 - 定长映射采用通用近似；如需严谨估算（例如 numeric/decimal 可变长度、char(n) 多字节字符），建议转为抽样或按业务定制映射。
 - 输出为 JSON Lines，适合后续用 Python/Pandas/Spark 等工具读取聚合。
+
+## 生成 meta.json（基于 MySQL 与 schema.sql）
+
+若需要为改写/存储预算生成与 `scripts/sample_meta.json` 相同结构的元数据文件，可使用脚本：`LLM-for-DB-Tuning/scripts/generate_meta_mysql.py`。
+
+示例：
+
+```
+python LLM-for-DB-Tuning/scripts/generate_meta_mysql.py \
+  --schema-sql LLM-for-DB-Tuning/DataBase/cleaned_sql/schema.sql \
+  --host 127.0.0.1 --port 3306 \
+  --user root --password 123456 --database mydb \
+  --sample-ratio 0.01 --min-sample-rows 100 \
+  --out LLM-for-DB-Tuning/output_dir/meta.json
+```
+
+说明：
+- 仅统计表数据开销：定长列使用固定字节估计，变长列通过 `RAND()` 抽样 + `OCTET_LENGTH()` 估算；列的 `null_frac` 通过单次抽样计算得到。
+- `--schema-sql` 用于限定纳入的表集合与外键发现范围（从 CREATE TABLE 定义中解析表名）。
+- 输出字段与 `scripts/sample_meta.json` 对齐：`total_storage_bytes`、`tables`（含每表 `row_count`、`primary_key`、`columns` 下的 `avg_length`/`null_frac`）、`foreign_keys`、`stats`。

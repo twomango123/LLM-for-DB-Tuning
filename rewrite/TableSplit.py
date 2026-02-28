@@ -52,16 +52,47 @@ class TableSplit(SMO):
             include = list(dict.fromkeys(orig_pk + [c for c in bcols if c not in orig_pk]))
             child_include_cols[t] = include
 
+        # 构建列→数据类型映射，用于对日期/时间列做零日期防护
+        def _dtype_map(cons):
+            mp = {}
+            for cm in (cons.get('columns') or []):
+                nm = cm.get('COLUMN_NAME')
+                dt = (cm.get('DATA_TYPE') or '').lower()
+                if nm:
+                    mp[nm] = dt
+            return mp
+
+        dtype_map = _dtype_map(cons)
+
+        def _safe_dt_expr(alias: str, col: str, dtype: str) -> str:
+            # 与 TableJoin 中一致的零日期安全包装：
+            # - DATE:      CAST(NULLIF(CONCAT(alias.`col`),'0000-00-00') AS DATE)
+            # - DATETIME/TIMESTAMP: CAST(NULLIF(CONCAT(alias.`col`),'0000-00-00 00:00:00') AS DATETIME)
+            q = f"{alias}.`{col}`"
+            d = (dtype or '').lower()
+            if d == 'date':
+                return f"CAST(NULLIF(CONCAT({q}), '0000-00-00') AS DATE)"
+            if d in ('datetime', 'timestamp'):
+                return f"CAST(NULLIF(CONCAT({q}), '0000-00-00 00:00:00') AS DATETIME)"
+            return q
+
         # 1) 创建每个业务表
         sql_statements = []
         logger.debug("创建业务表与列集合中...")
         for i, new_table in enumerate(self.new_tables):
             include = child_include_cols[new_table]
             logger.debug("子表%d: %s 列: %s", i + 1, new_table, include)
-            cols_str = ", ".join(include)
+            # 为 CREATE TABLE ... SELECT 使用别名 t，以便安全引用
+            select_exprs = []
+            for col in include:
+                dt = dtype_map.get(col, '')
+                expr = _safe_dt_expr('t', col, dt)
+                # 保持原列名
+                select_exprs.append(f"{expr} AS `{col}`")
+            cols_str = ", ".join(select_exprs)
             sql = f"""CREATE TABLE `{new_table}` AS
                 SELECT DISTINCT {cols_str}
-                FROM {old_table_quoted};"""
+                FROM {old_table_quoted} t;"""
             sql_statements.append(sql)
 
         # 2) 为每个子表重建主键（使用原表主键）+ 其它约束（唯一、检查、出站外键不在这里处理）
@@ -188,6 +219,132 @@ class TableSplit(SMO):
             if sql2 == sql:
                 sql2 = re.sub(rf"\b{re.escape(self.old_table)}\b", view_name, sql)
             return sql2
+
+    def apply_to_write_sql(self, sql: str) -> str:
+        """
+        写入 SQL 改写（INSERT/UPDATE）：
+        - is_retained=True（保留原表）：写入仍对原表生效，不改写（由视图只读使用）。
+        - is_retained=False（实体垂直拆分）：
+          * INSERT 到 old_table：将列按所属子表路由，拆分为多条 INSERT 到不同新表；
+            - 若 INSERT ... SELECT，复用只读 apply_to_sql 改写 SELECT，并据列目标拆分；
+            - 若 INSERT ... VALUES，多行批量时生成多条按表分组的 INSERT；
+            - 仅在列清单清晰（明确列名）时执行；否则保守返回原 SQL。
+          * UPDATE 到 old_table：按 SET 的列归属生成多条 UPDATE 针对各子表（仅当 WHERE 不引用跨子表列时）。
+        注意：为了安全，本函数采取“保守路由”策略：无法明确归属即不改写。
+        """
+        if getattr(self, 'is_retained', False):
+            return sql
+        try:
+            tree = sqlglot.parse_one(sql, read='mysql')
+        except Exception:
+            return sql
+
+        old = self.old_table.split('.')[-1].lower()
+        column_map = {t.lower(): set([c.lower() for c in (self.columnList.get(t) or [])]) for t in self.new_tables}
+
+        def owner_table(col: str) -> str | None:
+            c = col.lower().strip('`')
+            for t, cols in column_map.items():
+                if c in cols:
+                    return t
+            return None
+
+        # INSERT
+        if isinstance(tree, exp.Insert):
+            schema = tree.this
+            base = ''
+            cols_nodes = []
+            if isinstance(schema, exp.Schema):
+                base = (schema.this.name or '').split('.')[-1].lower() if isinstance(schema.this, exp.Table) else ''
+                cols_nodes = list(schema.expressions or [])
+            elif isinstance(schema, exp.Table):
+                base = (schema.name or '').split('.')[-1].lower()
+            if base != old:
+                return sql
+            cols = [c.name for c in cols_nodes] if cols_nodes else []
+            if not cols:
+                return sql  # 需要明确列清单
+            # 目标列分桶
+            buckets: dict[str, list[int]] = {}
+            for idx, c in enumerate(cols):
+                t = owner_table(c)
+                if not t:
+                    return sql
+                buckets.setdefault(t, []).append(idx)
+
+            # 确保每个子表的主键列包含在其 INSERT 列中（共享键需要在每张子表写入）
+            pkd = getattr(self, 'primary_keys_dict', {}) or {}
+            for t, pk_cols in pkd.items():
+                idxs = buckets.setdefault(t.lower(), [])
+                for pk in (pk_cols or []):
+                    if pk in cols:
+                        i = cols.index(pk)
+                        if i not in idxs:
+                            idxs.append(i)
+            # 统一按原 INSERT 列顺序排序，保证主键在前（若原列顺序在前）
+            for t in list(buckets.keys()):
+                buckets[t] = sorted(set(buckets[t]))
+
+            # INSERT ... VALUES
+            vals = tree.args.get('expression')
+            out_stmts: list[str] = []
+            if isinstance(vals, exp.Values):
+                for t, idxs in buckets.items():
+                    new_cols = [cols[i] for i in idxs]
+                    rows = []
+                    for row in vals.expressions:
+                        items = [row.expressions[i].sql(dialect='mysql') for i in idxs]
+                        rows.append('(' + ', '.join(items) + ')')
+                    sql_stmt = f"INSERT INTO `{t}` (" + ', '.join(f"`{c}`" for c in new_cols) + ") VALUES " + ', '.join(rows) + ';'
+                    out_stmts.append(sql_stmt)
+                return '\n'.join(out_stmts)
+            else:
+                # INSERT ... SELECT
+                sel = tree.args.get('expression')
+                if not (isinstance(sel, exp.Select) or isinstance(sel, exp.Subquery)):
+                    return sql
+                # 按桶拆分 SELECT 的投影：保守做法，需要 SELECT 列与 INSERT 列一一对应
+                sel_sql = sel.sql(dialect='mysql')
+                sel_sql_rw = self.apply_to_sql(sel_sql)
+                sel_new = sqlglot.parse_one(sel_sql_rw, read='mysql')
+                if len(getattr(sel_new, 'expressions', [])) != len(cols):
+                    return sql
+                out = []
+                for t, idxs in buckets.items():
+                    new_cols = [cols[i] for i in idxs]
+                    new_sel_exprs = [sel_new.expressions[i] for i in idxs]
+                    sub = exp.Select(expressions=new_sel_exprs, from_=sel_new.args.get('from'), where=sel_new.args.get('where'), group=sel_new.args.get('group'), order=sel_new.args.get('order'))
+                    stmt = exp.Insert(this=exp.Table(this=exp.Identifier(this=t))),
+                    sql_stmt = f"INSERT INTO `{t}` (" + ', '.join(f"`{c}`" for c in new_cols) + ") " + sub.sql(dialect='mysql') + ';'
+                    out.append(sql_stmt)
+                return '\n'.join(out)
+        
+        # UPDATE
+        if isinstance(tree, exp.Update):
+            tbl = tree.this
+            base = (tbl.name or '').split('.')[-1].lower() if isinstance(tbl, exp.Table) else ''
+            if base != old:
+                return sql
+            sets = list(tree.args.get('expressions') or [])
+            if not sets:
+                return sql
+            # 将赋值按列归属分桶
+            bucket_sets: dict[str, list[exp.Expression]] = {}
+            for s in sets:
+                target = getattr(s, 'this', None)
+                if not isinstance(target, exp.Column):
+                    return sql
+                t = owner_table(target.name)
+                if not t:
+                    return sql
+                bucket_sets.setdefault(t, []).append(s)
+            out = []
+            for t, exprs in bucket_sets.items():
+                u = exp.Update(this=exp.Table(this=exp.Identifier(this=t)), expressions=exprs, where=tree.args.get('where'))
+                out.append(u.sql(dialect='mysql'))
+            return '\n'.join(out)
+        
+        return sql
     # ----------------------------------------------------------
     # SQL 改写操作
     # # ----------------------------------------------------------
@@ -397,3 +554,160 @@ class TableSplit(SMO):
                     f.write(f"{sql};\n")
             
             print(f"已保存重写后的SQL到: {output_path}")
+
+    # ---------- performance eval ----------
+    def evaluate_on_plan(self, plan_text: str,
+                         meta_path: str | None = 'output_dir/meta.json',
+                         samples_path: str | None = 'response/samples/samples.json',
+                         used_columns: dict | None = None) -> dict:
+        """
+        评估垂直拆分对计划的影响（增强版）：
+        - 若查询引用 old_table：
+          1) 判断所用列是否完全落入某个子表 → 落单则按该子表行宽缩放（行数不变），下游算子通过 type1 传播更新；
+          2) 若涉及多个子表列：
+             - is_retained=True：成本不变；
+             - is_retained=False：在 1) 的宽度处理基础上，叠加一次“自然连接”代价，并据此更新连接输出行，借助 type1 对下游算子按行数变化进行缩放。
+               连接代价使用 samples.json 的 join 中位数推导选择率 S，并用实际基数 L、R 缩放（hash 或 nested 简化模型）。
+        - used_columns: 可选 {table_name: [cols...]}，若未提供，则用“最小宽度子表”近似。
+        """
+        try:
+            from rewrite.cost_model import (
+                load_meta, load_samples, width_from_columns, avg_row_width,
+                join_selectivity_from_samples, CostModel
+            )
+            from performance_eval.rewrite_utils import (
+                hash_join_cost_from_rows, nested_join_cost_from_rows
+            )
+            from performance_eval.plan import parse_plan, compute_total_cost
+        except Exception:
+            return {
+                'new_plan_text': plan_text,
+                'original_total_cost': None,
+                'new_total_cost': None,
+                'delta': 0.0,
+                'note': 'performance_eval 不可用，跳过评估'
+            }
+
+        old = self.old_table
+        nodes = parse_plan(plan_text)
+        if not any(old in (n.tables or []) for n in nodes):
+            return {
+                'new_plan_text': plan_text,
+                'original_total_cost': None,
+                'new_total_cost': None,
+                'delta': 0.0,
+                'note': '计划未引用该表，跳过'
+            }
+
+        # 宽度近似：优先使用 used_columns 指示的列集合；否则回退为各子表全列
+        old_cols = set()
+        meta = load_meta(meta_path)
+        for c, m in ((meta.get('tables') or {}).get(old, {}) or {}).get('columns', {}).items():
+            old_cols.add(c)
+        # 旧表估计行宽
+        old_w = 0.0
+        for c in old_cols:
+            try:
+                old_w += float(((meta.get('tables') or {}).get(old, {}).get('columns') or {}).get(c, {}).get('avg_length') or 0.0)
+            except Exception:
+                pass
+        old_w = old_w or 1.0
+
+        # 针对每个子表计算“本查询用到的列宽”
+        child_ws: list[tuple[str, float]] = []
+        for t in self.new_tables:
+            cols = (used_columns or {}).get(t) or self.columnList.get(t, [])
+            w = 0.0
+            for c in cols:
+                try:
+                    w += float(((meta.get('tables') or {}).get(t, {}).get('columns') or {}).get(c, {}).get('avg_length') or 0.0)
+                except Exception:
+                    pass
+            if w > 0:
+                child_ws.append((t, w))
+        if not child_ws:
+            return {
+                'new_plan_text': plan_text,
+                'original_total_cost': None,
+                'new_total_cost': None,
+                'delta': 0.0,
+                'note': '缺少列宽元数据，跳过'
+            }
+
+        # 检查是否“单子表覆盖所有所用列”
+        cols_needed = set()
+        for t in self.new_tables:
+            cols_needed.update((used_columns or {}).get(t) or [])
+        single_cover = None
+        if cols_needed:
+            for t, _ in child_ws:
+                cols_t = set((used_columns or {}).get(t) or self.columnList.get(t, []) or [])
+                if cols_needed.issubset(cols_t):
+                    single_cover = t
+                    break
+        # 若没有显式列集合，采用最小宽度子表近似
+        t_pick, w_child = (min(child_ws, key=lambda x: x[1]) if single_cover is None else
+                           next((x for x in child_ws if x[0] == single_cover), child_ws[0]))
+        cf = (w_child or 1.0) / max(old_w, 1e-9)
+        cm = CostModel()
+        res = cm.apply_type1(plan_text, target_table=old, rows_factor=1.0, cols_factor=cf, filter_factor=1.0)
+
+        # 多子表列且不保留原表：叠加自然连接代价，并按选择率更新下游基数（经 type1 传播缩放）
+        multi_tables = (single_cover is None and bool(cols_needed))
+        if multi_tables and not getattr(self, 'is_retained', False):
+            # 实际基数 L、R：用 meta 中各子表行数（如果没有子表视图，则近似用旧表基数）
+            l_tbl, r_tbl = self.new_tables[0], self.new_tables[1] if len(self.new_tables) > 1 else (self.new_tables[0], None)
+            L = float((meta.get('tables') or {}).get(l_tbl, {}).get('row_count') or (meta.get('tables') or {}).get(old, {}).get('row_count') or 0)
+            R = float((meta.get('tables') or {}).get(r_tbl, {}).get('row_count') or (meta.get('tables') or {}).get(old, {}).get('row_count') or 0)
+            samples = load_samples(samples_path) if samples_path else {}
+            sel = join_selectivity_from_samples(samples)
+            add_cost = 0.0
+            if sel:
+                S, sL, sR, sO = sel
+                # 采用 HashJoin 模型估算新增连接代价
+                add_cost = hash_join_cost_from_rows(L, R, sL, sR, sO)
+            # 估算 JOIN 输出基数并将其传播到下游（行数缩放）
+            base_rows = float((meta.get('tables') or {}).get(old, {}).get('row_count') or 0)
+            out_rows = (L * R * (S if sel else 1e-6)) if (L and R) else base_rows
+            rf = (out_rows / max(base_rows, 1e-9)) if base_rows else 1.0
+            # 先按行数与行宽共同缩放一次，让 plan 树中各算子基数/成本随之更新
+            res_rows = cm.apply_type1(res['new_plan_text'], target_table=old, rows_factor=rf, cols_factor=1.0, filter_factor=1.0)
+            # 然后在新的总代价上叠加“自然连接”的新增代价
+            before = res_rows.get('new_total_cost') or compute_total_cost(parse_plan(res_rows['new_plan_text']))
+            res_rows['original_total_cost'] = res_rows.get('original_total_cost')
+            res_rows['new_total_cost'] = before + add_cost
+            res_rows['delta'] = (before + add_cost) - (res_rows.get('original_total_cost') or 0.0)
+            # 附加“不能直接缩放得到的项”说明
+            try:
+                from rewrite.cost_model import parse_plan as _pp
+                ns_terms = []
+                for n in _pp(plan_text):
+                    if 'join' in n.type:
+                        ns_terms.append({'op': n.type, 'need': ['S(连接选择率)']})
+                    if n.type in ('group_temp', 'group_agg'):
+                        ns_terms.append({'op': n.type, 'need': ['G(分组数)']})
+                    if n.type == 'index_scan':
+                        ns_terms.append({'op': n.type, 'need': ['Sx(选择率)']})
+                res_rows['non_scalable'] = ns_terms
+            except Exception:
+                pass
+            res_rows['note'] = f"不保留原表：多子表列，已按选择率更新下游基数并叠加连接代价≈{add_cost:.3g}；宽度按 {t_pick} 缩放"
+            return res_rows
+
+        res['note'] = ('保留原表' if getattr(self, 'is_retained', False) else '不保留原表') + f'：按 {t_pick} 列宽缩放'
+        # 不能直接通过缩放得到的项
+        try:
+            from rewrite.cost_model import parse_plan as _pp
+            ns_terms = []
+            for n in _pp(plan_text):
+                if 'join' in n.type:
+                    ns_terms.append({'op': n.type, 'need': ['S(连接选择率)']})
+                if n.type in ('group_temp', 'group_agg'):
+                    ns_terms.append({'op': n.type, 'need': ['G(分组数)']})
+                if n.type == 'index_scan':
+                    ns_terms.append({'op': n.type, 'need': ['Sx(选择率)']})
+            if ns_terms:
+                res['non_scalable'] = ns_terms
+        except Exception:
+            pass
+        return res

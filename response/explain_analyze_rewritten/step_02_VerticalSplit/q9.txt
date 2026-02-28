@@ -1,0 +1,6 @@
+-> Nested loop inner join  (cost=1.09e+6 rows=99645) (actual time=1269..1269 rows=0 loops=1)
+    -> Nested loop inner join  (cost=1.05e+6 rows=99645) (actual time=1269..1269 rows=0 loops=1)
+        -> Table scan on t2  (cost=102125 rows=996447) (actual time=0.0318..455 rows=1e+6 loops=1)
+        -> Filter: (t3.state_province_county = 'California')  (cost=0.853 rows=0.1) (actual time=742e-6..742e-6 rows=0 loops=1e+6)
+            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=0.853 rows=1) (actual time=584e-6..606e-6 rows=1 loops=1e+6)
+    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)

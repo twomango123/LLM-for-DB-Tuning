@@ -1,0 +1,6 @@
+UPDATE order_deliveries
+SET delivery_status_code = 'IN_TRANSIT',
+    delivery_date = NOW()
+WHERE delivery_status_code = 'SCHEDULED'
+ORDER BY actual_order_id DESC, delivery_date DESC
+LIMIT 1;

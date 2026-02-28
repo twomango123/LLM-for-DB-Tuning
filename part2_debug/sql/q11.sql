@@ -1,0 +1,1 @@
+SELECT customer_name ,  customer_phone ,  customer_email FROM customers ORDER BY date_became_customer;

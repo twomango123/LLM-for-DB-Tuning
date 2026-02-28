@@ -1,0 +1,68 @@
+{
+  "total_storage_bytes": 0,
+  "tables": {
+    "customer": {
+      "row_count": 1000,
+      "primary_key": ["c_id"],
+      "columns": {
+        "c_id": {"avg_length": 4, "null_frac": 0.0},
+        "name": {"avg_length": 20, "null_frac": 0.0},
+        "email": {"avg_length": 28, "null_frac": 0.0}
+      }
+    },
+    "customer_ext": {
+      "row_count": 1000,
+      "primary_key": ["ce_c_id"],
+      "columns": {
+        "ce_c_id": {"avg_length": 4, "null_frac": 0.0},
+        "birthday": {"avg_length": 8, "null_frac": 0.0},
+        "level": {"avg_length": 1, "null_frac": 0.0}
+      }
+    },
+    "orders": {
+      "row_count": 2000,
+      "primary_key": ["order_id"],
+      "columns": {
+        "order_id": {"avg_length": 8, "null_frac": 0.0},
+        "customer_id": {"avg_length": 4, "null_frac": 0.0},
+        "year": {"avg_length": 2, "null_frac": 0.0}
+      }
+    },
+    "orders_2023": {
+      "row_count": 1000,
+      "primary_key": ["order_id"],
+      "columns": {
+        "order_id": {"avg_length": 8, "null_frac": 0.0},
+        "customer_id": {"avg_length": 4, "null_frac": 0.0},
+        "year": {"avg_length": 2, "null_frac": 0.0}
+      }
+    },
+    "orders_2024": {
+      "row_count": 1000,
+      "primary_key": ["order_id"],
+      "columns": {
+        "order_id": {"avg_length": 8, "null_frac": 0.0},
+        "customer_id": {"avg_length": 4, "null_frac": 0.0},
+        "year": {"avg_length": 2, "null_frac": 0.0}
+      }
+    }
+  },
+  "foreign_keys": [
+    {"from_table": "customer_ext", "from_columns": ["ce_c_id"], "to_table": "customer", "to_columns": ["c_id"]},
+    {"from_table": "orders", "from_columns": ["customer_id"], "to_table": "customer", "to_columns": ["c_id"]}
+  ],
+  "stats": {
+    "predicates": {
+      "orders:year=2023": 1000,
+      "orders:year=2024": 1000
+    },
+    "joins": {
+      "customer.c_id=customer_ext.ce_c_id": 1000
+    },
+    "split_size_hints:customer.email": {
+      "email_user": 10,
+      "email_domain": 18
+    }
+  }
+}
+

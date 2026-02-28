@@ -1,1 +1,0 @@
--> Count rows in nation  (actual time=0.374..0.374 rows=1 loops=1)

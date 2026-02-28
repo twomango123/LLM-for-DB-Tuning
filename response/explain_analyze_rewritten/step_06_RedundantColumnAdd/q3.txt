@@ -1,0 +1,1 @@
+-> Count rows in customers  (actual time=35.2..35.2 rows=1 loops=1)

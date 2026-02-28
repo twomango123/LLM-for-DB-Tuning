@@ -1,0 +1,4 @@
+{
+  "delivery_routes.route_id::join(route_id)": 0.010620000000000001,
+  "delivery_route_locations.route_id::join(route_id)": 0.0007199999999999998
+}

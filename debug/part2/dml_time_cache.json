@@ -1,0 +1,134 @@
+{
+  "generated_at": "2026-02-03T08:25:25Z",
+  "entries": [
+    {
+      "filename": "ins_actual_order.sql",
+      "type": "INSERT",
+      "exec_time_s": 0.034412145148962736,
+      "table": "actual_orders"
+    },
+    {
+      "filename": "ins_actual_order_product_from_regular.sql",
+      "type": "INSERT",
+      "exec_time_s": 0.02924892702139914,
+      "table": "actual_order_products"
+    },
+    {
+      "filename": "ins_address.sql",
+      "type": "INSERT",
+      "exec_time_s": 0.0215022808406502,
+      "table": "addresses"
+    },
+    {
+      "filename": "ins_customer.sql",
+      "type": "INSERT",
+      "exec_time_s": 0.011569079011678696,
+      "table": "customers"
+    },
+    {
+      "filename": "ins_customer_address.sql",
+      "type": "INSERT",
+      "exec_time_s": 0.017818985041230917,
+      "table": "customer_addresses"
+    },
+    {
+      "filename": "ins_order_delivery.sql",
+      "type": "INSERT",
+      "exec_time_s": 0.02504113782197237,
+      "table": "order_deliveries"
+    },
+    {
+      "filename": "ins_regular_order.sql",
+      "type": "INSERT",
+      "exec_time_s": 0.013537860941141844,
+      "table": "regular_orders"
+    },
+    {
+      "filename": "ins_regular_order_product.sql",
+      "type": "INSERT",
+      "exec_time_s": 0.8204697680193931,
+      "table": "regular_order_products"
+    },
+    {
+      "filename": "upd_address_city_zip.sql",
+      "type": "UPDATE",
+      "exec_time_s": 0.0006918301805853844,
+      "table": "addresses",
+      "columns": [
+        "city",
+        "zip_postcode"
+      ],
+      "where_select_time_s": 0.0,
+      "effective_time_s": 0.0006918301805853844
+    },
+    {
+      "filename": "upd_customer_contact.sql",
+      "type": "UPDATE",
+      "exec_time_s": 0.010530763072893023,
+      "table": "customers",
+      "columns": [
+        "customer_phone",
+        "customer_email"
+      ],
+      "where_select_time_s": 0.0,
+      "effective_time_s": 0.010530763072893023
+    },
+    {
+      "filename": "upd_customer_payment_method.sql",
+      "type": "UPDATE",
+      "exec_time_s": 0.01084548607468605,
+      "table": "customers",
+      "columns": [
+        "payment_method"
+      ],
+      "where_select_time_s": 258.0,
+      "effective_time_s": 0.0
+    },
+    {
+      "filename": "upd_delivery_complete.sql",
+      "type": "UPDATE",
+      "exec_time_s": 0.6803429729770869,
+      "table": "order_deliveries",
+      "columns": [
+        "delivery_status_code",
+        "delivery_date"
+      ],
+      "where_select_time_s": 422.0,
+      "effective_time_s": 0.0
+    },
+    {
+      "filename": "upd_delivery_status.sql",
+      "type": "UPDATE",
+      "exec_time_s": 0.5967861791141331,
+      "table": "order_deliveries",
+      "columns": [
+        "delivery_status_code",
+        "delivery_date"
+      ],
+      "where_select_time_s": 395.0,
+      "effective_time_s": 0.0
+    },
+    {
+      "filename": "upd_order_status.sql",
+      "type": "UPDATE",
+      "exec_time_s": 0.012170525966212153,
+      "table": "actual_orders",
+      "columns": [
+        "order_status_code"
+      ],
+      "where_select_time_s": 196.0,
+      "effective_time_s": 0.0
+    },
+    {
+      "filename": "upd_product_price_promo.sql",
+      "type": "UPDATE",
+      "exec_time_s": 0.8015596049372107,
+      "table": "products",
+      "columns": [
+        "product_price"
+      ],
+      "where_select_time_s": 0.0,
+      "effective_time_s": 0.8015596049372107
+    }
+  ]
+}

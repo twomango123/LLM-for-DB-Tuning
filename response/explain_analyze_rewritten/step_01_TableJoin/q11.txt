@@ -1,0 +1,2 @@
+-> Sort: customers.date_became_customer  (cost=100555 rows=998607) (actual time=409..446 rows=1e+6 loops=1)
+    -> Table scan on customers  (cost=100555 rows=998607) (actual time=0.0617..216 rows=1e+6 loops=1)

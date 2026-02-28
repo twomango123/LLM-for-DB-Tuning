@@ -1,0 +1,58 @@
+[
+  {
+    "op": "Limit: 1 row",
+    "actual_time": 0.113,
+    "avg_time": 0.113,
+    "exclusive_time": 0.010000000000000009,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.112..0.112 rows=1 loops=1)",
+    "actual_time": 0.112,
+    "avg_time": 0.112,
+    "exclusive_time": 0.112,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Table scan on <temporary>",
+    "actual_time": 0.103,
+    "avg_time": 0.103,
+    "exclusive_time": 0.0010000000000000009,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Aggregate using temporary table",
+    "actual_time": 0.102,
+    "avg_time": 0.102,
+    "exclusive_time": 0.021599999999999994,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Nested loop inner join",
+    "actual_time": 0.0804,
+    "avg_time": 0.0804,
+    "exclusive_time": 0.0023999999999999994,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Covering index scan on t2 using route_id",
+    "actual_time": 0.0615,
+    "avg_time": 0.0615,
+    "exclusive_time": 0.0615,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Single-row index lookup on t1 using PRIMARY",
+    "actual_time": 0.0165,
+    "avg_time": 0.0165,
+    "exclusive_time": 0.0165,
+    "loops": 1.0,
+    "rows": 1.0
+  }
+]

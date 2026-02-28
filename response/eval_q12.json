@@ -1,0 +1,78 @@
+{
+  "final_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+  "before_total_cost": 301044.0,
+  "after_total_cost": 301044.0,
+  "delta": 0.0,
+  "steps": [
+    {
+      "op": "TableJoin",
+      "result": {
+        "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "仅单表且 keep_old=True，成本不变"
+      }
+    },
+    {
+      "op": "TableSplit",
+      "result": {
+        "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "计划未引用该表，跳过"
+      }
+    },
+    {
+      "op": "TableSplit",
+      "result": {
+        "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "缺少列宽元数据，跳过"
+      }
+    },
+    {
+      "op": "HorizontalSplit",
+      "result": {
+        "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "计划未引用该表，跳过"
+      }
+    },
+    {
+      "op": "RedundantColumnAdd",
+      "result": {
+        "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "计划未引用目标表，跳过"
+      }
+    },
+    {
+      "op": "RedundantColumnAdd",
+      "result": {
+        "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "计划未引用目标表，跳过"
+      }
+    },
+    {
+      "op": "TableJoin",
+      "result": {
+        "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "仅单表且 keep_old=True，成本不变"
+      }
+    }
+  ]
+}

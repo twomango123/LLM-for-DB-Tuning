@@ -1,0 +1,5 @@
+-> Limit: 1 row(s)  (actual time=423..423 rows=1 loops=1)
+    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=423..423 rows=1 loops=1)
+        -> Table scan on <temporary>  (actual time=423..423 rows=1 loops=1)
+            -> Aggregate using temporary table  (actual time=423..423 rows=1 loops=1)
+                -> Table scan on customers  (cost=100348 rows=998585) (actual time=0.282..162 rows=999999 loops=1)

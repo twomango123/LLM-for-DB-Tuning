@@ -1,0 +1,1 @@
+SELECT truck_details FROM trucks ORDER BY truck_licence_number

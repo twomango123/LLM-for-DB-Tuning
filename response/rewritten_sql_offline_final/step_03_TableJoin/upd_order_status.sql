@@ -1,0 +1,5 @@
+UPDATE actual_orders
+SET order_status_code = 'PACKED'
+WHERE order_status_code = 'NEW'
+ORDER BY actual_order_id DESC
+LIMIT 1;

@@ -1,0 +1,4 @@
+RedundantColumnAdd(customers.payment_method, order_deliveries.payment_method, ['customers.customer_id=actual_orders.regular_order_id'])
+TableJoin(order_deliveries, actual_orders, actual_order_id, actual_order_id, False):order_deliveries_orders
+RedundantColumnAdd(products.product_price, regular_order_products.product_price, ['products.product_id=regular_order_products.product_id'])
+VerticalSplit(customers, True):customers_high_freq(customer_id,payment_method),customers_low_freq(customer_id,customer_name,customer_phone,customer_email,date_became_customer)

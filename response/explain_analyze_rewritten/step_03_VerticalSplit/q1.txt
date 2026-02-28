@@ -1,0 +1,2 @@
+-> Filter: (actual_orders.order_status_code = 'Success')  (cost=102052 rows=99841) (actual time=209..209 rows=0 loops=1)
+    -> Table scan on actual_orders  (cost=102052 rows=998412) (actual time=0.364..166 rows=999999 loops=1)

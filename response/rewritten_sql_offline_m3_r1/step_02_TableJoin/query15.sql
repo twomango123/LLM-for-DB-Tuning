@@ -1,0 +1,1 @@
+SELECT t1.route_name FROM delivery_routes AS t1 JOIN delivery_route_locations AS t2 ON t1.route_id  =  t2.route_id GROUP BY t1.route_id ORDER BY count(*) DESC LIMIT 1;

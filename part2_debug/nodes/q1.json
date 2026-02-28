@@ -1,0 +1,18 @@
+[
+  {
+    "op": "Filter:",
+    "actual_time": 258.0,
+    "avg_time": 258.0,
+    "exclusive_time": 56.0,
+    "loops": 1.0,
+    "rows": 0.0
+  },
+  {
+    "op": "Table scan on actual_orders",
+    "actual_time": 202.0,
+    "avg_time": 202.0,
+    "exclusive_time": 202.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  }
+]

@@ -1,0 +1,280 @@
+[
+  {
+    "id": 1,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query1.sql",
+    "basename": "query1.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 2,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query2.sql",
+    "basename": "query2.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 3,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query3.sql",
+    "basename": "query3.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 4,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query4.sql",
+    "basename": "query4.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 5,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query5.sql",
+    "basename": "query5.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 6,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query6.sql",
+    "basename": "query6.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 7,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query7.sql",
+    "basename": "query7.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 8,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query8.sql",
+    "basename": "query8.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 9,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query9.sql",
+    "basename": "query9.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 10,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query10.sql",
+    "basename": "query10.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 11,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query11.sql",
+    "basename": "query11.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 12,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query12.sql",
+    "basename": "query12.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 13,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query13.sql",
+    "basename": "query13.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 14,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query14.sql",
+    "basename": "query14.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 15,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query15.sql",
+    "basename": "query15.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 16,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query16.sql",
+    "basename": "query16.sql",
+    "mult": 160,
+    "insert_tables": [],
+    "update_tables": []
+  },
+  {
+    "id": 17,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/ins_actual_order.sql",
+    "basename": "ins_actual_order.sql",
+    "mult": 484,
+    "insert_tables": [
+      "actual_orders"
+    ],
+    "update_tables": []
+  },
+  {
+    "id": 18,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/ins_actual_order_product_from_regular.sql",
+    "basename": "ins_actual_order_product_from_regular.sql",
+    "mult": 484,
+    "insert_tables": [
+      "actual_order_products"
+    ],
+    "update_tables": []
+  },
+  {
+    "id": 19,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/ins_address.sql",
+    "basename": "ins_address.sql",
+    "mult": 484,
+    "insert_tables": [
+      "addresses"
+    ],
+    "update_tables": []
+  },
+  {
+    "id": 20,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/ins_customer.sql",
+    "basename": "ins_customer.sql",
+    "mult": 484,
+    "insert_tables": [
+      "customers"
+    ],
+    "update_tables": []
+  },
+  {
+    "id": 21,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/ins_customer_address.sql",
+    "basename": "ins_customer_address.sql",
+    "mult": 484,
+    "insert_tables": [
+      "customer_addresses"
+    ],
+    "update_tables": []
+  },
+  {
+    "id": 22,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/ins_order_delivery.sql",
+    "basename": "ins_order_delivery.sql",
+    "mult": 484,
+    "insert_tables": [
+      "order_deliveries"
+    ],
+    "update_tables": []
+  },
+  {
+    "id": 23,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/ins_regular_order.sql",
+    "basename": "ins_regular_order.sql",
+    "mult": 484,
+    "insert_tables": [
+      "regular_orders"
+    ],
+    "update_tables": []
+  },
+  {
+    "id": 24,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/ins_regular_order_product.sql",
+    "basename": "ins_regular_order_product.sql",
+    "mult": 484,
+    "insert_tables": [
+      "regular_order_products"
+    ],
+    "update_tables": []
+  },
+  {
+    "id": 25,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/upd_address_city_zip.sql",
+    "basename": "upd_address_city_zip.sql",
+    "mult": 484,
+    "insert_tables": [],
+    "update_tables": [
+      "addresses"
+    ]
+  },
+  {
+    "id": 26,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/upd_customer_contact.sql",
+    "basename": "upd_customer_contact.sql",
+    "mult": 484,
+    "insert_tables": [],
+    "update_tables": [
+      "customers"
+    ]
+  },
+  {
+    "id": 27,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/upd_customer_payment_method.sql",
+    "basename": "upd_customer_payment_method.sql",
+    "mult": 484,
+    "insert_tables": [],
+    "update_tables": [
+      "customers"
+    ]
+  },
+  {
+    "id": 28,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/upd_delivery_complete.sql",
+    "basename": "upd_delivery_complete.sql",
+    "mult": 484,
+    "insert_tables": [],
+    "update_tables": [
+      "order_deliveries"
+    ]
+  },
+  {
+    "id": 29,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/upd_delivery_status.sql",
+    "basename": "upd_delivery_status.sql",
+    "mult": 484,
+    "insert_tables": [],
+    "update_tables": [
+      "order_deliveries"
+    ]
+  },
+  {
+    "id": 30,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/upd_order_status.sql",
+    "basename": "upd_order_status.sql",
+    "mult": 484,
+    "insert_tables": [],
+    "update_tables": [
+      "actual_orders"
+    ]
+  },
+  {
+    "id": 31,
+    "path": "LLM-for-DB-Tuning/output_dir/sql/upd_product_price_promo.sql",
+    "basename": "upd_product_price_promo.sql",
+    "mult": 484,
+    "insert_tables": [],
+    "update_tables": [
+      "products"
+    ]
+  }
+]

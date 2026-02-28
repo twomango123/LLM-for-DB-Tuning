@@ -1,0 +1,18 @@
+[
+  {
+    "op": "Sort: customers.date_became_customer",
+    "actual_time": 450.0,
+    "avg_time": 450.0,
+    "exclusive_time": 219.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  },
+  {
+    "op": "Table scan on customers",
+    "actual_time": 231.0,
+    "avg_time": 231.0,
+    "exclusive_time": 231.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  }
+]

@@ -1,0 +1,17 @@
+file,relative_frequency_percent
+ins_customer.sql,2
+ins_address.sql,2
+ins_customer_address.sql,2
+upd_customer_contact.sql,3
+upd_customer_payment_method.sql,1
+ins_regular_order.sql,8
+ins_regular_order_product.sql,12
+ins_actual_order.sql,10
+ins_actual_order_product_from_regular.sql,11
+upd_order_status.sql,12
+ins_order_delivery.sql,8
+upd_delivery_status.sql,12
+upd_delivery_complete.sql,12
+upd_product_price_promo.sql,3
+upd_address_city_zip.sql,2
+

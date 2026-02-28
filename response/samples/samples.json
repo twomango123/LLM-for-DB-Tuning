@@ -1,0 +1,57 @@
+{
+  "raw_count": 6,
+  "join": {
+    "join_rows_med": 997500000000.0,
+    "join_cost_med": 99750000000.0,
+    "left_rows_med": 998787.5,
+    "right_rows_med": 998787.5
+  },
+  "union": {
+    "append_cost_med": 223258.0,
+    "left_rows_med": 49931.5,
+    "right_rows_med": 499217.0,
+    "total_rows_med": 199682.0
+  },
+  "samples": {
+    "join_samples": [
+      {
+        "join_rows": 997000000000.0,
+        "join_cost": 99700000000.0,
+        "left_rows": 998607.0,
+        "right_rows": 998607.0
+      },
+      {
+        "join_rows": 997000000000.0,
+        "join_cost": 99700000000.0,
+        "left_rows": 998607.0,
+        "right_rows": 998607.0
+      },
+      {
+        "join_rows": 998000000000.0,
+        "join_cost": 99800000000.0,
+        "left_rows": 998968.0,
+        "right_rows": 998968.0
+      },
+      {
+        "join_rows": 998000000000.0,
+        "join_cost": 99800000000.0,
+        "left_rows": 998968.0,
+        "right_rows": 998968.0
+      }
+    ],
+    "union_samples": [
+      {
+        "append_cost": 226574.0,
+        "left_rows": 99841.0,
+        "right_rows": 998412.0,
+        "append_rows": 199682.0
+      },
+      {
+        "append_cost": 10.4,
+        "left_rows": 22.0,
+        "right_rows": 22.0,
+        "append_rows": 23.0
+      }
+    ]
+  }
+}

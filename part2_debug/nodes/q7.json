@@ -1,0 +1,90 @@
+[
+  {
+    "op": "Table scan on <temporary>",
+    "actual_time": 1789.0,
+    "avg_time": 1789.0,
+    "exclusive_time": 0.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Temporary table with deduplication",
+    "actual_time": 1789.0,
+    "avg_time": 1789.0,
+    "exclusive_time": 110.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Nested loop antijoin",
+    "actual_time": 1679.0,
+    "avg_time": 1679.0,
+    "exclusive_time": 1474.99862,
+    "loops": 1.0,
+    "rows": 999999.0
+  },
+  {
+    "op": "Table scan on c",
+    "actual_time": 204.0,
+    "avg_time": 204.0,
+    "exclusive_time": 204.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  },
+  {
+    "op": "Single-row index lookup on <subquery2> using <auto_distinct_key>",
+    "actual_time": 0.00138,
+    "avg_time": 1.3800013800013799e-09,
+    "exclusive_time": 0.0,
+    "loops": 999999.0,
+    "rows": 0.0
+  },
+  {
+    "op": "Materialize with deduplication",
+    "actual_time": 1163.0,
+    "avg_time": 1163.0,
+    "exclusive_time": 0.0,
+    "loops": 1.0,
+    "rows": 0.0
+  },
+  {
+    "op": "Filter:",
+    "actual_time": 1163.0,
+    "avg_time": 1163.0,
+    "exclusive_time": 0.0,
+    "loops": 1.0,
+    "rows": 0.0
+  },
+  {
+    "op": "Nested loop inner join",
+    "actual_time": 1163.0,
+    "avg_time": 1163.0,
+    "exclusive_time": 718.9993529999999,
+    "loops": 1.0,
+    "rows": 0.0
+  },
+  {
+    "op": "Table scan on ca",
+    "actual_time": 444.0,
+    "avg_time": 444.0,
+    "exclusive_time": 444.0,
+    "loops": 1.0,
+    "rows": 1000000.0
+  },
+  {
+    "op": "Filter:",
+    "actual_time": 0.000647,
+    "avg_time": 6.47e-10,
+    "exclusive_time": 1.3800000000000004e-10,
+    "loops": 1000000.0,
+    "rows": 0.0
+  },
+  {
+    "op": "Single-row index lookup on a using PRIMARY",
+    "actual_time": 0.000509,
+    "avg_time": 5.09e-10,
+    "exclusive_time": 5.09e-10,
+    "loops": 1000000.0,
+    "rows": 1.0
+  }
+]

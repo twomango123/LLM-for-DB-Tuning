@@ -202,3 +202,64 @@ docker cp d5aae99505cd:LLM-for-DB-Tuning/prompt/final_prompt.md ./final_prompt.m
 `cat /var/lib/mysql-files/Result.txt`  
 
 
+## PART2 归因权重（Attribution Weights）
+
+PART2 会通过 EXPLAIN ANALYZE 把算子时间归因到列级操作（scan/order by/group by/join(col) 等）。为尽量“取到信息”，在无法精确识别时会采用分层回退分摊。为控制“误分摊”，引入了可调的权重参数：
+
+- 环境变量与默认值（数值越小，分摊越谨慎）：
+  - `PART2_W_JOIN_EQ=1.0` 等值连接列对准确匹配（a.b=c.d）的归因权重。
+  - `PART2_W_JOIN_GENERIC=0.6` 无法解析出列对时，对 join 节点的通用分摊权重。
+  - `PART2_W_FILTER_COLUMN=0.6` Filter 节点基于出现的列（alias.col）分摊到 scan 的权重。
+  - `PART2_W_FILTER_GLOBAL=0.3` Filter 节点无法定位列/表时，对相关表 scan 的兜底分摊权重。
+  - `PART2_W_SCAN_GENERIC=1.0` 表级扫描/索引扫描匹配后的分摊权重。
+
+- 语义与优先级：
+  1) JOIN：优先用“等值列对”精确归因；若缺失列对，仅在算子文本中提及的相关表上做通用分摊，并乘以 `PART2_W_JOIN_GENERIC`。
+  2) FILTER：先尝试把时间分配给谓词中出现的列的 `scan`（乘 `PART2_W_FILTER_COLUMN`）；否则仅在相关表上做兜底分配（乘 `PART2_W_FILTER_GLOBAL`）。
+  3) SCAN：扩展识别 `index lookup / (index) range scan / full table scan / table scan / lookup`，匹配到后在该表的 `scan` 目标上分配（乘 `PART2_W_SCAN_GENERIC`）。
+
+- 调参建议：
+  - 追求保守（减少误分摊）：降低 `PART2_W_JOIN_GENERIC` 与 `PART2_W_FILTER_GLOBAL`（如 0.4 / 0.0）。
+  - 追求覆盖（尽量不丢时间）：适度提高上述权重，但建议保留相对次于精确匹配的比例关系。
+
+- 示例：
+  ```bash
+  # 更保守：减少通用分摊
+  export PART2_W_JOIN_GENERIC=0.4
+  export PART2_W_FILTER_GLOBAL=0.0
+
+  # 恢复默认
+  unset PART2_W_JOIN_GENERIC PART2_W_FILTER_GLOBAL
+  ```
+
+- 调试：
+  - `PART2_DEBUG=1`、`PART2_DEBUG_DIR=...` 可输出 `nodes/`（解析到的 EXPLAIN 节点）与 `per_key/`（列级时间归因），便于确认权重与分摊效果。
+## Auto Loop（并行评估与优化）
+
+本仓库的 `auto_loop.py` 提供并行多对话（m）、多轮推进（n）、统一评估选优（k）与入围优化（s）的自动流程，并在执行前提供人工确认门。核心能力与运行方式见下文。
+
+### 性能评估（static / dynamic）
+
+- static（默认）：
+  - 基线来源：`prompt/PART2.py` 通过 MySQL EXPLAIN ANALYZE 对工作负载进行归因，得到每张表各列操作的 avg_time、count 以及总时间 `sum_time_ms`（毫秒）。
+  - 改写模拟：用 `scripts/storage_transformer.StorageModel` 应用候选操作序列到存储元数据（meta.json），得到每表“行数 fr”与“行宽 fw=∑avg_length×(1-null_frac)”变化。
+  - 重加权规则（本实现）：
+    - 扫描：`cost_scan' = sum_time_ms_scan × fw × fr`
+    - 连接：`cost_join' = sum_time_ms_join × mean(fw×fr, 邻表平均(fw×fr))`
+    - 排序/聚合：`cost' = sum_time_ms × fw × fr × log2(N’)/log2(N)`（N≈表行数）
+  - 说明：评估直接使用 PART2 的 `sum_time_ms`（EXPLAIN 归因总时间），不再用 `avg_time×count` 近似。
+
+- dynamic：为每个候选创建临时库，导入 schema.sql，使用 runner 应用 schema+SQL 改写并导出改写后的 SQL，随后用 `query_latency/collect_latency.py` 采集真实延迟之和作为得分。
+
+### 不落盘的 SQL 差异分析（用于评估参考）
+
+当仅需比较“改写前后 SQL 所使用的表/连接对差异”以辅助评估，而不希望真正落盘改写时，可按以下思路实现轻量差异分析：
+
+1) 解析候选操作序列（`response/runner.py` 中已有解析器可复用）。
+2) 针对每条原始 SQL：
+   - 使用 `sqlglot` 或 PART2 中的别名/列归属推断，提取 `FROM/JOIN` 的表集合与连接对。
+   - 根据候选操作对“表名映射关系”进行替换（例如 `TableJoin(A,B)->NewAB` 视为把 (A,B) 合并为 NewAB）。
+   - 输出改写前后的“表集合与连接对差异”，作为成本外推的补充特征，无需真正改写 SQL 文件。
+
+建议后续提供 `analysis/sql_usage_diff.py` 脚本以自动化上述流程。
+

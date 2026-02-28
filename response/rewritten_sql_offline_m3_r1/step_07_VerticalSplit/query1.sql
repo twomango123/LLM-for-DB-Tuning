@@ -1,0 +1,1 @@
+SELECT actual_order_id FROM view_actual_orders WHERE order_status_code = 'Success'

@@ -1,0 +1,4 @@
+VerticalSplit(products, False):products_summary(product_id, product_name, product_price),products_descr(product_id, product_description), products_summary(product_id), products_descr(product_id) 
+RedundantColumnAdd(customers.customer_name, regular_orders.customer_name, ['customers.customer_id=regular_orders.distributer_id']) 
+TableJoin(actual_orders, actual_order_products, actual_order_id, actual_order_id, False):actual_order_details 
+TableJoin(customer_addresses, addresses, address_id, address_id, False):customer_full_addresses

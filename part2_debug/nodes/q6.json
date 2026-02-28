@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "op": "Limit: 1 row",
+    "actual_time": 429.0,
+    "avg_time": 429.0,
+    "exclusive_time": 128.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=108538 rows=978757) (actual time=429..429 rows=1 loops=1)",
+    "actual_time": 429.0,
+    "avg_time": 429.0,
+    "exclusive_time": 429.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Table scan on products",
+    "actual_time": 301.0,
+    "avg_time": 301.0,
+    "exclusive_time": 301.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  }
+]

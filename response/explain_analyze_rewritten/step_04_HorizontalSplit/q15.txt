@@ -1,0 +1,7 @@
+-> Limit: 1 row(s)  (actual time=0.221..0.222 rows=1 loops=1)
+    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.221..0.221 rows=1 loops=1)
+        -> Table scan on <temporary>  (actual time=0.208..0.208 rows=1 loops=1)
+            -> Aggregate using temporary table  (actual time=0.206..0.206 rows=1 loops=1)
+                -> Nested loop inner join  (cost=1.78 rows=1) (actual time=0.119..0.125 rows=1 loops=1)
+                    -> Covering index scan on t2 using route_id  (cost=1.1 rows=1) (actual time=0.0622..0.0673 rows=1 loops=1)
+                    -> Single-row index lookup on t1 using PRIMARY (route_id=t2.route_id)  (cost=0.677 rows=1) (actual time=0.0544..0.0545 rows=1 loops=1)

@@ -1,0 +1,1 @@
+SELECT payment_method FROM view_customers GROUP BY payment_method ORDER BY COUNT(*) DESC LIMIT 1

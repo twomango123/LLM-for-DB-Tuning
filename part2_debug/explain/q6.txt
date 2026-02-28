@@ -1,5 +1,3 @@
--> Sort: orderline.ol_number  (actual time=1978..1978 rows=15 loops=1)
-    -> Table scan on <temporary>  (actual time=1977..1977 rows=15 loops=1)
-        -> Aggregate using temporary table  (actual time=1977..1977 rows=15 loops=1)
-            -> Filter: (orderline.ol_delivery_d > DATE'2007-01-02')  (cost=312699 rows=982928) (actual time=1.19..1074 rows=2.1e+6 loops=1)
-                -> Table scan on orderline  (cost=312699 rows=2.95e+6) (actual time=1.18..911 rows=3e+6 loops=1)
+-> Limit: 1 row(s)  (cost=108538 rows=1) (actual time=429..429 rows=1 loops=1)
+    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=108538 rows=978757) (actual time=429..429 rows=1 loops=1)
+        -> Table scan on products  (cost=108538 rows=978757) (actual time=0.389..301 rows=999999 loops=1)

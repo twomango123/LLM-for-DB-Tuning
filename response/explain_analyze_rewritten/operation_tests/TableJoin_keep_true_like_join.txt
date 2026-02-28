@@ -1,0 +1,4 @@
+-> Aggregate: count(0)  (cost=1.3e+6 rows=1) (actual time=833..833 rows=1 loops=1)
+    -> Nested loop inner join  (cost=1.2e+6 rows=998468) (actual time=0.336..785 rows=1e+6 loops=1)
+        -> Covering index scan on r using product_id  (cost=100509 rows=998468) (actual time=0.214..503 rows=1e+6 loops=1)
+        -> Single-row covering index lookup on p using PRIMARY (product_id=r.product_id)  (cost=1 rows=1) (actual time=110e-6..137e-6 rows=1 loops=1e+6)

@@ -1,0 +1,886 @@
+{
+  "2": {
+    "raw": "-> Limit: 1 row(s)  (actual time=658..658 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=658..658 rows=1 loops=1)\n        -> Stream results  (cost=1.29e+6 rows=10007) (actual time=0.202..656 rows=10001 loops=1)\n            -> Group aggregate: count(0)  (cost=1.29e+6 rows=10007) (actual time=0.197..654 rows=10001 loops=1)\n                -> Nested loop inner join  (cost=1.19e+6 rows=998468) (actual time=0.122..609 rows=1e+6 loops=1)\n                    -> Covering index scan on t2 using product_id  (cost=100509 rows=998468) (actual time=0.0901..390 rows=1e+6 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (product_id=t2.product_id)  (cost=0.995 rows=1) (actual time=83.8e-6..105e-6 rows=1 loops=1e+6)\n",
+    "nodes": [
+      {
+        "op": "Limit: 1 row",
+        "actual_time": 658.0,
+        "avg_time": 658.0,
+        "exclusive_time": 2.0,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=658..658 rows=1 loops=1)",
+        "actual_time": 658.0,
+        "avg_time": 658.0,
+        "exclusive_time": 658.0,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Stream results",
+        "actual_time": 656.0,
+        "avg_time": 656.0,
+        "exclusive_time": 2.0,
+        "loops": 1.0,
+        "rows": 10001.0
+      },
+      {
+        "op": "Group aggregate: count",
+        "actual_time": 654.0,
+        "avg_time": 654.0,
+        "exclusive_time": 45.0,
+        "loops": 1.0,
+        "rows": 10001.0
+      },
+      {
+        "op": "Nested loop inner join",
+        "actual_time": 609.0,
+        "avg_time": 609.0,
+        "exclusive_time": 218.99989499999998,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Covering index scan on t2 using product_id",
+        "actual_time": 390.0,
+        "avg_time": 390.0,
+        "exclusive_time": 390.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Single-row index lookup on t1 using PRIMARY",
+        "actual_time": 0.000105,
+        "avg_time": 1.05e-10,
+        "exclusive_time": 1.05e-10,
+        "loops": 1000000.0,
+        "rows": 1.0
+      }
+    ],
+    "summary": {
+      "Limit: 1 row": {
+        "count": 1,
+        "avg_time": 658.0
+      },
+      "Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=658..658 rows=1 loops=1)": {
+        "count": 1,
+        "avg_time": 658.0
+      },
+      "Stream results": {
+        "count": 1,
+        "avg_time": 656.0
+      },
+      "Group aggregate: count": {
+        "count": 1,
+        "avg_time": 654.0
+      },
+      "Nested loop inner join": {
+        "count": 1,
+        "avg_time": 609.0
+      },
+      "Covering index scan on t2 using product_id": {
+        "count": 1,
+        "avg_time": 390.0
+      },
+      "Single-row index lookup on t1 using PRIMARY": {
+        "count": 1,
+        "avg_time": 1.05e-10
+      }
+    }
+  },
+  "5": {
+    "raw": "-> Sort: trucks.truck_licence_number  (cost=101331 rows=998968) (actual time=448..480 rows=999999 loops=1)\n    -> Table scan on trucks  (cost=101331 rows=998968) (actual time=0.0836..183 rows=999999 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Sort: trucks.truck_licence_number",
+        "actual_time": 480.0,
+        "avg_time": 480.0,
+        "exclusive_time": 297.0,
+        "loops": 1.0,
+        "rows": 999999.0
+      },
+      {
+        "op": "Table scan on trucks",
+        "actual_time": 183.0,
+        "avg_time": 183.0,
+        "exclusive_time": 183.0,
+        "loops": 1.0,
+        "rows": 999999.0
+      }
+    ],
+    "summary": {
+      "Sort: trucks.truck_licence_number": {
+        "count": 1,
+        "avg_time": 480.0
+      },
+      "Table scan on trucks": {
+        "count": 1,
+        "avg_time": 183.0
+      }
+    }
+  },
+  "11": {
+    "raw": "-> Sort: customers.date_became_customer  (cost=100555 rows=998607) (actual time=409..446 rows=1e+6 loops=1)\n    -> Table scan on customers  (cost=100555 rows=998607) (actual time=0.0617..216 rows=1e+6 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Sort: customers.date_became_customer",
+        "actual_time": 446.0,
+        "avg_time": 446.0,
+        "exclusive_time": 230.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Table scan on customers",
+        "actual_time": 216.0,
+        "avg_time": 216.0,
+        "exclusive_time": 216.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      }
+    ],
+    "summary": {
+      "Sort: customers.date_became_customer": {
+        "count": 1,
+        "avg_time": 446.0
+      },
+      "Table scan on customers": {
+        "count": 1,
+        "avg_time": 216.0
+      }
+    }
+  },
+  "15": {
+    "raw": "-> Limit: 1 row(s)  (actual time=0.173..0.173 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.172..0.172 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=0.162..0.163 rows=1 loops=1)\n            -> Aggregate using temporary table  (actual time=0.161..0.161 rows=1 loops=1)\n                -> Nested loop inner join  (cost=1.82 rows=1) (actual time=0.0946..0.0976 rows=1 loops=1)\n                    -> Covering index scan on t2 using route_id  (cost=1.1 rows=1) (actual time=0.0449..0.0475 rows=1 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (route_id=t2.route_id)  (cost=0.719 rows=1) (actual time=0.0474..0.0475 rows=1 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Limit: 1 row",
+        "actual_time": 0.173,
+        "avg_time": 0.173,
+        "exclusive_time": 0.009999999999999981,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.172..0.172 rows=1 loops=1)",
+        "actual_time": 0.172,
+        "avg_time": 0.172,
+        "exclusive_time": 0.172,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Table scan on <temporary>",
+        "actual_time": 0.163,
+        "avg_time": 0.163,
+        "exclusive_time": 0.0020000000000000018,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Aggregate using temporary table",
+        "actual_time": 0.161,
+        "avg_time": 0.161,
+        "exclusive_time": 0.0634,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Nested loop inner join",
+        "actual_time": 0.0976,
+        "avg_time": 0.0976,
+        "exclusive_time": 0.002600000000000005,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Covering index scan on t2 using route_id",
+        "actual_time": 0.0475,
+        "avg_time": 0.0475,
+        "exclusive_time": 0.0475,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Single-row index lookup on t1 using PRIMARY",
+        "actual_time": 0.0475,
+        "avg_time": 0.0475,
+        "exclusive_time": 0.0475,
+        "loops": 1.0,
+        "rows": 1.0
+      }
+    ],
+    "summary": {
+      "Limit: 1 row": {
+        "count": 1,
+        "avg_time": 0.173
+      },
+      "Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.172..0.172 rows=1 loops=1)": {
+        "count": 1,
+        "avg_time": 0.172
+      },
+      "Table scan on <temporary>": {
+        "count": 1,
+        "avg_time": 0.163
+      },
+      "Aggregate using temporary table": {
+        "count": 1,
+        "avg_time": 0.161
+      },
+      "Nested loop inner join": {
+        "count": 1,
+        "avg_time": 0.0976
+      },
+      "Covering index scan on t2 using route_id": {
+        "count": 1,
+        "avg_time": 0.0475
+      },
+      "Single-row index lookup on t1 using PRIMARY": {
+        "count": 1,
+        "avg_time": 0.0475
+      }
+    }
+  },
+  "8": {
+    "raw": "-> Filter: (customers.payment_method = 'Visa')  (cost=100350 rows=99861) (actual time=238..238 rows=0 loops=1)\n    -> Table scan on customers  (cost=100350 rows=998607) (actual time=0.0271..194 rows=1e+6 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Filter:",
+        "actual_time": 238.0,
+        "avg_time": 238.0,
+        "exclusive_time": 44.0,
+        "loops": 1.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Table scan on customers",
+        "actual_time": 194.0,
+        "avg_time": 194.0,
+        "exclusive_time": 194.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      }
+    ],
+    "summary": {
+      "Filter:": {
+        "count": 1,
+        "avg_time": 238.0
+      },
+      "Table scan on customers": {
+        "count": 1,
+        "avg_time": 194.0
+      }
+    }
+  },
+  "7": {
+    "raw": "-> Table scan on <temporary>  (cost=199e+9..211e+9 rows=995e+9) (actual time=1868..1868 rows=2 loops=1)\n    -> Temporary table with deduplication  (cost=199e+9..199e+9 rows=995e+9) (actual time=1868..1868 rows=2 loops=1)\n        -> Nested loop antijoin  (cost=99.5e+9 rows=995e+9) (actual time=1261..1761 rows=1e+6 loops=1)\n            -> Table scan on c  (cost=100350 rows=998607) (actual time=0.0489..190 rows=1e+6 loops=1)\n            -> Single-row index lookup on <subquery2> using <auto_distinct_key> (customer_id=c.customer_id)  (cost=1.2e+6..1.2e+6 rows=1) (actual time=0.00147..0.00147 rows=0 loops=1e+6)\n                -> Materialize with deduplication  (cost=1.2e+6..1.2e+6 rows=996447) (actual time=1261..1261 rows=0 loops=1)\n                    -> Filter: (ca.customer_id is not null)  (cost=1.1e+6 rows=996447) (actual time=1261..1261 rows=0 loops=1)\n                        -> Nested loop inner join  (cost=1.1e+6 rows=996447) (actual time=1261..1261 rows=0 loops=1)\n                            -> Table scan on ca  (cost=102125 rows=996447) (actual time=0.0439..444 rows=1e+6 loops=1)\n                            -> Filter: (a.state_province_county = 'California')  (cost=0.901 rows=1) (actual time=745e-6..745e-6 rows=0 loops=1e+6)\n                                -> Single-row index lookup on a using PRIMARY (address_id=ca.address_id)  (cost=0.901 rows=1) (actual time=586e-6..607e-6 rows=1 loops=1e+6)\n",
+    "nodes": [
+      {
+        "op": "Table scan on <temporary>",
+        "actual_time": 1868.0,
+        "avg_time": 1868.0,
+        "exclusive_time": 0.0,
+        "loops": 1.0,
+        "rows": 2.0
+      },
+      {
+        "op": "Temporary table with deduplication",
+        "actual_time": 1868.0,
+        "avg_time": 1868.0,
+        "exclusive_time": 107.0,
+        "loops": 1.0,
+        "rows": 2.0
+      },
+      {
+        "op": "Nested loop antijoin",
+        "actual_time": 1761.0,
+        "avg_time": 1761.0,
+        "exclusive_time": 1570.99853,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Table scan on c",
+        "actual_time": 190.0,
+        "avg_time": 190.0,
+        "exclusive_time": 190.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Single-row index lookup on <subquery2> using <auto_distinct_key>",
+        "actual_time": 0.00147,
+        "avg_time": 1.4699999999999999e-09,
+        "exclusive_time": 0.0,
+        "loops": 1000000.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Materialize with deduplication",
+        "actual_time": 1261.0,
+        "avg_time": 1261.0,
+        "exclusive_time": 0.0,
+        "loops": 1.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Filter:",
+        "actual_time": 1261.0,
+        "avg_time": 1261.0,
+        "exclusive_time": 0.0,
+        "loops": 1.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Nested loop inner join",
+        "actual_time": 1261.0,
+        "avg_time": 1261.0,
+        "exclusive_time": 816.999255,
+        "loops": 1.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Table scan on ca",
+        "actual_time": 444.0,
+        "avg_time": 444.0,
+        "exclusive_time": 444.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Filter:",
+        "actual_time": 0.000745,
+        "avg_time": 7.45e-10,
+        "exclusive_time": 1.3800000000000004e-10,
+        "loops": 1000000.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Single-row index lookup on a using PRIMARY",
+        "actual_time": 0.000607,
+        "avg_time": 6.07e-10,
+        "exclusive_time": 6.07e-10,
+        "loops": 1000000.0,
+        "rows": 1.0
+      }
+    ],
+    "summary": {
+      "Table scan on <temporary>": {
+        "count": 1,
+        "avg_time": 1868.0
+      },
+      "Temporary table with deduplication": {
+        "count": 1,
+        "avg_time": 1868.0
+      },
+      "Nested loop antijoin": {
+        "count": 1,
+        "avg_time": 1761.0
+      },
+      "Table scan on c": {
+        "count": 1,
+        "avg_time": 190.0
+      },
+      "Single-row index lookup on <subquery2> using <auto_distinct_key>": {
+        "count": 1,
+        "avg_time": 1.4699999999999999e-09
+      },
+      "Materialize with deduplication": {
+        "count": 1,
+        "avg_time": 1261.0
+      },
+      "Filter:": {
+        "count": 2,
+        "avg_time": 630.5000000003726
+      },
+      "Nested loop inner join": {
+        "count": 1,
+        "avg_time": 1261.0
+      },
+      "Table scan on ca": {
+        "count": 1,
+        "avg_time": 444.0
+      },
+      "Single-row index lookup on a using PRIMARY": {
+        "count": 1,
+        "avg_time": 6.07e-10
+      }
+    }
+  },
+  "9": {
+    "raw": "-> Nested loop inner join  (cost=1.13e+6 rows=99645) (actual time=1258..1258 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.1e+6 rows=99645) (actual time=1258..1258 rows=0 loops=1)\n        -> Table scan on t2  (cost=102125 rows=996447) (actual time=0.0513..444 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=0.901 rows=0.1) (actual time=742e-6..742e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=0.901 rows=1) (actual time=584e-6..605e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+    "nodes": [
+      {
+        "op": "Nested loop inner join",
+        "actual_time": 1258.0,
+        "avg_time": 1258.0,
+        "exclusive_time": 0.0,
+        "loops": 1.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Nested loop inner join",
+        "actual_time": 1258.0,
+        "avg_time": 1258.0,
+        "exclusive_time": 813.999258,
+        "loops": 1.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Table scan on t2",
+        "actual_time": 444.0,
+        "avg_time": 444.0,
+        "exclusive_time": 444.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Filter:",
+        "actual_time": 0.000742,
+        "avg_time": 7.42e-10,
+        "exclusive_time": 1.3700000000000004e-10,
+        "loops": 1000000.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Single-row index lookup on t3 using PRIMARY",
+        "actual_time": 0.000605,
+        "avg_time": 6.05e-10,
+        "exclusive_time": 6.05e-10,
+        "loops": 1000000.0,
+        "rows": 1.0
+      }
+    ],
+    "summary": {
+      "Nested loop inner join": {
+        "count": 2,
+        "avg_time": 1258.0
+      },
+      "Table scan on t2": {
+        "count": 1,
+        "avg_time": 444.0
+      },
+      "Filter:": {
+        "count": 1,
+        "avg_time": 7.42e-10
+      },
+      "Single-row index lookup on t3 using PRIMARY": {
+        "count": 1,
+        "avg_time": 6.05e-10
+      }
+    }
+  },
+  "6": {
+    "raw": "-> Limit: 1 row(s)  (cost=109285 rows=1) (actual time=426..426 rows=1 loops=1)\n    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=109285 rows=982529) (actual time=426..426 rows=1 loops=1)\n        -> Table scan on products  (cost=109285 rows=982529) (actual time=0.294..297 rows=999999 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Limit: 1 row",
+        "actual_time": 426.0,
+        "avg_time": 426.0,
+        "exclusive_time": 129.0,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=109285 rows=982529) (actual time=426..426 rows=1 loops=1)",
+        "actual_time": 426.0,
+        "avg_time": 426.0,
+        "exclusive_time": 426.0,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Table scan on products",
+        "actual_time": 297.0,
+        "avg_time": 297.0,
+        "exclusive_time": 297.0,
+        "loops": 1.0,
+        "rows": 999999.0
+      }
+    ],
+    "summary": {
+      "Limit: 1 row": {
+        "count": 1,
+        "avg_time": 426.0
+      },
+      "Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=109285 rows=982529) (actual time=426..426 rows=1 loops=1)": {
+        "count": 1,
+        "avg_time": 426.0
+      },
+      "Table scan on products": {
+        "count": 1,
+        "avg_time": 297.0
+      }
+    }
+  },
+  "1": {
+    "raw": "-> Filter: (actual_orders.order_status_code = 'Success')  (cost=102052 rows=99841) (actual time=209..209 rows=0 loops=1)\n    -> Table scan on actual_orders  (cost=102052 rows=998412) (actual time=0.407..166 rows=999999 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Filter:",
+        "actual_time": 209.0,
+        "avg_time": 209.0,
+        "exclusive_time": 43.0,
+        "loops": 1.0,
+        "rows": 0.0
+      },
+      {
+        "op": "Table scan on actual_orders",
+        "actual_time": 166.0,
+        "avg_time": 166.0,
+        "exclusive_time": 166.0,
+        "loops": 1.0,
+        "rows": 999999.0
+      }
+    ],
+    "summary": {
+      "Filter:": {
+        "count": 1,
+        "avg_time": 209.0
+      },
+      "Table scan on actual_orders": {
+        "count": 1,
+        "avg_time": 166.0
+      }
+    }
+  },
+  "12": {
+    "raw": "-> Limit: 5 row(s)  (cost=100859 rows=5) (actual time=235..235 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100859 rows=998607) (actual time=235..235 rows=5 loops=1)\n        -> Table scan on customers  (cost=100859 rows=998607) (actual time=0.0324..178 rows=1e+6 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Limit: 5 row",
+        "actual_time": 235.0,
+        "avg_time": 235.0,
+        "exclusive_time": 57.0,
+        "loops": 1.0,
+        "rows": 5.0
+      },
+      {
+        "op": "Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100859 rows=998607) (actual time=235..235 rows=5 loops=1)",
+        "actual_time": 235.0,
+        "avg_time": 235.0,
+        "exclusive_time": 235.0,
+        "loops": 1.0,
+        "rows": 5.0
+      },
+      {
+        "op": "Table scan on customers",
+        "actual_time": 178.0,
+        "avg_time": 178.0,
+        "exclusive_time": 178.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      }
+    ],
+    "summary": {
+      "Limit: 5 row": {
+        "count": 1,
+        "avg_time": 235.0
+      },
+      "Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100859 rows=998607) (actual time=235..235 rows=5 loops=1)": {
+        "count": 1,
+        "avg_time": 235.0
+      },
+      "Table scan on customers": {
+        "count": 1,
+        "avg_time": 178.0
+      }
+    }
+  },
+  "16": {
+    "raw": "-> Table scan on <temporary>  (actual time=4845..4847 rows=9796 loops=1)\n    -> Aggregate using temporary table  (actual time=4845..4845 rows=9796 loops=1)\n        -> Nested loop inner join  (cost=1.1e+6 rows=996447) (actual time=0.0589..1338 rows=1e+6 loops=1)\n            -> Table scan on t1  (cost=102125 rows=996447) (actual time=0.0453..455 rows=1e+6 loops=1)\n            -> Single-row index lookup on t2 using PRIMARY (address_id=t1.address_id)  (cost=0.901 rows=1) (actual time=746e-6..767e-6 rows=1 loops=1e+6)\n",
+    "nodes": [
+      {
+        "op": "Table scan on <temporary>",
+        "actual_time": 4847.0,
+        "avg_time": 4847.0,
+        "exclusive_time": 2.0,
+        "loops": 1.0,
+        "rows": 9796.0
+      },
+      {
+        "op": "Aggregate using temporary table",
+        "actual_time": 4845.0,
+        "avg_time": 4845.0,
+        "exclusive_time": 3507.0,
+        "loops": 1.0,
+        "rows": 9796.0
+      },
+      {
+        "op": "Nested loop inner join",
+        "actual_time": 1338.0,
+        "avg_time": 1338.0,
+        "exclusive_time": 882.999233,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Table scan on t1",
+        "actual_time": 455.0,
+        "avg_time": 455.0,
+        "exclusive_time": 455.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Single-row index lookup on t2 using PRIMARY",
+        "actual_time": 0.000767,
+        "avg_time": 7.67e-10,
+        "exclusive_time": 7.67e-10,
+        "loops": 1000000.0,
+        "rows": 1.0
+      }
+    ],
+    "summary": {
+      "Table scan on <temporary>": {
+        "count": 1,
+        "avg_time": 4847.0
+      },
+      "Aggregate using temporary table": {
+        "count": 1,
+        "avg_time": 4845.0
+      },
+      "Nested loop inner join": {
+        "count": 1,
+        "avg_time": 1338.0
+      },
+      "Table scan on t1": {
+        "count": 1,
+        "avg_time": 455.0
+      },
+      "Single-row index lookup on t2 using PRIMARY": {
+        "count": 1,
+        "avg_time": 7.67e-10
+      }
+    }
+  },
+  "3": {
+    "raw": "-> Count rows in customers  (actual time=42.8..42.8 rows=1 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Count rows in customers",
+        "actual_time": 42.8,
+        "avg_time": 42.8,
+        "exclusive_time": 42.8,
+        "loops": 1.0,
+        "rows": 1.0
+      }
+    ],
+    "summary": {
+      "Count rows in customers": {
+        "count": 1,
+        "avg_time": 42.8
+      }
+    }
+  },
+  "13": {
+    "raw": "-> Limit: 1 row(s)  (actual time=421..421 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=421..421 rows=2 loops=1)\n            -> Aggregate using temporary table  (actual time=421..421 rows=2 loops=1)\n                -> Table scan on customers  (cost=100350 rows=998607) (actual time=0.992..161 rows=1e+6 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Limit: 1 row",
+        "actual_time": 421.0,
+        "avg_time": 421.0,
+        "exclusive_time": 0.0,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)",
+        "actual_time": 421.0,
+        "avg_time": 421.0,
+        "exclusive_time": 421.0,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Table scan on <temporary>",
+        "actual_time": 421.0,
+        "avg_time": 421.0,
+        "exclusive_time": 0.0,
+        "loops": 1.0,
+        "rows": 2.0
+      },
+      {
+        "op": "Aggregate using temporary table",
+        "actual_time": 421.0,
+        "avg_time": 421.0,
+        "exclusive_time": 260.0,
+        "loops": 1.0,
+        "rows": 2.0
+      },
+      {
+        "op": "Table scan on customers",
+        "actual_time": 161.0,
+        "avg_time": 161.0,
+        "exclusive_time": 161.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      }
+    ],
+    "summary": {
+      "Limit: 1 row": {
+        "count": 1,
+        "avg_time": 421.0
+      },
+      "Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)": {
+        "count": 1,
+        "avg_time": 421.0
+      },
+      "Table scan on <temporary>": {
+        "count": 1,
+        "avg_time": 421.0
+      },
+      "Aggregate using temporary table": {
+        "count": 1,
+        "avg_time": 421.0
+      },
+      "Table scan on customers": {
+        "count": 1,
+        "avg_time": 161.0
+      }
+    }
+  },
+  "14": {
+    "raw": "-> Sort: delivery_routes.route_name  (cost=100869 rows=998968) (actual time=301..331 rows=999999 loops=1)\n    -> Table scan on delivery_routes  (cost=100869 rows=998968) (actual time=0.122..151 rows=999999 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Sort: delivery_routes.route_name",
+        "actual_time": 331.0,
+        "avg_time": 331.0,
+        "exclusive_time": 180.0,
+        "loops": 1.0,
+        "rows": 999999.0
+      },
+      {
+        "op": "Table scan on delivery_routes",
+        "actual_time": 151.0,
+        "avg_time": 151.0,
+        "exclusive_time": 151.0,
+        "loops": 1.0,
+        "rows": 999999.0
+      }
+    ],
+    "summary": {
+      "Sort: delivery_routes.route_name": {
+        "count": 1,
+        "avg_time": 331.0
+      },
+      "Table scan on delivery_routes": {
+        "count": 1,
+        "avg_time": 151.0
+      }
+    }
+  },
+  "10": {
+    "raw": "-> Nested loop antijoin  (cost=89.1e+9 rows=891e+9) (actual time=278..919 rows=990021 loops=1)\n    -> Table scan on addresses  (cost=97751 rows=892374) (actual time=0.0647..292 rows=1e+6 loops=1)\n    -> Single-row index lookup on <subquery2> using <auto_distinct_key> (employee_address_id=addresses.address_id)  (cost=201550..201550 rows=1) (actual time=528e-6..528e-6 rows=0.01 loops=1e+6)\n        -> Materialize with deduplication  (cost=201550..201550 rows=998612) (actual time=272..272 rows=10000 loops=1)\n            -> Filter: (employees.employee_address_id is not null)  (cost=101688 rows=998612) (actual time=0.962..162 rows=999999 loops=1)\n                -> Covering index scan on employees using employee_address_id  (cost=101688 rows=998612) (actual time=0.96..115 rows=999999 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Nested loop antijoin",
+        "actual_time": 919.0,
+        "avg_time": 919.0,
+        "exclusive_time": 626.999472,
+        "loops": 1.0,
+        "rows": 990021.0
+      },
+      {
+        "op": "Table scan on addresses",
+        "actual_time": 292.0,
+        "avg_time": 292.0,
+        "exclusive_time": 292.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      },
+      {
+        "op": "Single-row index lookup on <subquery2> using <auto_distinct_key>",
+        "actual_time": 0.000528,
+        "avg_time": 5.28e-10,
+        "exclusive_time": 0.0,
+        "loops": 1000000.0,
+        "rows": 0.01
+      },
+      {
+        "op": "Materialize with deduplication",
+        "actual_time": 272.0,
+        "avg_time": 272.0,
+        "exclusive_time": 110.0,
+        "loops": 1.0,
+        "rows": 10000.0
+      },
+      {
+        "op": "Filter:",
+        "actual_time": 162.0,
+        "avg_time": 162.0,
+        "exclusive_time": 47.0,
+        "loops": 1.0,
+        "rows": 999999.0
+      },
+      {
+        "op": "Covering index scan on employees using employee_address_id",
+        "actual_time": 115.0,
+        "avg_time": 115.0,
+        "exclusive_time": 115.0,
+        "loops": 1.0,
+        "rows": 999999.0
+      }
+    ],
+    "summary": {
+      "Nested loop antijoin": {
+        "count": 1,
+        "avg_time": 919.0
+      },
+      "Table scan on addresses": {
+        "count": 1,
+        "avg_time": 292.0
+      },
+      "Single-row index lookup on <subquery2> using <auto_distinct_key>": {
+        "count": 1,
+        "avg_time": 5.28e-10
+      },
+      "Materialize with deduplication": {
+        "count": 1,
+        "avg_time": 272.0
+      },
+      "Filter:": {
+        "count": 1,
+        "avg_time": 162.0
+      },
+      "Covering index scan on employees using employee_address_id": {
+        "count": 1,
+        "avg_time": 115.0
+      }
+    }
+  },
+  "4": {
+    "raw": "-> Aggregate: count(distinct customers.payment_method)  (cost=200399 rows=1) (actual time=224..224 rows=1 loops=1)\n    -> Table scan on customers  (cost=100538 rows=998607) (actual time=0.262..147 rows=1e+6 loops=1)\n",
+    "nodes": [
+      {
+        "op": "Aggregate: count",
+        "actual_time": 224.0,
+        "avg_time": 224.0,
+        "exclusive_time": 77.0,
+        "loops": 1.0,
+        "rows": 1.0
+      },
+      {
+        "op": "Table scan on customers",
+        "actual_time": 147.0,
+        "avg_time": 147.0,
+        "exclusive_time": 147.0,
+        "loops": 1.0,
+        "rows": 1000000.0
+      }
+    ],
+    "summary": {
+      "Aggregate: count": {
+        "count": 1,
+        "avg_time": 224.0
+      },
+      "Table scan on customers": {
+        "count": 1,
+        "avg_time": 147.0
+      }
+    }
+  }
+}

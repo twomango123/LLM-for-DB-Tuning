@@ -1,314 +1,66 @@
 [
   {
     "id": 1,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect01.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query1.sql"
   },
   {
     "id": 2,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockUpdate01.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query2.sql"
   },
   {
     "id": 3,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getOsCustomerSelect1.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query3.sql"
   },
   {
     "id": 4,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmCustomerSelect1.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query4.sql"
   },
   {
     "id": 5,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmCustomerUpdate1.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query5.sql"
   },
   {
     "id": 6,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_01.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query6.sql"
   },
   {
     "id": 7,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect02.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query7.sql"
   },
   {
     "id": 8,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockUpdate02.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query8.sql"
   },
   {
     "id": 9,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getOsCustomerSelect2.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query9.sql"
   },
   {
     "id": 10,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmCustomerSelect2.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query10.sql"
   },
   {
     "id": 11,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmCustomerUpdate2.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query11.sql"
   },
   {
     "id": 12,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_02.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query12.sql"
   },
   {
     "id": 13,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect03.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query13.sql"
   },
   {
     "id": 14,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getOsCustomerSelect3.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query14.sql"
   },
   {
     "id": 15,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmCustomerSelect3.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query15.sql"
   },
   {
     "id": 16,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_03.sql"
-  },
-  {
-    "id": 17,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect04.sql"
-  },
-  {
-    "id": 18,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmCustomerSelect4.sql"
-  },
-  {
-    "id": 19,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_04.sql"
-  },
-  {
-    "id": 20,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect05.sql"
-  },
-  {
-    "id": 21,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_05.sql"
-  },
-  {
-    "id": 22,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect06.sql"
-  },
-  {
-    "id": 23,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_06.sql"
-  },
-  {
-    "id": 24,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect07.sql"
-  },
-  {
-    "id": 25,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_07.sql"
-  },
-  {
-    "id": 26,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect08.sql"
-  },
-  {
-    "id": 27,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_08.sql"
-  },
-  {
-    "id": 28,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect09.sql"
-  },
-  {
-    "id": 29,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_09.sql"
-  },
-  {
-    "id": 30,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoStockSelect10.sql"
-  },
-  {
-    "id": 31,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_10.sql"
-  },
-  {
-    "id": 32,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_11.sql"
-  },
-  {
-    "id": 33,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_12.sql"
-  },
-  {
-    "id": 34,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_13.sql"
-  },
-  {
-    "id": 35,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_14.sql"
-  },
-  {
-    "id": 36,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_15.sql"
-  },
-  {
-    "id": 37,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_16.sql"
-  },
-  {
-    "id": 38,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_17.sql"
-  },
-  {
-    "id": 39,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_18.sql"
-  },
-  {
-    "id": 40,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_19.sql"
-  },
-  {
-    "id": 41,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_20.sql"
-  },
-  {
-    "id": 42,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_21.sql"
-  },
-  {
-    "id": 43,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/query_22.sql"
-  },
-  {
-    "id": 44,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getDlCustomerUpdate.sql"
-  },
-  {
-    "id": 45,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getDlNewOrderDelete.sql"
-  },
-  {
-    "id": 46,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getDlNewOrderSelect.sql"
-  },
-  {
-    "id": 47,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getDlOrderSelect.sql"
-  },
-  {
-    "id": 48,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getDlOrderUpdate.sql"
-  },
-  {
-    "id": 49,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getDlOrderlineSelect.sql"
-  },
-  {
-    "id": 50,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getDlOrderlineUpdate.sql"
-  },
-  {
-    "id": 51,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoCustomerSelect.sql"
-  },
-  {
-    "id": 52,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoCustomerSelectString.sql"
-  },
-  {
-    "id": 53,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoDistrictSelect.sql"
-  },
-  {
-    "id": 54,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoDistrictUpdate.sql"
-  },
-  {
-    "id": 55,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoItemSelect.sql"
-  },
-  {
-    "id": 56,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoNewOrderInsert.sql"
-  },
-  {
-    "id": 57,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoOrderInsert.sql"
-  },
-  {
-    "id": 58,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoOrderlineInsert.sql"
-  },
-  {
-    "id": 59,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getNoWarehouseSelect.sql"
-  },
-  {
-    "id": 60,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getOsOrderSelect.sql"
-  },
-  {
-    "id": 61,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getOsOrderlineSelect.sql"
-  },
-  {
-    "id": 62,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmDistrictSelect.sql"
-  },
-  {
-    "id": 63,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmDistrictUpdate.sql"
-  },
-  {
-    "id": 64,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmHistoryInsert.sql"
-  },
-  {
-    "id": 65,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmWarehouseSelect.sql"
-  },
-  {
-    "id": 66,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getPmWarehouseUpdate.sql"
-  },
-  {
-    "id": 67,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountCustomer.sql"
-  },
-  {
-    "id": 68,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountDistrict.sql"
-  },
-  {
-    "id": 69,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountHistory.sql"
-  },
-  {
-    "id": 70,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountItem.sql"
-  },
-  {
-    "id": 71,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountNation.sql"
-  },
-  {
-    "id": 72,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountNeworder.sql"
-  },
-  {
-    "id": 73,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountOrder.sql"
-  },
-  {
-    "id": 74,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountOrderline.sql"
-  },
-  {
-    "id": 75,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountRegion.sql"
-  },
-  {
-    "id": 76,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountStock.sql"
-  },
-  {
-    "id": 77,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountSupplier.sql"
-  },
-  {
-    "id": 78,
-    "path": "LLM-for-DB-Tuning/Data/cleaned_sql/query_and_update/getSelectCountWarehouse.sql"
+    "path": "LLM-for-DB-Tuning/output_dir/sql/query16.sql"
   }
 ]

@@ -1,0 +1,114 @@
+[
+  {
+    "plan": "q1.txt",
+    "before": 201930.0,
+    "after": 201930.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；HorizontalSplit: 未命中分片，增加 UNION ALL 代价≈2.23e+05；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q10.txt",
+    "before": 94100306279.0,
+    "after": 94100306279.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q11.txt",
+    "before": 203628.0,
+    "after": 203628.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q12.txt",
+    "before": 301044.0,
+    "after": 301044.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q13.txt",
+    "before": 100348.0,
+    "after": 100348.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q14.txt",
+    "before": 202934.0,
+    "after": 202934.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q15.txt",
+    "before": 2.9,
+    "after": 2.9,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q16.txt",
+    "before": 1301951.0,
+    "after": 1301951.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q2.txt",
+    "before": 3870507.992,
+    "after": 3870507.992,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q3.txt",
+    "before": 0.0,
+    "after": 0.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q4.txt",
+    "before": 300554.0,
+    "after": 300554.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q5.txt",
+    "before": 202934.0,
+    "after": 202934.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q6.txt",
+    "before": 309693.0,
+    "after": 309693.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q7.txt",
+    "before": 99302603766.0,
+    "after": 99302603766.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q8.txt",
+    "before": 200696.0,
+    "after": 200696.0,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  },
+  {
+    "plan": "q9.txt",
+    "before": 2531952.25,
+    "after": 2531952.25,
+    "delta": 0.0,
+    "note": "TableJoin: 仅单表且 keep_old=True，成本不变；TableJoin: 仅单表且 keep_old=True，成本不变"
+  }
+]

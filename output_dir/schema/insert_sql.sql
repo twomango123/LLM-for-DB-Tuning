@@ -56,7 +56,7 @@ CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
-(`customer_id`, @payment_method, @customer_name, @customer_phone, @customer_email, `date_became_customer`);
+(`customer_id`, @payment_method, @customer_name, @customer_phone, @customer_email, @d);
 COMMIT;
 
 
@@ -85,7 +85,7 @@ CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
-(`actual_order_id`, @order_status_code, `regular_order_id`,`actual_order_date`);
+(`actual_order_id`, @order_status_code, `regular_order_id`, @aod);
 COMMIT;
 
 
@@ -105,7 +105,7 @@ CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
-(`customer_id`,`address_id`,`date_from`, @address_type, `date_to`);
+(`customer_id`,`address_id`, @df, @address_type, @dt);
 COMMIT;
 
 
@@ -154,7 +154,7 @@ CHARACTER SET utf8mb4
 FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"' ESCAPED BY '\\'
 LINES TERMINATED BY '\n'
 IGNORE 1 LINES
-(@location_code,`actual_order_id`, @delivery_status_code,`driver_employee_id`,`truck_id`,`delivery_date`);
+(@location_code,`actual_order_id`, @delivery_status_code,`driver_employee_id`,`truck_id`, @dd);
 COMMIT;
 
 

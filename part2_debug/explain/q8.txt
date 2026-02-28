@@ -1,0 +1,2 @@
+-> Filter: (customers.payment_method = 'Visa')  (cost=100348 rows=99859) (actual time=220..220 rows=0 loops=1)
+    -> Table scan on customers  (cost=100348 rows=998585) (actual time=0.0759..176 rows=999999 loops=1)

@@ -1,0 +1,58 @@
+[
+  {
+    "op": "Limit: 1 row",
+    "actual_time": 778.0,
+    "avg_time": 778.0,
+    "exclusive_time": 1.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=778..778 rows=1 loops=1)",
+    "actual_time": 778.0,
+    "avg_time": 778.0,
+    "exclusive_time": 778.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Stream results",
+    "actual_time": 777.0,
+    "avg_time": 777.0,
+    "exclusive_time": 3.0,
+    "loops": 1.0,
+    "rows": 10000.0
+  },
+  {
+    "op": "Group aggregate: count",
+    "actual_time": 774.0,
+    "avg_time": 774.0,
+    "exclusive_time": 51.0,
+    "loops": 1.0,
+    "rows": 10000.0
+  },
+  {
+    "op": "Nested loop inner join",
+    "actual_time": 723.0,
+    "avg_time": 723.0,
+    "exclusive_time": 258.999875,
+    "loops": 1.0,
+    "rows": 1000000.0
+  },
+  {
+    "op": "Covering index scan on t2 using product_id",
+    "actual_time": 464.0,
+    "avg_time": 464.0,
+    "exclusive_time": 464.0,
+    "loops": 1.0,
+    "rows": 1000000.0
+  },
+  {
+    "op": "Single-row index lookup on t1 using PRIMARY",
+    "actual_time": 0.000125,
+    "avg_time": 1.25e-10,
+    "exclusive_time": 1.25e-10,
+    "loops": 1000000.0,
+    "rows": 1.0
+  }
+]

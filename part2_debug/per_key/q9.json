@@ -1,0 +1,7 @@
+{
+  "customers.customer_id::join(customer_id)": 108.89990205,
+  "customer_addresses.customer_id::join(customer_id)": 108.89990205,
+  "customer_addresses.address_id::join(address_id)": 108.89990205,
+  "addresses.address_id::join(address_id)": 108.8999020503084,
+  "addresses.state_province_county::scan": 4.170000000000001e-11
+}

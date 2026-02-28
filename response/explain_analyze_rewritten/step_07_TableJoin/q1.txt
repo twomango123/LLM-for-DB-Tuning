@@ -1,0 +1,6 @@
+-> Table scan on actual_orders  (cost=3.91..5.66 rows=3.2) (actual time=0.097..0.097 rows=0 loops=1)
+    -> Union all materialize  (cost=3.12..3.12 rows=3.2) (actual time=0.0962..0.0962 rows=0 loops=1)
+        -> Filter: (actual_orders_recent.order_status_code = 'Success')  (cost=2.45 rows=2.2) (actual time=0.0636..0.0636 rows=0 loops=1)
+            -> Table scan on actual_orders_recent  (cost=2.45 rows=22) (actual time=0.0487..0.0589 rows=22 loops=1)
+        -> Filter: (actual_orders_completed.order_status_code = 'Success')  (cost=0.35 rows=1) (actual time=0.0228..0.0228 rows=0 loops=1)
+            -> Table scan on actual_orders_completed  (cost=0.35 rows=1) (actual time=0.0225..0.0225 rows=0 loops=1)

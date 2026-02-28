@@ -1,0 +1,5 @@
+TableJoin(addresses,customer_addresses,address_id,address_id,True):address_details 
+TableJoin(products,regular_order_products,product_id,product_id,True):product_details 
+VerticalSplit(customers,True):customer_main(customer_id,customer_name,date_became_customer),customer_info(customer_id,customer_phone,customer_email,payment_method),customer_main(customer_id),customer_info(customer_id) 
+VerticalSplit(actual_orders,True):actual_order_main(actual_order_id,order_status_code),actual_order_info(actual_order_id,regular_order_id,actual_order_date),actual_order_main(actual_order_id),actual_order_info(actual_order_id) 
+RedundantColumnAdd(customers.customer_name,actual_order_main.customer_name,['customers.customer_id=actual_orders.regular_order_id'])

@@ -1,0 +1,18 @@
+[
+  {
+    "op": "Aggregate: count",
+    "actual_time": 211.0,
+    "avg_time": 211.0,
+    "exclusive_time": 78.0,
+    "loops": 1.0,
+    "rows": 1.0
+  },
+  {
+    "op": "Table scan on customers",
+    "actual_time": 133.0,
+    "avg_time": 133.0,
+    "exclusive_time": 133.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  }
+]

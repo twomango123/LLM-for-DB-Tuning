@@ -1,0 +1,2 @@
+-> Sort: trucks.truck_licence_number  (cost=101467 rows=998968) (actual time=351..383 rows=999999 loops=1)
+    -> Table scan on trucks  (cost=101467 rows=998968) (actual time=0.0783..184 rows=999999 loops=1)

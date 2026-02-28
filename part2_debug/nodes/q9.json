@@ -1,0 +1,42 @@
+[
+  {
+    "op": "Nested loop inner join",
+    "actual_time": 1177.0,
+    "avg_time": 1177.0,
+    "exclusive_time": 0.0,
+    "loops": 1.0,
+    "rows": 0.0
+  },
+  {
+    "op": "Nested loop inner join",
+    "actual_time": 1177.0,
+    "avg_time": 1177.0,
+    "exclusive_time": 725.999347,
+    "loops": 1.0,
+    "rows": 0.0
+  },
+  {
+    "op": "Table scan on t2",
+    "actual_time": 451.0,
+    "avg_time": 451.0,
+    "exclusive_time": 451.0,
+    "loops": 1.0,
+    "rows": 1000000.0
+  },
+  {
+    "op": "Filter:",
+    "actual_time": 0.000653,
+    "avg_time": 6.53e-10,
+    "exclusive_time": 1.3900000000000004e-10,
+    "loops": 1000000.0,
+    "rows": 0.0
+  },
+  {
+    "op": "Single-row index lookup on t3 using PRIMARY",
+    "actual_time": 0.000514,
+    "avg_time": 5.14e-10,
+    "exclusive_time": 5.14e-10,
+    "loops": 1000000.0,
+    "rows": 1.0
+  }
+]

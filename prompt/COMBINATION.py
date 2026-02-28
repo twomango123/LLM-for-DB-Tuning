@@ -44,13 +44,19 @@ TAIL_TEXT = """## 操作集合
 	"操作含义": "将两个表通过连接条件合并为一个表，可选保留或删除原表",
 	"接口": "TableJoin(Table1,Table2, table1_join_key, table2_join_key, is_retained): NewTable",
 	"举例": "TableJoin(customer,customer_ext, c_id, ce_c_id, True):customer_all",
+	"格式规范": [
+		"table1_join_key / table2_join_key 必须为不带引号的列名；可为单列或多列",
+		"多列连接键请使用括号包裹并以逗号分隔：TableJoin(A,B, (a1,a2), (b1,b2), False):AB",
+		"不允许在列名中使用单引号/双引号/反引号，例如 regular_orders.'customer_id' 是非法写法",
+		"允许带表前缀的写法仅用于说明性示例，解析时将仅取列名末段"
+	],
 	},
 
 	"HorizontalSplit": {
 	"操作含义": "按谓词将表水平拆分成多个分表，可选保留或删除原表",
-	"接口": "HorizontalSplit(SourceTable, is_retained):Table1(拆分依据),Table2(拆分依据),....",
-	"举例": "HorizontalSplit(orders, False):orders_2023(year=2023), orders_2024(year=2024)",
-	"约束条件": "当原表不保留，且表主键是其他表的外键时，允许操作，但操作会使其他表丢失外键约束。"
+	"接口": "HorizontalSplit(SourceTable, is_retained):Table1(拆分依据),Table2(!拆分依据),....",
+	"举例": "HorizontalSplit(orders, False):orders_2023(year=2023), orders_2024(year<>2023)",
+	"约束条件": "根据拆分依据拆分的两个子表的并集是原表；当原表不保留，且表主键是其他表的外键时，允许操作，但操作会使其他表丢失外键约束。"
 	},
 
 	"HorizontalMerge": {
@@ -60,9 +66,13 @@ TAIL_TEXT = """## 操作集合
 	"约束条件": "两子表需具有相同的主键外键关系；两子表同一列不能存在不同的默认约束关系；两子表不能同时存在具有自增约束的列；两子表存在的唯一约束将丢失。"
 	},
 	"RedundantColumnAdd": {
-	"操作含义": "在目标表中冗余复制源表某列",
-	"接口": "RedundantColumnAdd(SourceTable.Column, TargetTable.NewColumn, join_key)",
-	"举例": "RedundantColumnAdd(customers.name, orders.customer_name, ['customers.customer_id', 'orders.customer_id'])",
+	"操作含义": "在目标表中复制源表某个列作为一个新的冗余列，两表首先通过连接键连接",
+	"接口": "RedundantColumnAdd(SourceTable.Column, TargetTable.RedundantColumnName, join_key)",
+	"举例": "RedundantColumnAdd(customers.name, orders.customer_name, ['customers.customer_id=orders.customer_id'])",
+	"格式规范": [
+		"join_key 必须为等式字符串列表，每个元素形如 'Src.col=Dst.col'，字符串内部的标识符不允许再加引号",
+		"TargetTable.RedundantColumnName 可省略列名部分（默认与源列同名）"
+	],
 	"约束条件": "两表需包含外键关系"
 	},
 	"RedundantColumnDrop": {
@@ -117,13 +127,19 @@ TAIL_TEXT = """## 操作集合
 现在，请给出你认为有助于在当前场景下缩短历史负载查询执行时间的Schema调整动作序列，要求：
 
 ~~~
-1.按照支持的操作接口，给出操作序列，换行分隔，无需回答其他内容
+1.按照支持的操作接口，每次回答都只给出完整操作序列，换行符分隔，无需回答其他内容
 2.可参考给出的经验进行schema变化操作  
 3.需要在历史负载查询执行时间更短时使用的存储空间尽可能小，请平衡两者代价  
 4.需要注意读操作和写操作的频率，确保读写操作的总性能得到提升，请平衡两者代价
-5.每一项操作前后可能有表被删除，请根据操作顺序，在后续操作中使用变化后的新表进行操作  
+5.每一项操作前后可能有表被删除或增加，请根据操作顺序，在后续操作中使用变化后的新表进行操作  
 6.在给出一个操作时，需要确定当前被操作的表和列经过前序操作仍包含其中  
 ~~~
+
+### 通用格式规范（强制）
+- 标识符（表名、列名）一律不加引号（禁止 'col'、"col"、`col`），仅在 RedundantColumnAdd 的 join_key 外层作为字符串出现。
+- 允许使用 `表.列` 形式，但解析时仅以末段列名为准；请避免混用别名。
+- 多列键必须用括号包裹：例如 `(k1,k2)`；两侧列数必须一致。
+- 仅使用 ASCII 英文逗号与括号，不要使用中文符号。
 """
 
 
@@ -144,14 +160,15 @@ def build_combined(schema_sql: str, csv_dir: str, sql_dir: str) -> str:
         config_path=os.environ.get("DB_CONFIG", str(Path(_THIS_DIR).with_name("query_latency") / "db_config.ini")),
         debug=bool(int(os.environ.get("PART2_DEBUG", "0"))),
         debug_dir=os.environ.get("PART2_DEBUG_DIR", str(Path(_THIS_DIR).with_name("debug") / "part2")),
-        exec_counts_path=os.environ.get("EXEC_COUNTS", str(Path(_THIS_DIR).with_name("Data") / "cleaned_sql" / "query_and_update" / "sample_execution_counts_chbench.csv"))
+        exec_counts_path=os.environ.get("EXEC_COUNTS", str(Path(_THIS_DIR).with_name("Data") / "cleaned_sql" / "query_and_update" / "sample_execution_counts_chbench.csv")),
+        dml_time_cache=os.environ.get("DML_TIME_CACHE", str(Path(_THIS_DIR).with_name("debug") / "part2" / "dml_time_cache.json"))
     ).rstrip()
-    # PART3 已简化为不再读取历史负载与延迟，这里调用将返回空字符串
-    part3 = build_part3().rstrip()
+    # PART3：统计每表列集合频次（基于 sql_dir + schema_sql 用于未限定列归属）
+    part3 = build_part3(sql_dir=sql_dir, schema_sql=schema_sql).rstrip()
     tail = TAIL_TEXT.rstrip()
 
     # Provide a small header to separate the JSON section clearly
-    part2 = "列级操作与基数统计：\n\n" + part2_json
+    part2 = "表/列级操作与基数统计：\n\n" + part2_json
     pieces = [part1, part2, part3, tail]
     return "\n\n".join(pieces) + "\n"
 

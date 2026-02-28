@@ -1,0 +1,35 @@
+low-before	low-after	mid-before	mid-after	high-before	high-after									
+query_id,total_elapsed_ms,count,avg_elapsed_ms	query_id,total_elapsed_ms,count,avg_elapsed_ms	query_id,total_elapsed_ms,count,avg_elapsed_ms	query_id,total_elapsed_ms,count,avg_elapsed_ms	query_id,total_elapsed_ms,count,avg_elapsed_ms	query_id,total_elapsed_ms,count,avg_elapsed_ms									
+ins_actual_order,130,2,65	ins_actual_order,362,3,121	ins_actual_order,96,2,48	ins_actual_order,1218,6,203	ins_actual_order,555,10,56	ins_actual_order,1277,10,128									
+ins_actual_order_product_from_regular,254,4,64	ins_actual_order_product_from_regular,336,3,112	ins_actual_order_product_from_regular,87,2,44	ins_actual_order_product_from_regular,880,6,147	ins_actual_order_product_from_regular,466,10,47	ins_actual_order_product_from_regular,1285,10,128									
+ins_customer,22,2,11	ins_address,319,3,106	ins_order_delivery,110,2,55	ins_address,985,6,164	ins_address,524,10,52	ins_address,1136,10,114									
+ins_order_delivery,168,2,84	ins_customer,467,3,156	ins_regular_order,29,2,14	ins_customer,795,6,132	ins_customer,690,10,69	ins_customer,2229,10,223									
+ins_regular_order,28,2,14	ins_customer_address,310,3,103	ins_regular_order_product,1630,2,815	ins_customer_address,689,6,115	ins_customer_address,624,10,62	ins_customer_address,1134,10,113									
+ins_regular_order_product,3149,4,787	ins_order_delivery,511,3,170	query1,8703,40,218	ins_order_delivery,597,6,100	ins_order_delivery,808,10,81	ins_order_delivery,1364,10,136									
+query1,5382,36,150	ins_regular_order,394,3,131	query10,4405,2,2202	ins_regular_order,996,6,166	ins_regular_order,647,10,65	ins_regular_order,1724,10,172									
+query10,3866,2,1933	ins_regular_order_product,3986,3,1329	query11,4507,2,2254	ins_regular_order_product,6136,6,1023	ins_regular_order_product,8840,10,884	ins_regular_order_product,12291,10,1229									
+query11,4499,2,2250	query1,3,10,0	query12,428,2,214	query1,1,7,0	query1,608,4,152	query1,1,4,0									
+query12,542,2,271	query10,19711,10,1971	query13,752,2,376	query10,14997,7,2142	query10,6084,3,2028	query10,6705,3,2235									
+query13,945,2,472	query11,22541,10,2254	query14,3629,2,1814	query11,16444,7,2349	query11,6961,3,2320	query11,7223,3,2408									
+query14,3640,2,1820	query12,1665,9,185	query15,1,2,0	query12,1341,7,192	query12,827,3,276	query12,713,3,238									
+query15,2,2,1	query13,3378,9,375	query16,7177,2,3588	query13,2650,7,379	query13,1207,3,402	query13,1445,3,482									
+query16,7187,2,3594	query14,17129,9,1903	query2,24335,40,608	query14,13450,7,1921	query14,5571,3,1857	query14,5771,3,1924									
+query2,14803,36,411	query15,2,9,0	query3,1201,40,30	query15,1,6,0	query15,1,3,0	query15,2,3,1									
+query3,1341,36,37	query16,41446,9,4605	query4,6862,40,172	query16,27994,6,4666	query16,10786,3,3595	query16,14347,3,4782									
+query4,6420,36,178	query2,4254,10,425	query5,3946,2,1973	query2,3049,7,436	query2,1694,4,424	query2,1892,4,473									
+query5,4113,2,2056	query3,375,10,38	query6,867,2,434	query3,267,7,38	query3,137,3,46	query3,114,3,38									
+query6,850,2,425	query4,1735,10,174	query7,3008,2,1504	query4,1213,7,173	query4,521,3,174	query4,664,3,221									
+query7,2697,2,1348	query5,20601,10,2060	query8,456,2,228	query5,14331,7,2047	query5,6681,3,2227	query5,5846,3,1949									
+query8,361,2,180	query6,4050,10,405	query9,2101,2,1050	query6,2891,7,413	query6,1426,3,475	query6,1101,3,367									
+query9,2062,2,1031	query7,13517,10,1352	upd_customer_contact,1,2,0	query7,9451,7,1350	query7,4008,3,1336	query7,3959,3,1320									
+upd_customer_contact,13,2,6	query8,1813,10,181	upd_delivery_status,1190,2,595	query8,1280,7,183	query8,551,3,184	query8,547,3,182									
+upd_delivery_complete,2237,4,559	query9,9998,10,1000	upd_order_status,99,2,50	query9,6964,7,995	query9,2930,3,977	query9,3342,3,1114									
+upd_delivery_status,2978,4,744	upd_address_city_zip,1,3,0		upd_address_city_zip,1,6,0	upd_address_city_zip,1,10,0	upd_address_city_zip,1,10,0									
+upd_order_status,160,4,40	upd_customer_contact,144,3,48		upd_customer_contact,147,6,24	upd_customer_contact,69,10,7	upd_customer_contact,79,10,8									
+upd_product_price_promo,1701,2,850	upd_customer_payment_method,381,3,127		upd_customer_payment_method,751,6,125	upd_customer_payment_method,603,10,60	upd_customer_payment_method,1636,10,164									
+	upd_delivery_complete,1964,3,655		upd_delivery_complete,4163,6,694	upd_delivery_complete,5625,10,562	upd_delivery_complete,6717,10,672									
+	upd_delivery_status,3248,3,1083		upd_delivery_status,5913,6,986	upd_delivery_status,6028,10,603	upd_delivery_status,8826,10,883									
+	upd_order_status,340,3,113		upd_order_status,896,6,149	upd_order_status,415,10,42	upd_order_status,1297,10,130									
+	upd_product_price_promo,2845,3,948		upd_product_price_promo,7309,6,1218	upd_product_price_promo,8458,10,846	upd_product_price_promo,11069,10,1107									
+														
+											

@@ -1,0 +1,6 @@
+-> Nested loop antijoin  (cost=89.1e+9 rows=891e+9) (actual time=279..927 rows=990021 loops=1)
+    -> Table scan on addresses  (cost=97298 rows=892374) (actual time=0.0555..300 rows=1e+6 loops=1)
+    -> Single-row index lookup on <subquery2> using <auto_distinct_key> (employee_address_id=addresses.address_id)  (cost=201550..201550 rows=1) (actual time=530e-6..530e-6 rows=0.01 loops=1e+6)
+        -> Materialize with deduplication  (cost=201550..201550 rows=998612) (actual time=273..273 rows=10000 loops=1)
+            -> Filter: (employees.employee_address_id is not null)  (cost=101688 rows=998612) (actual time=0.945..163 rows=999999 loops=1)
+                -> Covering index scan on employees using employee_address_id  (cost=101688 rows=998612) (actual time=0.943..115 rows=999999 loops=1)

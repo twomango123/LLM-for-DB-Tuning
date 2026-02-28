@@ -1,1 +1,0 @@
--> Count rows in supplier  (actual time=2.85..2.85 rows=1 loops=1)

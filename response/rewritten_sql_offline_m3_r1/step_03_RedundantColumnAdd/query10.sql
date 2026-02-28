@@ -1,0 +1,1 @@
+SELECT state_province_county FROM addresses WHERE NOT address_id IN (SELECT employee_address_id FROM employees)

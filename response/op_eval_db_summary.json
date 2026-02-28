@@ -1,0 +1,26 @@
+[
+  {
+    "case": "TableJoin_keep_true_like_join",
+    "total_cost": 2600510.0
+  },
+  {
+    "case": "TableJoin_keep_false_like_scan",
+    "total_cost": 0.0
+  },
+  {
+    "case": "VerticalSplit_keep_true_single_child",
+    "total_cost": 203632.0
+  },
+  {
+    "case": "VerticalSplit_keep_false_cross_child_join",
+    "total_cost": 298700401400.0
+  },
+  {
+    "case": "HorizontalSplit_keep_true_match_partition",
+    "total_cost": 204104.0
+  },
+  {
+    "case": "HorizontalSplit_keep_false_union_all",
+    "total_cost": 401576.0
+  }
+]

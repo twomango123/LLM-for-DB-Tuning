@@ -31,7 +31,32 @@ class HorizontalMerge(SMO):
         """
         根据 is_retained 创建视图或实体表；实体表场景下按规则重建约束（MySQL 专用）。
         """
-        union = " UNION ALL ".join([f"SELECT * FROM `{s}`" for s in self.sources])
+        # 为 DATE/DATETIME/TIMESTAMP 列在 UNION 路径上统一做零日期防护
+        helper = MySQLConstraintHelper(db) if db is not None else None
+        cons = helper.fetch_constraints(self.sources[0]) if (helper and self.sources) else {'columns': []}
+        def _dtype_map(cons):
+            mp = {}
+            for cm in (cons.get('columns') or []):
+                nm = cm.get('COLUMN_NAME')
+                dt = (cm.get('DATA_TYPE') or '').lower()
+                if nm:
+                    mp[nm] = dt
+            return mp
+        dtype = _dtype_map(cons)
+        def _safe(alias: str, col: str) -> str:
+            q = f"{alias}.`{col}`"
+            d = (dtype.get(col,'') or '').lower()
+            if d == 'date':
+                return f"CAST(NULLIF(CONCAT({q}), '0000-00-00') AS DATE)"
+            if d in ('datetime','timestamp'):
+                return f"CAST(NULLIF(CONCAT({q}), '0000-00-00 00:00:00') AS DATETIME)"
+            return q
+        if dtype:
+            cols = [cm['COLUMN_NAME'] for cm in (cons.get('columns') or [])]
+            select_star = lambda s: ", ".join([f"{_safe('t', c)} AS `{c}`" for c in cols])
+            union = " UNION ALL ".join([f"SELECT {select_star(s)} FROM `{s}` t" for s in self.sources])
+        else:
+            union = " UNION ALL ".join([f"SELECT * FROM `{s}`" for s in self.sources])
 
         # 保留源表：创建视图
         if getattr(self, 'is_retained', False):
@@ -41,8 +66,10 @@ class HorizontalMerge(SMO):
             return create_view
 
         # 不保留：创建实体表并迁移约束
+        # 幂等覆盖：先删再建
+        drop = f"DROP TABLE IF EXISTS `{self.new_table}`;"
         create = f"CREATE TABLE `{self.new_table}` AS {union};"
-        stmts = ['SET FOREIGN_KEY_CHECKS=0', create]
+        stmts = ['SET FOREIGN_KEY_CHECKS=0', drop, create]
 
         helper = MySQLConstraintHelper(db) if db is not None else None
         if helper and self.sources:
@@ -137,3 +164,151 @@ class HorizontalMerge(SMO):
 
     def apply_to_data(self, row):
         return row
+
+    def apply_to_write_sql(self, sql: str) -> str:
+        """
+        写入 SQL 改写（保守）：
+        - 若 INSERT 的目标就是 new_table 且为 INSERT INTO new_table SELECT ...，
+          则允许对 SELECT 子句做只读 apply_to_sql 改写，将对源表的读取替换为 new_table（避免再次 UNION）。
+        - 针对写入源表的 INSERT/UPDATE 不做“合并到 new_table”的自动改写，避免双写/路由错误。
+        其它情况返回原 SQL。
+        """
+        try:
+            import sqlglot
+            from sqlglot import expressions as exp
+            tree = sqlglot.parse_one(sql, read='mysql')
+        except Exception:
+            return sql
+        if isinstance(tree, exp.Insert):
+            dst = tree.this
+            sel = tree.args.get('expression')
+            if isinstance(dst, exp.Table) and isinstance(sel, (exp.Select, exp.Subquery)):
+                dst_name = (dst.name or '').split('.')[-1]
+                if dst_name == self.new_table:
+                    new_sql = self.apply_to_sql(sel.sql(dialect='mysql'))
+                    try:
+                        tree.set('expression', sqlglot.parse_one(new_sql, read='mysql'))
+                        return tree.sql(dialect='mysql')
+                    except Exception:
+                        return sql
+        return sql
+
+    # ---------- performance eval ----------
+    def evaluate_on_plan(self, plan_text: str,
+                         meta_path: str | None = 'output_dir/meta.json',
+                         sample_union_cost: float | None = None,
+                         sample_union_rows: float | None = None,
+                         predicates: list[str] | None = None) -> dict:
+        """
+        评估水平合并（多表并回一表/视图）对计划的影响：
+        - 若计划引用任意一个源表：
+          * 不保留源表（创建实体表）：将对源表的基数/宽度替换为 new_table；
+          * 保留源表（视图）：若查询涉及多个源表，去除 UNION ALL 合并代价；否则不变。
+        这里采用简化近似：
+          - 替换基表 → 类型1 rows_factor = new_rows/old_rows，cols_factor = width_new/width_old。
+          - 移除 UNION 代价 → 用 sample_union_cost 作为上界，直接从总成本减去（若提供）。
+        """
+        try:
+            from rewrite.cost_model import (
+                load_meta, table_rows, avg_row_width, CostModel
+            )
+            from performance_eval.plan import parse_plan, compute_total_cost
+        except Exception:
+            return {
+                'new_plan_text': plan_text,
+                'original_total_cost': None,
+                'new_total_cost': None,
+                'delta': 0.0,
+                'note': 'performance_eval 不可用，跳过评估'
+            }
+
+        meta = load_meta(meta_path)
+        nodes = parse_plan(plan_text)
+        touched = [s for s in self.sources if any(s in (n.tables or []) for n in nodes)]
+        if not touched:
+            return {
+                'new_plan_text': plan_text,
+                'original_total_cost': None,
+                'new_total_cost': None,
+                'delta': 0.0,
+                'note': '计划未引用源表，跳过'
+            }
+
+        new_rows = table_rows(meta, self.new_table) or 0.0
+        new_w = (avg_row_width(meta, self.new_table) or 1.0)
+
+        # 若不保留源表：对首个命中的源表按 new_table 缩放
+        if not getattr(self, 'is_retained', False):
+            s = touched[0]
+            old_rows = table_rows(meta, s) or 0.0
+            old_w = (avg_row_width(meta, s) or 1.0)
+            rf = (new_rows or 0.0) / max(old_rows, 1e-9) if old_rows else 1.0
+            cf = (new_w or 1.0) / max(old_w, 1e-9)
+            cm = CostModel()
+            res = cm.apply_type1(plan_text, target_table=s, rows_factor=rf, cols_factor=cf, filter_factor=1.0)
+            res['note'] = f'不保留：用 {self.new_table} 替换 {s} 的基数/宽度'
+            # 若提供了分片谓词（与筛选条件一致），在合并后按谓词重分配选择率（可能不同）
+            if predicates:
+                try:
+                    pruned = cm.prune_filters(res['new_plan_text'], patterns=predicates, regex=False, combine='product', cols_factor=1.0)
+                    if pruned and pruned.get('new_total_cost') is not None:
+                        res['new_plan_text'] = pruned['new_plan_text']
+                        # original_total_cost 仍以 res 的 original 为准
+                        base = res.get('original_total_cost')
+                        res['new_total_cost'] = pruned.get('new_total_cost')
+                        if base is not None and res['new_total_cost'] is not None:
+                            res['delta'] = res['new_total_cost'] - base
+                        res['note'] += '；命中谓词：合并后选择率按谓词剪枝重新分配'
+                except Exception:
+                    pass
+            # 不能直接缩放得到的项
+            try:
+                from rewrite.cost_model import parse_plan as _pp
+                ns_terms = []
+                for n in _pp(plan_text):
+                    if 'join' in n.type:
+                        ns_terms.append({'op': n.type, 'need': ['S(连接选择率)']})
+                    if n.type in ('group_temp', 'group_agg'):
+                        ns_terms.append({'op': n.type, 'need': ['G(分组数)']})
+                    if n.type == 'index_scan':
+                        ns_terms.append({'op': n.type, 'need': ['Sx(选择率)']})
+                if ns_terms:
+                    res['non_scalable'] = ns_terms
+            except Exception:
+                pass
+            return res
+
+        # 保留：若查询会访问多个源表，估计去除 UNION 聚合代价；之后若给出谓词，按谓词重分配选择率
+        num_hit = len(touched)
+        if num_hit >= 2 and sample_union_cost is not None:
+            total_before = compute_total_cost(nodes)
+            # 简化：直接减去提供的样本合并代价
+            new_total = max(total_before - float(sample_union_cost), 0.0)
+            out = {
+                'new_plan_text': plan_text,
+                'original_total_cost': total_before,
+                'new_total_cost': new_total,
+                'delta': new_total - total_before,
+                'note': '保留：多源访问，去除 UNION 代价（近似）',
+                'non_scalable': [{'op': 'UNION ALL', 'need': ['样本合并代价/行数用于线性缩放']}]
+            }
+            if predicates:
+                try:
+                    cm = CostModel()
+                    pruned = cm.prune_filters(plan_text, patterns=predicates, regex=False, combine='product', cols_factor=1.0)
+                    if pruned and pruned.get('new_total_cost') is not None:
+                        out['new_plan_text'] = pruned['new_plan_text']
+                        out['new_total_cost'] = max(pruned['new_total_cost'] - float(sample_union_cost), 0.0)
+                        out['delta'] = out['new_total_cost'] - total_before
+                        out['note'] += '；命中谓词：合并后选择率按谓词剪枝重新分配'
+                except Exception:
+                    pass
+            return out
+
+        return {
+            'new_plan_text': plan_text,
+            'original_total_cost': None,
+            'new_total_cost': None,
+            'delta': 0.0,
+            'note': '保留且单源访问，成本不变'
+        }

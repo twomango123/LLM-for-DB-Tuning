@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "op": "Table scan on <temporary>",
+    "actual_time": 3844.0,
+    "avg_time": 3844.0,
+    "exclusive_time": 2.0,
+    "loops": 1.0,
+    "rows": 9795.0
+  },
+  {
+    "op": "Aggregate using temporary table",
+    "actual_time": 3842.0,
+    "avg_time": 3842.0,
+    "exclusive_time": 3191.0,
+    "loops": 1.0,
+    "rows": 9795.0
+  },
+  {
+    "op": "Nested loop inner join",
+    "actual_time": 651.0,
+    "avg_time": 651.0,
+    "exclusive_time": 228.999888,
+    "loops": 1.0,
+    "rows": 1000000.0
+  },
+  {
+    "op": "Covering index scan on t1 using address_id",
+    "actual_time": 422.0,
+    "avg_time": 422.0,
+    "exclusive_time": 422.0,
+    "loops": 1.0,
+    "rows": 1000000.0
+  },
+  {
+    "op": "Single-row index lookup on t2 using PRIMARY",
+    "actual_time": 0.000112,
+    "avg_time": 1.12e-10,
+    "exclusive_time": 1.12e-10,
+    "loops": 1000000.0,
+    "rows": 1.0
+  }
+]

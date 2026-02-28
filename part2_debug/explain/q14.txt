@@ -1,0 +1,2 @@
+-> Sort: delivery_routes.route_name  (cost=101410 rows=999040) (actual time=298..327 rows=999999 loops=1)
+    -> Table scan on delivery_routes  (cost=101410 rows=999040) (actual time=0.134..160 rows=999999 loops=1)

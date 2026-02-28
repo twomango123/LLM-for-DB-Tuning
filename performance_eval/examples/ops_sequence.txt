@@ -1,0 +1,5 @@
+TableJoin(customers, customer_addresses, customers.customer_id, customer_addresses.customer_id, False): customers_addresses_combined
+VerticalSplit(products, True): high_frequency_products(product_id, product_name, product_price), low_frequency_products(product_id, product_description), high_frequency_products(product_id), low_frequency_products(product_id)
+TableJoin(actual_orders, regular_orders, actual_orders.regular_order_id, regular_orders.regular_order_id, False): combined_orders
+RedundantColumnAdd(addresses.city, customers_addresses_combined.customer_city, ['addresses.address_id=customers_addresses_combined.address_id'])
+RedundantColumnAdd(products.product_price, actual_order_products.redundant_product_price, ['products.product_id=actual_order_products.product_id'])

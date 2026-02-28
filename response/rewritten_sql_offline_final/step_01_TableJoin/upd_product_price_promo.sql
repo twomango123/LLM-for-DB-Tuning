@@ -1,0 +1,4 @@
+UPDATE products
+SET product_price = ROUND(product_price * 0.95, 2)
+ORDER BY product_price ASC, product_id ASC
+LIMIT 1;

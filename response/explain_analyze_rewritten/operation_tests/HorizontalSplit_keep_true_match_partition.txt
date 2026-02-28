@@ -1,0 +1,5 @@
+-> Aggregate: count(0)  (cost=123271..123271 rows=1) (actual time=245..245 rows=1 loops=1)
+    -> Table scan on t  (cost=112037..113287 rows=99841) (actual time=245..245 rows=0 loops=1)
+        -> Materialize  (cost=112037..112037 rows=99841) (actual time=245..245 rows=0 loops=1)
+            -> Filter: ((actual_orders.order_status_code = 'recent') and (rand() < 0.02))  (cost=102052 rows=99841) (actual time=245..245 rows=0 loops=1)
+                -> Table scan on actual_orders  (cost=102052 rows=998412) (actual time=0.375..194 rows=999999 loops=1)

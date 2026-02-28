@@ -185,3 +185,12 @@ class RedundantColumnDrop(SMO):
             return prefix + ', '.join(items)
 
         return pattern.sub(repl, sql)
+
+    def apply_to_write_sql(self, sql: str) -> str:
+        """
+        写入 SQL 改写（保守）：
+        - INSERT 到 target_table：若列清单包含冗余列，直接返回原 SQL（假设 schema 变更后已删除该列，交由上层报错/修复）。
+        - UPDATE target_table SET redundant_column=...：返回原 SQL（相同理由）。
+        - 其它情况不改写。
+        """
+        return sql

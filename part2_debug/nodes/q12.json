@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "op": "Limit: 5 row",
+    "actual_time": 229.0,
+    "avg_time": 229.0,
+    "exclusive_time": 57.0,
+    "loops": 1.0,
+    "rows": 5.0
+  },
+  {
+    "op": "Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998585) (actual time=229..229 rows=5 loops=1)",
+    "actual_time": 229.0,
+    "avg_time": 229.0,
+    "exclusive_time": 229.0,
+    "loops": 1.0,
+    "rows": 5.0
+  },
+  {
+    "op": "Table scan on customers",
+    "actual_time": 172.0,
+    "avg_time": 172.0,
+    "exclusive_time": 172.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  }
+]

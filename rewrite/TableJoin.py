@@ -155,6 +155,7 @@ class TableJoin(SMO):
 
         # 创建新表（全外连接模拟）
         union_sql = f"""
+        DROP TABLE IF EXISTS `{newt}`;
         CREATE TABLE `{newt}` AS
         SELECT {', '.join(select_columns)}
         FROM `{t1}` t1
@@ -442,12 +443,102 @@ class TableJoin(SMO):
 
     def apply_to_sql(self, sql: str) -> str:
         """
-        将查询中 old_tables 的自然连接改写为对 new_table 的读取。
-        仅处理只读 SELECT，且遵循“FROM t1, t2 ... WHERE ...”的常见格式。
-        - 当 sign==1/2 使用与 apply_to_readonly_sql 内部相同的 from 替换策略。
+        将查询中 old_tables 的连接改写为对 new_table 的读取。
+        - 优先使用 sqlglot AST 对显式 JOIN 进行替换与 ON 等值谓词剔除；
+        - 回退到已有的 Strategy2（兼容别名）或 Strategy1（逗号连接）。
         """
-        return (self._replace_strategy1(sql, self.new_table) if self.sign == 1
-                else self._replace_strategy2(sql, self.new_table))
+        try:
+            import sqlglot
+            from sqlglot import expressions as exp
+            t1_base = self.old_tables[0].split('.')[-1]
+            t2_base = self.old_tables[1].split('.')[-1]
+            tree = sqlglot.parse_one(sql, read='mysql')
+            changed = False
+
+            # Walk joins: if join involves t1 and t2, collapse into new_table scan
+            for j in list(tree.find_all(exp.Join)):
+                # Identify left/right tables under this join node
+                def _base_table(n):
+                    if isinstance(n, exp.Table):
+                        return (n.name or '').split('.')[-1]
+                    # Search descendant table
+                    for t in n.find_all(exp.Table):
+                        return (t.name or '').split('.')[-1]
+                    return None
+                lt = _base_table(j.this)
+                rt = _base_table(j.expression)  # join source (right)
+                if not lt or not rt:
+                    continue
+                s = {lt, rt}
+                if t1_base in s and t2_base in s:
+                    # Build new table node with alias = prefer left alias if exists
+                    alias_name = None
+                    if isinstance(j.this, exp.Table) and j.this.args.get('alias') is not None:
+                        alias_name = j.this.args['alias'].name
+                    elif isinstance(j.expression, exp.Table) and j.expression.args.get('alias') is not None:
+                        alias_name = j.expression.args['alias'].name
+                    new_tbl = exp.Table(this=exp.Identifier(this=self.new_table, quoted=False))
+                    repl = exp.Alias(this=new_tbl, alias=exp.TableAlias(this=exp.to_identifier(alias_name))) if alias_name else new_tbl
+                    # Replace the whole join subtree by new table
+                    j.replace(repl)
+                    changed = True
+
+            if changed:
+                # Clean WHERE/ON: remove equality predicates on old join keys
+                # Keys are stored in self.join_key as list of (k1,k2) or old_columns_list fallback
+                try:
+                    join_pairs = getattr(self, 'join_key', None) or []
+                    if join_pairs:
+                        def _is_join_eq(n: exp.Expression) -> bool:
+                            if not isinstance(n, exp.EQ):
+                                return False
+                            # string forms like t.col = s.col
+                            def _q(expr):
+                                col = None
+                                for c in expr.find_all(exp.Column):
+                                    col = c
+                                    break
+                                if col is None:
+                                    return None, None
+                                tname = col.table or ''
+                                cname = col.name or ''
+                                return tname.split('.')[-1], cname
+                            ltbl, lcol = _q(n.left)
+                            rtbl, rcol = _q(n.right)
+                            if not (lcol and rcol):
+                                return False
+                            for a,b in join_pairs:
+                                if {lcol, rcol} == {a, b}:
+                                    return True
+                            return False
+                        where = tree.args.get('where')
+                        if where is not None and where.this is not None:
+                            # Break ANDs and filter out join equalities
+                            items = []
+                            def walk_and(x):
+                                if isinstance(x, exp.And):
+                                    walk_and(x.left); walk_and(x.right)
+                                else:
+                                    items.append(x)
+                            walk_and(where.this)
+                            items2 = [x for x in items if not _is_join_eq(x)]
+                            # rebuild
+                            cur = None
+                            for it in items2:
+                                cur = it if cur is None else exp.And(this=cur, expression=it)
+                            if cur is None:
+                                tree.set('where', None)
+                            else:
+                                where.set('this', cur)
+                except Exception:
+                    pass
+
+                return tree.sql(dialect='mysql')
+        except Exception:
+            pass
+        # Fallback to existing strategies
+        return (self._replace_strategy2(sql, self.new_table) if self.sign != 1
+                else self._replace_strategy1(sql, self.new_table))
 
     def apply_to_readonly_sql(self, sql_path) :
         # 构建一个表 只保留old_table主属性列
@@ -741,6 +832,185 @@ class TableJoin(SMO):
                     f.write(f"{sql};\n")
             
             print(f"已保存重写后的SQL到: {output_path}")
+
+    def apply_to_write_sql(self, sql: str) -> str:
+        """
+        写入 SQL 改写（保守）：
+        - INSERT INTO new_table SELECT t1 ⨝ t2 ... → 仅改写 SELECT 端为 new_table 读取（读路径规则），保持目标表不变；
+        - 其它 INSERT/UPDATE：不从旧表对“写入”到 new_table，以免产生数据不一致；返回原 SQL。
+        """
+        try:
+            import sqlglot
+            from sqlglot import expressions as exp
+            tree = sqlglot.parse_one(sql, read='mysql')
+        except Exception:
+            return sql
+        if isinstance(tree, exp.Insert):
+            dst = tree.this
+            sel = tree.args.get('expression')
+            if isinstance(dst, exp.Table) and isinstance(sel, (exp.Select, exp.Subquery)):
+                dst_name = (dst.name or '').split('.')[-1]
+                if dst_name == self.new_table:
+                    new_sql = self.apply_to_sql(sel.sql(dialect='mysql'))
+                    try:
+                        tree.set('expression', sqlglot.parse_one(new_sql, read='mysql'))
+                        return tree.sql(dialect='mysql')
+                    except Exception:
+                        return sql
+        return sql
+
+    # ---------- performance eval ----------
+    def evaluate_on_plan(self, plan_text: str,
+                         meta_path: str | None = 'output_dir/meta.json',
+                         sql_text: str | None = None) -> dict:
+        """
+        评估 TableJoin 对 EXPLAIN 计划与总代价的影响。
+        规则：
+        - sign==1（不保留原表）：
+          * 若计划同时引用 old_tables 两表，直接移除 JOIN → 扫描 new_table；
+          * 若仅使用其中一表，则将该表的扫描视为 new_table 读取：按行数与行宽缩放（类型1）。
+        - sign!=1（保留原表）：
+          * 若出现两表连接，则仍移除 JOIN 代价；
+          * 若仅单表使用，则保持成本不变。
+        """
+        try:
+            from rewrite.cost_model import (
+                load_meta, table_rows, avg_row_width, CostModel
+            )
+            from performance_eval.rewrite_utils import remove_join
+            from performance_eval.plan import parse_plan
+        except Exception:
+            return {
+                'new_plan_text': plan_text,
+                'original_total_cost': None,
+                'new_total_cost': None,
+                'delta': 0.0,
+                'note': 'performance_eval 不可用，跳过评估'
+            }
+
+        t1, t2 = self.old_tables[0], self.old_tables[1]
+        new_table = self.new_table
+        keep_old = (getattr(self, 'sign', 1) != 1)
+
+        meta = load_meta(meta_path)
+        r1 = table_rows(meta, t1) or 0.0
+        r2 = table_rows(meta, t2) or 0.0
+        # 新表行数回退：优先取 meta；否则采用更保守的 min(r1, r2)
+        # 若存在“唯一/主键信号”（此处用单列连接键作为近似），且仅命中单边表，则直接用该边行数
+        rn_meta = table_rows(meta, new_table)
+        # keep_old=False 的新表视为两表“全外连接”近似：
+        # - 若存在单列连接键（近似 1:1），FOJ 基数≈max(r1,r2)
+        # - 否则保守取上界 r1 + r2（无交集上界），避免低估
+        try:
+            jk = getattr(self, 'join_key', None) or []
+            pk_like_foj = isinstance(jk, (list, tuple)) and len(jk) == 1
+        except Exception:
+            pk_like_foj = False
+        rn_fallback = (max(r1, r2) if pk_like_foj else ((r1 or 0.0) + (r2 or 0.0)))
+        rn = rn_meta if rn_meta is not None else rn_fallback
+        w1 = (avg_row_width(meta, t1) or 0.0) or 1.0
+        w2 = (avg_row_width(meta, t2) or 0.0) or 1.0
+        wn = (avg_row_width(meta, new_table) or (w1 + w2)) or 1.0
+
+        nodes = parse_plan(plan_text)
+        # 别名映射：若提供原始 SQL，抽取 alias→base，将 EXPLAIN 中的表名反映射为 base 进行匹配
+        def _alias_map(sql: str) -> dict[str, str]:
+            try:
+                import sqlglot
+                from sqlglot import expressions as exp
+                tree = sqlglot.parse_one(sql, read='mysql')
+                mp = {}
+                for tb in tree.find_all(exp.Table):
+                    base = (tb.name or '').split('.')[-1]
+                    al = tb.args.get('alias')
+                    if base and al is not None and hasattr(al, 'name'):
+                        mp[al.name] = base
+                return mp
+            except Exception:
+                return {}
+
+        amap = _alias_map(sql_text or '') if sql_text else {}
+        def _as_base(name: str) -> str:
+            n = name.strip('`')
+            return amap.get(n, n)
+        seen_t1 = any(_as_base(t) == t1 for n in nodes for t in (n.tables or []))
+        seen_t2 = any(_as_base(t) == t2 for n in nodes for t in (n.tables or []))
+
+        # 若计划未引用任一源表，直接跳过（避免误报 keep_old 的提示）
+        if not seen_t1 and not seen_t2:
+            return {
+                'new_plan_text': plan_text,
+                'original_total_cost': None,
+                'new_total_cost': None,
+                'delta': 0.0,
+                'note': '计划未引用源表，跳过'
+            }
+
+        # 构造 base->alias 的反向映射（用于匹配 EXPLAIN 中的别名，如 t1/t2）
+        inv_alias = {}
+        for al, base in (amap.items() if amap else []):
+            inv_alias.setdefault(base, al)
+
+        # 命中两表连接：无论 keep_old 与否都视为“消除该连接”，改为新表扫描
+        if seen_t1 and seen_t2:
+            # 行宽缩放：new_table 相对两表合并后的近似宽度（w1+w2）
+            cf = (wn or 1.0) / max(w1 + w2, 1e-9)
+            # 优先用别名（若存在），以便 transform 能正确识别子树覆盖关系
+            t1_match = inv_alias.get(t1, t1)
+            t2_match = inv_alias.get(t2, t2)
+            res = remove_join(plan_text,
+                              old_tables=[t1_match, t2_match],
+                              new_table=new_table,
+                              new_table_rows=rn,
+                              cols_factor=cf)
+            # 仅当计划文本发生变化时，确认“移除 JOIN”成功，否则沿用内部返回的 note（通常为 no matching join...）
+            try:
+                changed = (res.get('new_plan_text') or '') != (plan_text or '')
+            except Exception:
+                changed = False
+            if changed:
+                res['note'] = '移除旧表 JOIN，替换为新表扫描（忽略 keep_old）'
+            return res
+
+        # 近似的“唯一/主键”信号（与上面一致）：单列连接键
+        pk_like = pk_like_foj
+
+        if not keep_old:
+            # 单表命中：按 FOJ 基数缩放（见上 rn 定义），并按新表行宽缩放
+            if seen_t1 and not seen_t2 and r1 > 0:
+                rn_eff = (max(r1, r2) if pk_like else rn)
+                rf = rn_eff / max(r1, 1e-9)
+                cf = wn / max(w1, 1e-9)
+                cm = CostModel()
+                res = cm.apply_type1(plan_text, target_table=t1, rows_factor=rf, cols_factor=cf, filter_factor=1.0)
+                res['note'] = f'仅使用 {t1}，按全外连接基数/新表行宽缩放（rn≈{"max(r1,r2)" if pk_like else "r1+r2"}）'
+                return res
+            if seen_t2 and not seen_t1 and r2 > 0:
+                rn_eff = (max(r1, r2) if pk_like else rn)
+                rf = rn_eff / max(r2, 1e-9)
+                cf = wn / max(w2, 1e-9)
+                cm = CostModel()
+                res = cm.apply_type1(plan_text, target_table=t2, rows_factor=rf, cols_factor=cf, filter_factor=1.0)
+                res['note'] = f'仅使用 {t2}，按全外连接基数/新表行宽缩放（rn≈{"max(r1,r2)" if pk_like else "r1+r2"}）'
+                return res
+        else:
+            # keep_old=True 且单表命中：成本不变（特别注意不改变行宽）
+            if (seen_t1 and not seen_t2) or (seen_t2 and not seen_t1):
+                return {
+                    'new_plan_text': plan_text,
+                    'original_total_cost': None,
+                    'new_total_cost': None,
+                    'delta': 0.0,
+                    'note': '仅单表且 keep_old=True，行宽/成本均不变'
+                }
+
+        return {
+            'new_plan_text': plan_text,
+            'original_total_cost': None,
+            'new_total_cost': None,
+            'delta': 0.0,
+            'note': '仅单表且 keep_old=True，行宽/成本均不变'
+        }
 
 
 

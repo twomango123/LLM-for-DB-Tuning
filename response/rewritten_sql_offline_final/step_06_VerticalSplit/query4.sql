@@ -1,0 +1,1 @@
+SELECT COUNT(DISTINCT payment_method) FROM customers

@@ -1,0 +1,5 @@
+-> Aggregate: count(0)  (cost=314022..314022 rows=1) (actual time=218..218 rows=1 loops=1)
+    -> Table scan on t  (cost=201677..214162 rows=998607) (actual time=216..218 rows=19844 loops=1)
+        -> Materialize  (cost=201677..201677 rows=998607) (actual time=216..216 rows=19844 loops=1)
+            -> Filter: (rand() < 0.02)  (cost=101816 rows=998607) (actual time=0.134..213 rows=19844 loops=1)
+                -> Table scan on customers  (cost=101816 rows=998607) (actual time=0.119..169 rows=1e+6 loops=1)

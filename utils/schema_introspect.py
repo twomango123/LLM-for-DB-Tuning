@@ -10,7 +10,7 @@ like column lists, primary keys, and foreign key mappings.
 
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 
 def get_table_columns(db, table: str) -> List[str]:
@@ -102,4 +102,84 @@ def get_outbound_fks_info(db, table: str) -> List[Dict[str, List[str]]]:
         rows = db.execute_query(sql_cols) if db else []
         out.append({'name': cname, 'columns': [r['COLUMN_NAME'] for r in rows]})
     return out
+
+
+def get_column_metadata(db, table: str, column: str) -> Dict[str, Optional[str]]:
+    """Return basic metadata for a column from information_schema.COLUMNS.
+
+    Keys:
+      - data_type: lowercased DATA_TYPE (e.g., 'int', 'varchar', 'enum')
+      - column_type: raw COLUMN_TYPE (e.g., "enum('a','b')", "int(11)")
+      - is_nullable: 'YES' or 'NO'
+    """
+    sql = f"""
+    SELECT DATA_TYPE, COLUMN_TYPE, IS_NULLABLE
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = '{table}'
+      AND COLUMN_NAME = '{column}'
+    LIMIT 1
+    """
+    try:
+        rows = db.execute_query(sql) if db else []
+    except Exception:
+        rows = []
+    if not rows:
+        return {'data_type': None, 'column_type': None, 'is_nullable': None}
+    r = rows[0]
+    return {
+        'data_type': (r.get('DATA_TYPE') or '').lower() if isinstance(r, dict) else None,
+        'column_type': r.get('COLUMN_TYPE') if isinstance(r, dict) else None,
+        'is_nullable': r.get('IS_NULLABLE') if isinstance(r, dict) else None,
+    }
+
+
+def get_enum_values(db, table: str, column: str) -> List[str]:
+    """If column is ENUM, return its declared values; otherwise empty list."""
+    meta = get_column_metadata(db, table, column)
+    ct = (meta.get('column_type') or '')
+    dt = (meta.get('data_type') or '')
+    if dt != 'enum' or not ct:
+        return []
+    # COLUMN_TYPE example: "enum('a','b','c')"
+    s = ct.strip()
+    try:
+        i = s.index('(')
+        j = s.rindex(')')
+        inner = s[i + 1 : j]
+    except ValueError:
+        return []
+    out: List[str] = []
+    cur = []
+    in_sq = False
+    prev = ''
+    for ch in inner:
+        if ch == "'" and prev != '\\':
+            in_sq = not in_sq
+            # do not include quotes themselves
+        elif ch == ',' and not in_sq:
+            token = ''.join(cur).strip()
+            if token.strip("' "):
+                out.append(token.strip().strip("'"))
+            cur = []
+        else:
+            cur.append(ch)
+        prev = ch
+    tail = ''.join(cur).strip()
+    if tail.strip("' "):
+        out.append(tail.strip().strip("'"))
+    return out
+
+
+def is_column_nullable(db, table: str, column: str) -> Optional[bool]:
+    meta = get_column_metadata(db, table, column)
+    is_nullable = meta.get('is_nullable')
+    if is_nullable is None:
+        return None
+    s = str(is_nullable).upper()
+    if s == 'YES':
+        return True
+    if s == 'NO':
+        return False
+    return None
 

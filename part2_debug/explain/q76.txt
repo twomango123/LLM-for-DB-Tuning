@@ -1,1 +1,0 @@
--> Count rows in stock  (actual time=104..104 rows=1 loops=1)

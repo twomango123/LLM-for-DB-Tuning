@@ -1,0 +1,1 @@
+SELECT actual_order_id FROM (SELECT * FROM actual_orders_recent UNION ALL SELECT * FROM actual_orders_completed) AS actual_orders WHERE order_status_code = 'Success'

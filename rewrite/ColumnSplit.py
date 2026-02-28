@@ -172,8 +172,25 @@ class ColumnSplit(SMO):
                 # 保存映射以便后续重建 FK
                 fk.setdefault('_child_col_map', {})[child_col] = new_child_cols
 
-        # 3) 父表：CTAS 添加新列并迁移数据
+        # 3) 父表：CTAS 添加新列并迁移数据（对日期/时间列做零日期防护）
         # 生成新列表达式
+        def _dtype_map(cons):
+            mp = {}
+            for cm in (constraints.get('columns') or []):
+                nm = cm.get('COLUMN_NAME')
+                dt = (cm.get('DATA_TYPE') or '').lower()
+                if nm:
+                    mp[nm] = dt
+            return mp
+        def _safe(alias: str, col: str, dtype: str) -> str:
+            q = f"{alias}.`{col}`"
+            d = (dtype or '').lower()
+            if d == 'date':
+                return f"CAST(NULLIF(CONCAT({q}),'0000-00-00') AS DATE)"
+            if d in ('datetime','timestamp'):
+                return f"CAST(NULLIF(CONCAT({q}),'0000-00-00 00:00:00') AS DATETIME)"
+            return q
+        dtype = _dtype_map(constraints)
         select_new_cols = []
         if self.split_delimiter is not None:
             for i, new_col in enumerate(self.new_columns, start=1):
@@ -188,9 +205,14 @@ class ColumnSplit(SMO):
         else:
             raise ValueError("必须提供 split_delimiter 或 split_position")
 
-        stmts.append(
-            f"CREATE TABLE `{t}__tmp_split` AS SELECT *, " + ", ".join(select_new_cols) + f" FROM `{t}`;"
-        )
+        # 幂等覆盖：删除可能残留的临时表再创建
+        stmts.append(f"DROP TABLE IF EXISTS `{t}__tmp_split`;")
+        if dtype:
+            cols = [cm['COLUMN_NAME'] for cm in (constraints.get('columns') or [])]
+            proj = ", ".join([f"{_safe('src', c, dtype.get(c,''))} AS `{c}`" for c in cols])
+            stmts.append(f"CREATE TABLE `{t}__tmp_split` AS SELECT {proj}, " + ", ".join(select_new_cols) + f" FROM `{t}` src;")
+        else:
+            stmts.append(f"CREATE TABLE `{t}__tmp_split` AS SELECT *, " + ", ".join(select_new_cols) + f" FROM `{t}`;")
         stmts.append(f"RENAME TABLE `{t}` TO `{t}__old_split`, `{t}__tmp_split` TO `{t}`;")
         stmts.append(f"ALTER TABLE `{t}` DROP COLUMN `{old}`;")
 
@@ -483,4 +505,111 @@ class ColumnSplit(SMO):
         except Exception:
             return sql
 
-    
+    def apply_to_write_sql(self, sql: str) -> str:
+        """
+        改写写入 SQL（INSERT/UPDATE）：
+        - INSERT INTO table(col,..., old_column, ...) VALUES (..., expr, ...)
+          -> 将 old_column 替换为新列集合，并用 SUBSTRING_INDEX/ SUBSTRING 对 expr 做拆分；
+        - INSERT INTO table(cols...) SELECT ...
+          -> 若列清单包含 old_column，则把列清单替换为新列集合，并对 SELECT 部分复用 apply_to_sql；
+        - UPDATE table SET old_column = expr WHERE ...
+          -> 展开为多列赋值：new_i = split(expr)；保留其它赋值不变；
+        仅处理目标表匹配的情况，其它情况原样返回。
+        """
+        try:
+            tree = sqlglot.parse_one(sql, read='mysql')
+        except Exception:
+            return sql
+
+        tname = self.table.split('.')[-1].lower()
+
+        def _split_expr(expr_sql: str, idx: int) -> str:
+            if self.split_delimiter is not None:
+                d = self.split_delimiter.replace("'", "''")
+                return f"SUBSTRING_INDEX(SUBSTRING_INDEX(({expr_sql}), '{d}', {idx}), '{d}', -1)"
+            else:
+                p = int(self.split_position)
+                if idx == 1:
+                    return f"SUBSTRING(({expr_sql}), 1, {p})"
+                else:
+                    return f"SUBSTRING(({expr_sql}), {p+1})"
+
+        # INSERT
+        if isinstance(tree, exp.Insert):
+            schema = tree.this
+            # INSERT 目标可能为 Schema(table, columns)
+            base = ''
+            cols_nodes = []
+            if isinstance(schema, exp.Schema):
+                base = (schema.this.name or '').split('.')[-1].lower() if isinstance(schema.this, exp.Table) else ''
+                cols_nodes = list(schema.expressions or [])
+            elif isinstance(schema, exp.Table):
+                base = (schema.name or '').split('.')[-1].lower()
+            else:
+                base = ''
+            if base != tname:
+                return sql
+            # columns: Identifier 列表
+            col_names = [c.name for c in cols_nodes] if cols_nodes else []
+            if col_names and self.old_column in col_names:
+                # 替换列清单中的 old -> new_columns
+                new_col_nodes = [exp.to_identifier(c) for c in self.new_columns]
+                idx = col_names.index(self.old_column)
+                new_cols_full = list(cols_nodes)
+                new_cols_full[idx:idx+1] = new_col_nodes
+                # 重建 Schema(this=table, expressions=new_cols_full)
+                if isinstance(schema, exp.Schema):
+                    tree.set('this', exp.Schema(this=schema.this, expressions=new_cols_full))
+
+                # VALUES 场景：展开对应值
+                vals = tree.args.get('expression')
+                if isinstance(vals, exp.Values):
+                    new_rows = []
+                    for row in vals.expressions:
+                        # row 可能是 Tuple
+                        items = list(row.expressions)
+                        rhs_sql = items[idx].sql(dialect='mysql')
+                        repl = [sqlglot.parse_one(_split_expr(rhs_sql, i+1), read='mysql') for i in range(len(self.new_columns))]
+                        items[idx:idx+1] = repl
+                        new_rows.append(exp.Tuple(expressions=items))
+                    vals.set('expressions', new_rows)
+                else:
+                    # INSERT ... SELECT：对 SELECT 复用只读改写
+                    sel = tree.args.get('expression')
+                    if isinstance(sel, exp.Select) or isinstance(sel, exp.Subquery):
+                        new_sql = self.apply_to_sql(sel.sql(dialect='mysql'))
+                        sel_new = sqlglot.parse_one(new_sql, read='mysql')
+                        tree.set('expression', sel_new)
+                return tree.sql(dialect='mysql')
+            return sql
+
+        # UPDATE
+        if isinstance(tree, exp.Update):
+            tbl = tree.this
+            base = (tbl.name or '').split('.')[-1].lower() if isinstance(tbl, exp.Table) else ''
+            if base != tname:
+                return sql
+            sets = list(tree.args.get('expressions') or [])
+            if not sets:
+                return sql
+            new_sets = []
+            changed = False
+            for s in sets:
+                # 兼容 Assignment/EQ
+                target = getattr(s, 'this', None)
+                value = getattr(s, 'expression', None)
+                if isinstance(target, exp.Column) and target.name == self.old_column:
+                    changed = True
+                    rhs = value.sql(dialect='mysql') if value is not None else 'NULL'
+                    for i, nc in enumerate(self.new_columns, start=1):
+                        lhs = exp.Column(this=exp.to_identifier(nc))
+                        rv = sqlglot.parse_one(_split_expr(rhs, i), read='mysql')
+                        new_sets.append(exp.EQ(this=lhs, expression=rv))
+                else:
+                    new_sets.append(s)
+            if changed:
+                tree.set('expressions', new_sets)
+                return tree.sql(dialect='mysql')
+            return sql
+
+        return sql

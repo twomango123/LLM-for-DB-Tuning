@@ -1,0 +1,1 @@
+SELECT product_name FROM view_products ORDER BY product_price DESC LIMIT 1

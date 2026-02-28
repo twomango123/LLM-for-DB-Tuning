@@ -270,7 +270,66 @@ class MySqlDialect : public Dialect {
         "	PRIMARY KEY (r_regionkey)\n"
         ")"};
 
-    std::vector<const char*> additionalPreparationStatements = {};
+    std::vector<const char*> additionalPreparationStatements = {
+        // 外键约束在数据导入完成后添加，避免导入顺序导致失败
+        // TPC-C 关系
+        "ALTER TABLE tpcch.district\n"
+        "  ADD CONSTRAINT fk_district_warehouse_fk\n"
+        "  FOREIGN KEY (d_w_id) REFERENCES tpcch.warehouse(w_id)",
+
+        "ALTER TABLE tpcch.customer\n"
+        "  ADD CONSTRAINT fk_customer_district_fk\n"
+        "  FOREIGN KEY (c_w_id, c_d_id) REFERENCES tpcch.district(d_w_id, d_id)",
+
+        "ALTER TABLE tpcch.history\n"
+        "  ADD CONSTRAINT fk_history_customer_fk\n"
+        "  FOREIGN KEY (h_c_w_id, h_c_d_id, h_c_id) REFERENCES tpcch.customer(c_w_id, c_d_id, c_id)",
+
+        "ALTER TABLE tpcch.history\n"
+        "  ADD CONSTRAINT fk_history_district_fk\n"
+        "  FOREIGN KEY (h_w_id, h_d_id) REFERENCES tpcch.district(d_w_id, d_id)",
+
+        "ALTER TABLE tpcch.orders\n"
+        "  ADD CONSTRAINT fk_orders_customer_fk\n"
+        "  FOREIGN KEY (o_w_id, o_d_id, o_c_id) REFERENCES tpcch.customer(c_w_id, c_d_id, c_id)",
+
+        "ALTER TABLE tpcch.neworder\n"
+        "  ADD CONSTRAINT fk_neworder_orders_fk\n"
+        "  FOREIGN KEY (no_w_id, no_d_id, no_o_id) REFERENCES tpcch.orders(o_w_id, o_d_id, o_id)",
+
+        "ALTER TABLE tpcch.orderline\n"
+        "  ADD CONSTRAINT fk_orderline_orders_fk\n"
+        "  FOREIGN KEY (ol_w_id, ol_d_id, ol_o_id) REFERENCES tpcch.orders(o_w_id, o_d_id, o_id)",
+
+        "ALTER TABLE tpcch.orderline\n"
+        "  ADD CONSTRAINT fk_orderline_stock_fk\n"
+        "  FOREIGN KEY (ol_supply_w_id, ol_i_id) REFERENCES tpcch.stock(s_w_id, s_i_id)",
+
+        "ALTER TABLE tpcch.stock\n"
+        "  ADD CONSTRAINT fk_stock_warehouse_fk\n"
+        "  FOREIGN KEY (s_w_id) REFERENCES tpcch.warehouse(w_id)",
+
+        "ALTER TABLE tpcch.stock\n"
+        "  ADD CONSTRAINT fk_stock_item_fk\n"
+        "  FOREIGN KEY (s_i_id) REFERENCES tpcch.item(i_id)",
+
+        // 关联到 TPC-H 维度表
+        "ALTER TABLE tpcch.stock\n"
+        "  ADD CONSTRAINT fk_stock_supplier_fk\n"
+        "  FOREIGN KEY (s_su_suppkey) REFERENCES tpcch.supplier(su_suppkey)",
+
+        "ALTER TABLE tpcch.supplier\n"
+        "  ADD CONSTRAINT fk_supplier_nation_fk\n"
+        "  FOREIGN KEY (su_nationkey) REFERENCES tpcch.nation(n_nationkey)",
+
+        "ALTER TABLE tpcch.nation\n"
+        "  ADD CONSTRAINT fk_nation_region_fk\n"
+        "  FOREIGN KEY (n_regionkey) REFERENCES tpcch.region(r_regionkey)",
+
+        "ALTER TABLE tpcch.customer\n"
+        "  ADD CONSTRAINT fk_customer_nation_fk\n"
+        "  FOREIGN KEY (c_n_nationkey) REFERENCES tpcch.nation(n_nationkey)"
+    };
 
     std::vector<const char*> importPrefixStrings = {
         "LOAD DATA INFILE '", "LOAD DATA INFILE '", "LOAD DATA INFILE '",

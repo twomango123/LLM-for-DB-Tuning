@@ -1,0 +1,5 @@
+TableJoin(regular_order_products, products, product_id, product_id, False): orders_products
+TableJoin(actual_orders, orders_products, regular_order_id, regular_order_id, False): all_order_details
+VerticalSplit(addresses, False): address_basic(address_id, city, zip_postcode), address_extended(address_id, address_details, state_province_county, country), address_basic(address_id), address_extended(address_id)
+RedundantColumnAdd(customers.customer_name, regular_orders.customer_name, ['customers.customer_id=regular_orders.distributer_id'])
+VerticalSplit(customers, True): customer_core(customer_id, customer_name, payment_method), customer_contact(customer_id, customer_phone, customer_email, date_became_customer), customer_core(customer_id), customer_contact(customer_id)

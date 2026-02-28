@@ -1,0 +1,5 @@
+UPDATE customers
+SET customer_phone = '+1-555-0199',
+    customer_email = 'support@acme.example'
+ORDER BY customer_id DESC
+LIMIT 1;

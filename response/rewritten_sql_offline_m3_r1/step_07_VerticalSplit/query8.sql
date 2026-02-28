@@ -1,0 +1,1 @@
+SELECT customer_email, customer_name FROM view_customers WHERE payment_method = 'Visa'

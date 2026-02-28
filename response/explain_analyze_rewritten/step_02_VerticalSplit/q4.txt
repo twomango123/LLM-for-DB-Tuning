@@ -1,0 +1,2 @@
+-> Aggregate: count(distinct customers.payment_method)  (cost=200251 rows=1) (actual time=209..209 rows=1 loops=1)
+    -> Table scan on customers  (cost=100391 rows=998607) (actual time=0.252..133 rows=1e+6 loops=1)

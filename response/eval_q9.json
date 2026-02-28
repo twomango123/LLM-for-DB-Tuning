@@ -1,0 +1,78 @@
+{
+  "final_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+  "before_total_cost": 2531952.25,
+  "after_total_cost": 2531952.25,
+  "delta": 0.0,
+  "steps": [
+    {
+      "op": "TableJoin",
+      "result": {
+        "new_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "仅单表且 keep_old=True，成本不变"
+      }
+    },
+    {
+      "op": "TableSplit",
+      "result": {
+        "new_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "计划未引用该表，跳过"
+      }
+    },
+    {
+      "op": "TableSplit",
+      "result": {
+        "new_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "计划未引用该表，跳过"
+      }
+    },
+    {
+      "op": "HorizontalSplit",
+      "result": {
+        "new_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "计划未引用该表，跳过"
+      }
+    },
+    {
+      "op": "RedundantColumnAdd",
+      "result": {
+        "new_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "计划未引用目标表，跳过"
+      }
+    },
+    {
+      "op": "RedundantColumnAdd",
+      "result": {
+        "new_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "计划未引用目标表，跳过"
+      }
+    },
+    {
+      "op": "TableJoin",
+      "result": {
+        "new_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+        "original_total_cost": null,
+        "new_total_cost": null,
+        "delta": 0.0,
+        "note": "仅单表且 keep_old=True，成本不变"
+      }
+    }
+  ]
+}

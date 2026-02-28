@@ -1,0 +1,1 @@
+-> Count rows in product_regular_orders_tmp  (actual time=53.8..53.8 rows=1 loops=1)

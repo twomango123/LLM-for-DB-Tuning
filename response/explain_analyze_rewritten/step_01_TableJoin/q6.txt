@@ -1,0 +1,3 @@
+-> Limit: 1 row(s)  (cost=109285 rows=1) (actual time=426..426 rows=1 loops=1)
+    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=109285 rows=982529) (actual time=426..426 rows=1 loops=1)
+        -> Table scan on products  (cost=109285 rows=982529) (actual time=0.294..297 rows=999999 loops=1)

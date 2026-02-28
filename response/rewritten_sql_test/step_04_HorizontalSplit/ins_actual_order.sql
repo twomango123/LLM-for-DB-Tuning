@@ -1,0 +1,1 @@
+INSERT INTO (SELECT * FROM actual_orders_recent UNION ALL SELECT * FROM actual_orders_completed) AS actual_orders (order_status_code, regular_order_id, actual_order_date) VALUES ('NEW', (SELECT MAX(regular_order_id) FROM regular_orders), NOW())

@@ -8,6 +8,7 @@ import json
 import re
 import os
 import sys
+import time
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -221,6 +222,12 @@ class OpEvent:
 
 def _extract_join_pairs(sql: str, aliases: Dict[str, str]) -> List[Tuple[str, str]]:
     pairs: List[Tuple[str, str]] = []
+    # 预先收集 FROM/JOIN 出场顺序（用于 USING 的相邻配对）
+    seq: List[str] = []
+    for m in re.finditer(r"\b(?:FROM|JOIN)\s+(" + _Q_NAME + r")\s*(?:AS\s+)?(" + _Q_IDENT + r")?", sql, re.IGNORECASE):
+        base = _norm_table(m.group(1))
+        alias = _unquote_ident(m.group(2)) if m.group(2) else base
+        seq.append(alias)
     # ON a.b = c.d (only equality joins handled)
     for on in re.finditer(r"\bON\b(.+?)(?=\bJOIN\b|\bWHERE\b|\bGROUP\b|\bORDER\b|\)|$)", sql, re.IGNORECASE | re.DOTALL):
         frag = on.group(1)
@@ -235,6 +242,26 @@ def _extract_join_pairs(sql: str, aliases: Dict[str, str]) -> List[Tuple[str, st
             left = _unquote_ident(m.group(1).replace(" ", ""))
             right = _unquote_ident(m.group(2).replace(" ", ""))
             pairs.append((left, right))
+    # JOIN ... USING (col1, col2, ...) 近似处理：为 USING 中的每个列，在参与查询的表之间配对
+    # 优先使用别名（alias）；若无别名则退回基表名。
+    using_pat = re.compile(r"\bJOIN\s+(" + _Q_NAME + r")\s*(?:AS\s+)?(" + _Q_IDENT + r")?\s*USING\s*\(([^)]*)\)", re.IGNORECASE | re.DOTALL)
+    for m in using_pat.finditer(sql):
+        j_alias = _unquote_ident(m.group(2)) if m.group(2) else _norm_table(m.group(1))
+        cols_s = m.group(3) or ""
+        cols = [_unquote_ident(x.strip()) for x in cols_s.split(',') if x.strip()]
+        # 仅与“相邻前一个”表进行配对，减少过度分摊
+        try:
+            idx = [i for i, tok in enumerate(seq) if tok == j_alias]
+        except Exception:
+            idx = []
+        for pos in idx or []:
+            if pos <= 0:
+                continue
+            prev_alias = seq[pos - 1]
+            for c in cols:
+                left = f"{prev_alias}.{c}"
+                right = f"{j_alias}.{c}"
+                pairs.append((left, right))
     return pairs
 
 
@@ -266,7 +293,8 @@ def _extract_where_predicates(sql: str) -> List[Tuple[str, str]]:
     for p in parts:
         p = p.strip()
         # a.b >= 10  |  col like 'X%'
-        m2 = re.match(r"(" + _Q_IDENT + r"(?:\s*\.\s*" + _Q_IDENT + r")?)\s*(=|<>|!=|>=|<=|>|<|LIKE|NOT\s+LIKE|IN|NOT\s+IN|BETWEEN)\s*(.+)$", p, re.IGNORECASE)
+        # 修复别名.列 的正则：显式分组 (alias.col)|(col)
+        m2 = re.match(r"((?:" + _Q_IDENT + r")\s*\.\s*(?:" + _Q_IDENT + r")|(?:" + _Q_IDENT + r"))\s*(=|<>|!=|>=|<=|>|<|LIKE|NOT\s+LIKE|IN|NOT\s+IN|BETWEEN)\s*(.+)$", p, re.IGNORECASE)
         if not m2:
             continue
         lhs = _unquote_ident(m2.group(1).replace(" ", ""))
@@ -388,14 +416,13 @@ def _extract_operations_block(sql: str, schema: Dict[str, Dict[str, str]]) -> Li
         ops.append(OpEvent(table=lt, column=_unquote_ident(l_col), operation=f"join({_unquote_ident(r_col)})", join_partner=(rt, _unquote_ident(r_col))))
         ops.append(OpEvent(table=rt, column=_unquote_ident(r_col), operation=f"join({_unquote_ident(l_col)})", join_partner=(lt, _unquote_ident(l_col))))
 
-    # WHERE predicates (filters)
+    # WHERE predicates (filters) → now recorded as 'scan' operations
     for lhs, pred in _extract_where_predicates(sql):
         base_table = _resolve_table_for_column(lhs, aliases, schema)
         col = lhs.split(".")[-1]
         if base_table and col in schema.get(base_table, {}):
-            # operation 名含谓词，形如 filter(col = 'X')
-            op_text = f"filter({col} {pred})"
-            ops.append(OpEvent(table=base_table, column=col, operation=op_text, predicate=pred))
+            # 将原先的 filter 操作修改为 scan（仍保留 predicate 用于基数估计）
+            ops.append(OpEvent(table=base_table, column=col, operation="scan", predicate=pred))
 
     # ORDER BY
     for tok in _extract_order_group(sql, "ORDER"):
@@ -607,6 +634,39 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
 
     total_avg = 0.0
     total_excl = 0.0
+
+    # 置信度加权（可通过环境变量调整）
+    def _f(name: str, default: float) -> float:
+        try:
+            v = os.environ.get(name)
+            return float(v) if v is not None and str(v).strip() != '' else default
+        except Exception:
+            return default
+    W_JOIN_EQ = _f('PART2_W_JOIN_EQ', 1.0)
+    W_JOIN_GENERIC = _f('PART2_W_JOIN_GENERIC', 0.6)
+    W_FILTER_COLUMN = _f('PART2_W_FILTER_COLUMN', 0.6)
+    W_FILTER_GLOBAL = _f('PART2_W_FILTER_GLOBAL', 0.3)
+    W_SCAN_GENERIC = _f('PART2_W_SCAN_GENERIC', 1.0)
+
+    # 从算子文本中提取可能出现的别名/表名，限制回退分摊范围
+    def _tables_in_text(text: str) -> Set[str]:
+        found: Set[str] = set()
+        s = text or ''
+        # 优先匹配别名
+        for alias, base in aliases.items():
+            try:
+                if re.search(r"\b" + re.escape(alias) + r"\b", s):
+                    found.add(base)
+            except re.error:
+                continue
+        # 再匹配基表名
+        for base in set(aliases.values()):
+            try:
+                if re.search(r"\b" + re.escape(base) + r"\b", s):
+                    found.add(base)
+            except re.error:
+                continue
+        return found
     matched = 0
     for n in nodes:
         optext = (n.get("text") or n.get("op") or "").strip()
@@ -624,7 +684,10 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
             pass
         low = optext.lower()
 
-        # 1) Filters (含连接条件)：优先将等值条件归因到 join(col)，否则归因到 filter()/select
+        # 1) Filters (含连接条件)：多级回退，尽量归因
+        #    级别1（最准确）：等值条件 -> 两侧 join(col)
+        #    级别2：非连接谓词中出现的列 -> 对应列的 scan
+        #    级别3：仍无法定位 -> 将时间均分到本 SQL 的所有 scan 操作
         if "filter" in low or " where " in low or low.startswith("filter"):
             # 1a) 先尝试识别 a.b = c.d 作为连接条件，分摊到两侧 join 操作
             eq_pairs = _extract_ident_pairs_from_text(optext)
@@ -643,24 +706,36 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
                             if any_join:
                                 key = (base_table, col, any_join)
                         if key in ops_present:
-                            per_key_time[key] = per_key_time.get(key, 0.0) + float(avg_time) / 2.0
+                            per_key_time[key] = per_key_time.get(key, 0.0) + (float(avg_time) * W_JOIN_EQ) / 2.0
                 continue
 
-            # 1b) 非连接谓词：按列归因到 filter(…)，否则回退到 select
-            cols = _extract_column_tokens(optext)
-            # Fallback: 用原始 SQL 的 WHERE 列集合
-            if not cols:
-                for lhs, _pred in _extract_where_predicates(sql):
-                    cols.append(lhs)
-            for tok in cols:
+            # 1b) 非连接谓词：将时间按出现的列分摊到对应表列的 scan
+            toks = _extract_column_tokens(optext)  # alias.col 近似提取
+            scan_targets: List[Tuple[str, str, str]] = []
+            for tok in toks:
                 base_table = _resolve_table_for_column(tok, aliases, schema)
                 col = tok.split(".")[-1]
-                if not base_table:
-                    continue
-                filter_key = next((k for k in ops_present if k[0] == base_table and k[1] == col and isinstance(k[2], str) and k[2].startswith("filter(")), None)
-                key = filter_key if filter_key else (base_table, col, "select")
-                if key in ops_present:
-                    per_key_time[key] = per_key_time.get(key, 0.0) + float(avg_time)
+                key = (base_table, col, "scan") if base_table else None
+                if key and key in ops_present:
+                    scan_targets.append(key)
+            if scan_targets:
+                share = (float(avg_time) * W_FILTER_COLUMN) / float(len(scan_targets))
+                for key in scan_targets:
+                    per_key_time[key] = per_key_time.get(key, 0.0) + share
+                continue
+
+            # 1c) 兜底：仅在文本中无法识别表时，才对“相关表”的 scan 做均分；仍无法定位则缩小为全局 scan 且较低权重
+            rel_tables = _tables_in_text(optext)
+            any_scans = [
+                (e.table, e.column, e.operation)
+                for e in evt_list
+                if e.operation == "scan" and (not rel_tables or e.table in rel_tables)
+            ]
+            if any_scans:
+                share = (float(avg_time) * W_FILTER_GLOBAL) / float(len(any_scans))
+                for key in any_scans:
+                    if key in ops_present:
+                        per_key_time[key] = per_key_time.get(key, 0.0) + share
             continue
 
         # 2) Sort: distribute to ORDER BY columns present in this SQL
@@ -681,36 +756,57 @@ def _attribute_costs_for_sql(sql: str, nodes: List[Dict[str, Any]], schema: Dict
                         per_key_time[key] = per_key_time.get(key, 0.0) + share
             continue
 
-        # 4) Join/Lookup/Hash: try to attribute using equality pairs a.b = c.d
+        # 4) Join/Lookup/Hash: 分层归因
+        #    级别1：使用等值列对 a.b = c.d 归因到具体 join(col)
+        #    级别2：若未识别到列对，将该节点时间均分到本 SQL 的所有 join(...) 操作
         if "join" in low or "nested loop" in low or "lookup" in low or "index lookup" in low or "hash join" in low:
-            for left, right in _extract_ident_pairs_from_text(optext):
-                for tok in (left, right):
-                    base_table = _resolve_table_for_column(tok, aliases, schema)
-                    col = tok.split(".")[-1]
-                    if not base_table:
-                        continue
-                    key = (base_table, col, "join(" + (right.split(".")[-1] if tok == left else left.split(".")[-1]) + ")")
-                    # 放宽：如果具体右列名不匹配，至少按 join(*) 归集
-                    if key not in ops_present:
-                        # Fallback to any join(*) op in this SQL
-                        any_join_key = (base_table, col, next((e.operation for e in evt_list if e.table == base_table and e.column == col and e.operation.startswith("join(")), None))
-                        if any_join_key[2]:
-                            key = any_join_key  # type: ignore
+            eqs = _extract_ident_pairs_from_text(optext)
+            if eqs:
+                for left, right in eqs:
+                    for tok in (left, right):
+                        base_table = _resolve_table_for_column(tok, aliases, schema)
+                        col = tok.split(".")[-1]
+                        if not base_table:
+                            continue
+                        key = (base_table, col, "join(" + (right.split(".")[-1] if tok == left else left.split(".")[-1]) + ")")
+                        if key not in ops_present:
+                            any_join_key = (base_table, col, next((e.operation for e in evt_list if e.table == base_table and e.column == col and e.operation.startswith("join(")), None))
+                            if any_join_key[2]:
+                                key = any_join_key  # type: ignore
+                        if key in ops_present:
+                            per_key_time[key] = per_key_time.get(key, 0.0) + (float(avg_time) * W_JOIN_EQ) / 2.0
+                continue
+            # 级别2：没有等值列对时，均分到“相关表”的 join(col)
+            rel_tables = _tables_in_text(optext)
+            join_targets = [
+                (e.table, e.column, e.operation)
+                for e in evt_list
+                if e.operation.startswith("join(") and (not rel_tables or e.table in rel_tables)
+            ]
+            if join_targets:
+                share = (float(avg_time) * W_JOIN_GENERIC) / float(len(join_targets))
+                for key in join_targets:
                     if key in ops_present:
-                        per_key_time[key] = per_key_time.get(key, 0.0) + float(avg_time) / 2.0  # split between two sides
-            continue
+                        per_key_time[key] = per_key_time.get(key, 0.0) + share
+                continue
 
-        # 5) Table scan on <table>: attribute to that table's involved columns in this SQL
-        m_scan = re.search(r"table\s+scan\s+on\s+(`?[A-Za-z0-9_]+`?)", optext, re.IGNORECASE)
+        # 5) Table scan / lookup on <table>: attribute to that table's scan columns
+        # 覆盖更多 MySQL 文案：index lookup/range scan/full table scan
+        m_scan = re.search(r"\b(?:index\s+lookup|index\s+range\s+scan|range\s+scan|full\s+table\s+scan|table\s+scan|scan|lookup)\s+on\s+(`?[A-Za-z0-9_]+`?)", optext, re.IGNORECASE)
         if m_scan:
             tbl = _norm_table(m_scan.group(1))
-            # 该表在本 SQL 的相关列（优先 filter/join，再到 group/order）
-            related = [(e.table, e.column, e.operation) for e in evt_list if e.table == tbl and (e.operation.startswith("filter(") or e.operation.startswith("join(") or e.operation in ("group by", "order by"))]
+            # 仅将 scan 耗时分配给该表的 'scan' 列操作（来自 WHERE 谓词）
+            related = [
+                (e.table, e.column, e.operation)
+                for e in evt_list
+                if e.table == tbl and e.operation == "scan"
+            ]
             if related:
-                share = float(avg_time) / float(len(related))
+                share = (float(avg_time) * W_SCAN_GENERIC) / float(len(related))
                 for key in related:
                     if key in ops_present:
                         per_key_time[key] = per_key_time.get(key, 0.0) + share
+            # 若没有相关 scan 目标，则不做表级兜底分摊，避免误分摊
             continue
 
         # 5) Insert/Update: attribute to involved columns evenly
@@ -742,6 +838,7 @@ def _aggregate_operations(
     debug: bool = False,
     debug_dir: Optional[str] = None,
     exec_counts: Optional[Dict[str, int]] = None,
+    dml_cache_by_basename: Optional[Dict[str, List[Dict[str, Any]]]] = None,
 ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
     # stats: (table, column, operation) -> {count, sum_time, rows, filtered}
     stats: Dict[Tuple[str, str, str], Dict[str, Any]] = {}
@@ -749,6 +846,10 @@ def _aggregate_operations(
     index_map: List[Dict[str, Any]] = []
     # 表级 DML 计数（insert/update），按 SQL 执行频率加权
     table_dml_counts: Dict[str, Dict[str, int]] = {}
+    # 表级 DML 计时累积（秒）：{table: {"insert": sum_time_s, "update": sum_time_s}}
+    table_dml_times: Dict[str, Dict[str, float]] = {}
+    # 表级 JOIN 计数：table -> other_table -> {count: int, pairs: set[(col, other_col)]}
+    table_join_counts: Dict[str, Dict[str, Dict[str, Any]]] = {}
     # 调试：记录每条 SQL 的 DML 命中（表级）
     dml_hits: List[Dict[str, Any]] = []
     for qid, sql, path in queries:
@@ -807,6 +908,44 @@ def _aggregate_operations(
                 per_key_time = {}
         else:
             per_key_time = {}
+
+        # ---------------------- DML 计时（来自缓存文件），仅对 INSERT/UPDATE ----------------------
+        if is_dml and dml_cache_by_basename is not None:
+            base = os.path.basename(path)
+            mult = int((exec_counts or {}).get(base, 1))
+            cache_entries = dml_cache_by_basename.get(base) or []
+            for ent in cache_entries:
+                typ = str(ent.get("type") or "").upper()
+                tname = str(ent.get("table") or "")
+                eff_s = None
+                try:
+                    if ent.get("effective_time_s") is not None:
+                        eff_s = float(ent.get("effective_time_s"))
+                    else:
+                        # 回退：exec_time_s - where_select_time_s
+                        et = float(ent.get("exec_time_s") or 0.0)
+                        wt = float(ent.get("where_select_time_s") or 0.0)
+                        eff_s = max(0.0, et - wt)
+                except Exception:
+                    eff_s = None
+                if not tname or eff_s is None:
+                    continue
+                if typ == "UPDATE":
+                    cols = ent.get("columns") or []
+                    cols = [ _unquote_ident(str(c)) for c in cols ]
+                    if cols:
+                        per_col = eff_s / max(1, len(cols))
+                        for c in cols:
+                            key = (tname, c, "update")
+                            if key not in stats:
+                                stats[key] = {"count": 0, "sum_time": 0.0, "rows": None, "filtered": None}
+                            stats[key]["sum_time"] = float(stats[key].get("sum_time") or 0.0) + per_col * mult
+                    # 表级时间累计
+                    tm2 = table_dml_times.setdefault(tname, {})
+                    tm2["update"] = float(tm2.get("update") or 0.0) + eff_s * mult
+                elif typ in ("INSERT", "REPLACE"):
+                    tm = table_dml_times.setdefault(tname, {})
+                    tm["insert"] = float(tm.get("insert") or 0.0) + float(eff_s) * mult
         # Update counts and sum_time per SQL (count only once per key per SQL)
         # 对本条 SQL 命中的每个列操作，仅计一次；其出现次数按“该 SQL 的执行频率”加权
         base = os.path.basename(path)
@@ -819,6 +958,33 @@ def _aggregate_operations(
             stats[key]["count"] += mult
             if key in per_key_time:
                 stats[key]["sum_time"] += float(per_key_time[key]) * mult
+
+        # ---- 表级 JOIN 聚合：对同一条 SQL 的同一“表对”仅计一次；记录列对集合 ----
+        join_pairs_per_sql: Dict[Tuple[str, str], Set[Tuple[str, str]]] = {}
+        for e in ops:
+            if not (e.operation.startswith("join(") and e.join_partner):
+                continue
+            t1, c1 = e.table, _unquote_ident(e.column)
+            t2, c2 = e.join_partner
+            # 规范化表对顺序，避免双向重复
+            if t1 <= t2:
+                key_tb = (t1, t2)
+                pair = (c1, _unquote_ident(c2))
+            else:
+                key_tb = (t2, t1)
+                pair = (_unquote_ident(c2), c1)
+            join_pairs_per_sql.setdefault(key_tb, set()).add(pair)
+        # 将本 SQL 的表对聚合到全局（按执行次数加权）
+        for (a, b), pairs in join_pairs_per_sql.items():
+            a_map = table_join_counts.setdefault(a, {})
+            b_map = table_join_counts.setdefault(b, {})
+            a_entry = a_map.setdefault(b, {"count": 0, "pairs": set()})
+            b_entry = b_map.setdefault(a, {"count": 0, "pairs": set()})
+            a_entry["count"] = int(a_entry.get("count", 0)) + mult
+            b_entry["count"] = int(b_entry.get("count", 0)) + mult
+            a_entry["pairs"].update(pairs)
+            # 对称加入（交换列顺序）
+            b_entry["pairs"].update({(y, x) for (x, y) in pairs})
 
         # 表级 DML：基于 SQL 中识别到的 INSERT/UPDATE 表集合进行累计
         try:
@@ -842,22 +1008,18 @@ def _aggregate_operations(
                 "update_tables": sorted(list(upd_tbls)),
             })
 
-    # initialize result with all tables/columns to ensure 字段长度 可插入
-    result: Dict[str, Dict[str, List[Dict[str, Any]]]] = {
-        t: {c: [] for c in cols.keys()} for t, cols in schema.items()
-    }
+    # initialize result lazily: 仅包含出现过列级操作的列
+    result: Dict[str, Dict[str, List[Dict[str, Any]]]] = {}
     # fill in operations
     for (table, column, op), info in stats.items():
         rows_val = info.get("rows")
         if rows_val is None:
             rows_val = 1
-        # 跳过 DML 的列级输出：insert/update 都不在列级展示（表级统计见下）
+        # 跳过 INSERT 的列级输出；UPDATE 现在改为列级展示
         if op == "insert":
             continue
-        if op == "update":
-            continue
         cnt = int(info.get("count") or 0)
-        # 其它操作保持 rows/avg_time/count 输出
+        # 其它操作保持 rows/avg_time/count 输出，并增加 sum_time_ms（来自 EXPLAIN 归因）
         item = {
             "operation": op,
             "rows": rows_val if isinstance(rows_val, (int, float)) else 1,
@@ -869,14 +1031,49 @@ def _aggregate_operations(
             avg_time_ms = avg_time_s * 1000.0
             item["avg_time"] = avg_time_ms
             item["count"] = cnt
+            # 直接输出由 EXPLAIN 归因得到的总时间（毫秒），避免使用 avg*count 近似
+            try:
+                item["sum_time_ms"] = float(info.get("sum_time") or 0.0) * 1000.0
+                # cost 定义为 avg_time*count，与 sum_time_ms 等价
+                item["cost"] = item["sum_time_ms"]
+            except Exception:
+                pass
         result.setdefault(table, {}).setdefault(column, []).append(item)
-    # 在表级别挂接 DML 计数
+    # 在表级别挂接 DML 计数与（若可用）平均耗时/成本
     for t in schema.keys():
         dml = table_dml_counts.get(t) or {}
+        t_times = table_dml_times.get(t) or {}
         if dml.get("insert"):
-            result.setdefault(t, {})["insert"] = {"count": int(dml["insert"]) }
+            entry = {"count": int(dml["insert"]) }
+            if "insert" in t_times and dml["insert"] > 0:
+                avg_ms = (float(t_times["insert"]) / float(dml["insert"])) * 1000.0
+                entry["avg_time"] = avg_ms
+                entry["cost"] = avg_ms * int(dml["insert"])  # 成本 = 平均耗时 * 次数
+            result.setdefault(t, {})["insert"] = entry
         if dml.get("update"):
-            result.setdefault(t, {})["update"] = {"count": int(dml["update"]) }
+            entry = {"count": int(dml["update"]) }
+            if "update" in t_times and dml["update"] > 0:
+                avg_ms = (float(t_times["update"]) / float(dml["update"])) * 1000.0
+                entry["avg_time"] = avg_ms
+                entry["cost"] = avg_ms * int(dml["update"])  # 成本 = 平均耗时 * 次数
+            result.setdefault(t, {})["update"] = entry
+
+    # 在表级别挂接 JOIN 计数：
+    # result[table]["join"] = [{"table": other, "count": N, "pairs": [[col, other_col], ...]}, ...]
+    if table_join_counts:
+        for t, neighbors in table_join_counts.items():
+            items: List[Dict[str, Any]] = []
+            for other, entry in neighbors.items():
+                pairs = sorted(list(entry.get("pairs") or []))
+                items.append({
+                    "table": other,
+                    "count": int(entry.get("count", 0) or 0),
+                    "pairs": [[a, b] for (a, b) in pairs],
+                })
+            # 稳定排序：count desc, table asc
+            items.sort(key=lambda x: (-int(x.get("count", 0) or 0), str(x.get("table", ""))))
+            if items:
+                result.setdefault(t, {})["join"] = items
 
     # 调试：输出表级 DML 计数与逐 SQL 命中
     if debug:
@@ -888,10 +1085,12 @@ def _aggregate_operations(
         except Exception:
             pass
 
-    # sort operations per column deterministically
+    # sort operations per column deterministically；同时对表级 join 列表排序
     for t, cols in result.items():
-        for c, arr in cols.items():
-            if isinstance(arr, list):
+        for c, arr in list(cols.items()):
+            if c == "join" and isinstance(arr, list):
+                arr.sort(key=lambda x: (-int(x.get("count", 0) or 0), str(x.get("table", ""))))
+            elif isinstance(arr, list):
                 arr.sort(key=lambda x: (x.get("operation", ""), str(x.get("rows", 0))))
     return result
 
@@ -1084,7 +1283,8 @@ def build_part2(schema_sql_path: str, sql_dir: str,
                 config_path: Optional[str] = None,
                 debug: bool = False,
                 debug_dir: Optional[str] = None,
-                exec_counts_path: Optional[str] = None) -> str:
+                exec_counts_path: Optional[str] = None,
+                dml_time_cache: Optional[str] = None) -> str:
     # Load schema
     tables = parse_schema(schema_sql_path)
     if not tables:
@@ -1105,57 +1305,65 @@ def build_part2(schema_sql_path: str, sql_dir: str,
         password = cfg.get("password", password)
         database = cfg.get("database", database)
 
-    # Optional estimator for rows (best-effort)
+    # Optional estimator for rows (best-effort); 若无法连接，返回 None
     estimator = _maybe_build_estimator(dialect, host, port, user, password, database)
 
-    # 字段长度估算（必须连接 MySQL，无法连接则报错）
-    col_driver = _connect_mysql_driver(dialect, host, port, user, password, database)
-    if ColumnLengthEstimator is None:
-        try:
-            col_driver.disconnect()
-        except Exception:
-            pass
-        raise SystemExit("缺少字段长度估算器模块 column_stats.estimator")
-    length_est = ColumnLengthEstimator(col_driver)
-    lengths_by_table: Dict[str, Dict[str, int]] = {}
-    for t in tables.keys():
-        try:
-            stats = length_est.estimate_table(t)
-            lengths_by_table[t] = {col: int(round(info.get("length", 0))) for col, info in stats.items()}
-        except Exception as e:
-            try:
-                col_driver.disconnect()
-            except Exception:
-                pass
-            raise SystemExit(f"字段长度估算失败（{t}）：{e}")
-
-    # 聚合操作
-    # 构建用于 EXPLAIN ANALYZE 的连接（与字段长度共用一个驱动即可）
-    analyze_driver = col_driver
+    # 用于 EXPLAIN ANALYZE 的连接：若已构造 estimator，则复用其内部驱动；否则置为 None（跳过 EXPLAIN）
+    analyze_driver = getattr(estimator, 'db', None)
     # 加载 DML 执行次数映射，用于 INSERT/UPDATE 的 count
     # 执行频率/次数：先加载 float，再按总轮次规范化为整数次数
     exec_counts_float = _load_exec_counts(exec_counts_path)
     exec_counts = _normalize_exec_counts(exec_counts_float)
 
-    mapping = _aggregate_operations(tables, queries, lat_map, estimator, analyze_driver, debug=debug, debug_dir=debug_dir, exec_counts=exec_counts)
+    # 读取可复用的 DML 计时缓存（可选）
+    dml_cache_by_basename: Optional[Dict[str, List[Dict[str, Any]]]] = None
+    try:
+        cache_path = dml_time_cache
+        if cache_path:
+            p = Path(cache_path)
+            if p.exists():
+                raw = json.loads(p.read_text(encoding="utf-8"))
+                # 期望结构：{
+                #   "entries": [
+                #       {"filename": "upd_xxx.sql", "type": "UPDATE", "table": "t", "columns": [..], "exec_time_s": 0.01, "where_select_time_s": 0.004, "effective_time_s": 0.006},
+                #       ...
+                #   ]
+                # }
+                entries = raw.get("entries") if isinstance(raw, dict) else None
+                if isinstance(entries, list):
+                    dml_cache_by_basename = {}
+                    for e in entries:
+                        try:
+                            fn = os.path.basename(str(e.get("filename") or "").strip())
+                            if not fn:
+                                continue
+                            dml_cache_by_basename.setdefault(fn, []).append(e)
+                        except Exception:
+                            pass
+    except Exception:
+        dml_cache_by_basename = None
 
-    # 将 字段长度 插入到每个列的列表首位；没有操作的列也要输出
-    for t, cols in tables.items():
-        for c in cols.keys():
-            arr = mapping.setdefault(t, {}).setdefault(c, [])
-            length_val = lengths_by_table.get(t, {}).get(c, 0)
-            # 仅在未插入过时添加（避免重复）
-            if not arr or (arr and "字段长度" not in arr[0]):
-                arr.insert(0, {"字段长度": length_val})
+    mapping = _aggregate_operations(
+        tables,
+        queries,
+        lat_map,
+        estimator,
+        analyze_driver,
+        debug=debug,
+        debug_dir=debug_dir,
+        exec_counts=exec_counts,
+        dml_cache_by_basename=dml_cache_by_basename,
+    )
 
     # 在每个表级别增加 表行数 字段（使用 INFORMATION_SCHEMA 估算）
     try:
-        table_rows_map = _fetch_table_rows(col_driver, database, list(tables.keys()))
-        # 将表行数挂到 mapping[t]["表行数"]，并将列仍保持为列表
-        for t in list(mapping.keys()):
-            # 确保表存在
-            mapping.setdefault(t, {})
-            mapping[t]["表行数"] = int(table_rows_map.get(t, 0) or 0)
+        if analyze_driver is not None and database:
+            table_rows_map = _fetch_table_rows(analyze_driver, database, list(tables.keys()))
+            for t in list(mapping.keys()):
+                mapping.setdefault(t, {})
+                mapping[t]["表行数"] = int(table_rows_map.get(t, 0) or 0)
+        else:
+            raise RuntimeError("no-db")
     except Exception:
         for t in list(mapping.keys()):
             mapping.setdefault(t, {})
@@ -1165,10 +1373,6 @@ def build_part2(schema_sql_path: str, sql_dir: str,
     try:
         if estimator is not None and hasattr(estimator, "db") and hasattr(estimator.db, "disconnect"):
             estimator.db.disconnect()
-    except Exception:
-        pass
-    try:
-        col_driver.disconnect()
     except Exception:
         pass
 
@@ -1206,6 +1410,7 @@ def main() -> None:
     ap.add_argument("--debug", action="store_true", help="开启调试输出（保存 EXPLAIN 文本、节点与归因）")
     ap.add_argument("--debug-dir", default=str(Path(_ROOT_DIR) / "debug" / "part2"), help="调试输出目录")
     ap.add_argument("--exec-counts", default=str(Path(_ROOT_DIR) / "Data" / "cleaned_sql" / "query_and_update" / "sample_execution_counts_chbench.csv"), help="执行次数 CSV（filename,count）")
+    ap.add_argument("--dml-time-cache", default=str(Path(_ROOT_DIR) / "debug" / "part2" / "dml_time_cache.json"), help="DML 计时缓存 JSON 路径（由 dml_timer.py 生成），可复用 INSERT/UPDATE 的 avg_time 成本。")
     args = ap.parse_args()
 
     content = build_part2(
@@ -1221,6 +1426,7 @@ def main() -> None:
         debug=args.debug,
         debug_dir=args.debug_dir,
         exec_counts_path=args.exec_counts,
+        dml_time_cache=args.dml_time_cache,
     )
     if args.out:
         Path(args.out).write_text(content, encoding="utf-8")

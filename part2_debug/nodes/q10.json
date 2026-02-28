@@ -1,0 +1,50 @@
+[
+  {
+    "op": "Nested loop antijoin",
+    "actual_time": 939.0,
+    "avg_time": 939.0,
+    "exclusive_time": 631.999466,
+    "loops": 1.0,
+    "rows": 989999.0
+  },
+  {
+    "op": "Table scan on addresses",
+    "actual_time": 307.0,
+    "avg_time": 307.0,
+    "exclusive_time": 307.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  },
+  {
+    "op": "Single-row index lookup on <subquery2> using <auto_distinct_key>",
+    "actual_time": 0.000534,
+    "avg_time": 5.340005340005339e-10,
+    "exclusive_time": 0.0,
+    "loops": 999999.0,
+    "rows": 0.01
+  },
+  {
+    "op": "Materialize with deduplication",
+    "actual_time": 276.0,
+    "avg_time": 276.0,
+    "exclusive_time": 112.0,
+    "loops": 1.0,
+    "rows": 10000.0
+  },
+  {
+    "op": "Filter:",
+    "actual_time": 164.0,
+    "avg_time": 164.0,
+    "exclusive_time": 48.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  },
+  {
+    "op": "Covering index scan on employees using employee_address_id",
+    "actual_time": 116.0,
+    "avg_time": 116.0,
+    "exclusive_time": 116.0,
+    "loops": 1.0,
+    "rows": 999999.0
+  }
+]

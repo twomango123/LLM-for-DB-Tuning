@@ -1,0 +1,7 @@
+-> Limit: 1 row(s)  (actual time=658..658 rows=1 loops=1)
+    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=658..658 rows=1 loops=1)
+        -> Stream results  (cost=1.29e+6 rows=10007) (actual time=0.202..656 rows=10001 loops=1)
+            -> Group aggregate: count(0)  (cost=1.29e+6 rows=10007) (actual time=0.197..654 rows=10001 loops=1)
+                -> Nested loop inner join  (cost=1.19e+6 rows=998468) (actual time=0.122..609 rows=1e+6 loops=1)
+                    -> Covering index scan on t2 using product_id  (cost=100509 rows=998468) (actual time=0.0901..390 rows=1e+6 loops=1)
+                    -> Single-row index lookup on t1 using PRIMARY (product_id=t2.product_id)  (cost=0.995 rows=1) (actual time=83.8e-6..105e-6 rows=1 loops=1e+6)

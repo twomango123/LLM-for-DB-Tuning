@@ -1,0 +1,1170 @@
+{
+  "q1.txt": {
+    "final_plan_text": "-> Filter: (actual_orders.order_status_code = 'Success')  (cost=201999 rows=197576) (actual time=289..289 rows=0 loops=1)\n    -> Table scan on actual_orders  (cost=326307 rows=1.97576e+06) (actual time=1.14..232 rows=1e+6 loops=1)",
+    "before_total_cost": 201930.0,
+    "after_total_cost": 528306.0,
+    "delta": 326376.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Filter: (actual_orders.order_status_code = 'Success')  (cost=201999 rows=197576) (actual time=289..289 rows=0 loops=1)\n    -> Table scan on actual_orders  (cost=326307 rows=1.97576e+06) (actual time=1.14..232 rows=1e+6 loops=1)",
+          "original_total_cost": 201930.0,
+          "new_total_cost": 528306.076781755,
+          "delta": 326376.07678175496,
+          "note": "仅使用 actual_orders，按新表行数/行宽缩放"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Filter: (actual_orders.order_status_code = 'Success')  (cost=201999 rows=197576) (actual time=289..289 rows=0 loops=1)\n    -> Table scan on actual_orders  (cost=326307 rows=1.97576e+06) (actual time=1.14..232 rows=1e+6 loops=1)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Filter: (actual_orders.order_status_code = 'Success')  (cost=201999 rows=197576) (actual time=289..289 rows=0 loops=1)\n    -> Table scan on actual_orders  (cost=326307 rows=1.97576e+06) (actual time=1.14..232 rows=1e+6 loops=1)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Filter: (actual_orders.order_status_code = 'Success')  (cost=201999 rows=197576) (actual time=289..289 rows=0 loops=1)\n    -> Table scan on actual_orders  (cost=326307 rows=1.97576e+06) (actual time=1.14..232 rows=1e+6 loops=1)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Filter: (actual_orders.order_status_code = 'Success')  (cost=201999 rows=197576) (actual time=289..289 rows=0 loops=1)\n    -> Table scan on actual_orders  (cost=326307 rows=1.97576e+06) (actual time=1.14..232 rows=1e+6 loops=1)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Filter: (actual_orders.order_status_code = 'Success')  (cost=201999 rows=197576) (actual time=289..289 rows=0 loops=1)\n    -> Table scan on actual_orders  (cost=326307 rows=1.97576e+06) (actual time=1.14..232 rows=1e+6 loops=1)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q10.txt": {
+    "final_plan_text": "-> Nested loop antijoin  (cost=1.8989e+12 rows=1.8989e+12) (actual time=282..946 rows=990000 loops=1)\n    -> Table scan on addresses  (cost=242149 rows=1.92909e+06) (actual time=0.0559..311 rows=1e+6 loops=1)\n    -> Single-row index lookup on <subquery2> using <auto_distinct_key> (employee_address_id=addresses.address_id)  (cost=198781..198781 rows=1) (actual time=536e-6..536e-6 rows=0.01 loops=1e+6)  (cost=0 rows=0.01)\n        -> Materialize with deduplication  (cost=198781..198781 rows=984768) (actual time=276..276 rows=10000 loops=1)  (cost=0 rows=10000)\n            -> Filter: (employees.employee_address_id is not null)  (cost=100304 rows=984768) (actual time=0.985..165 rows=999999 loops=1)\n                -> Covering index scan on employees using employee_address_id  (cost=100304 rows=984768) (actual time=0.984..116 rows=999999 loops=1)",
+    "before_total_cost": 94100306555.00053,
+    "after_total_cost": 1898900442757.0,
+    "delta": 1804800136201.9995,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Nested loop antijoin  (cost=94.1e+9 rows=941e+9) (actual time=282..946 rows=990000 loops=1)\n    -> Table scan on addresses  (cost=105671 rows=955963) (actual time=0.0559..311 rows=1e+6 loops=1)\n    -> Single-row index lookup on <subquery2> using <auto_distinct_key> (employee_address_id=addresses.address_id)  (cost=198781..198781 rows=1) (actual time=536e-6..536e-6 rows=0.01 loops=1e+6)\n        -> Materialize with deduplication  (cost=198781..198781 rows=984768) (actual time=276..276 rows=10000 loops=1)\n            -> Filter: (employees.employee_address_id is not null)  (cost=100304 rows=984768) (actual time=0.985..165 rows=999999 loops=1)\n                -> Covering index scan on employees using employee_address_id  (cost=100304 rows=984768) (actual time=0.984..116 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Nested loop antijoin  (cost=94.1e+9 rows=941e+9) (actual time=282..946 rows=990000 loops=1)\n    -> Table scan on addresses  (cost=105671 rows=955963) (actual time=0.0559..311 rows=1e+6 loops=1)\n    -> Single-row index lookup on <subquery2> using <auto_distinct_key> (employee_address_id=addresses.address_id)  (cost=198781..198781 rows=1) (actual time=536e-6..536e-6 rows=0.01 loops=1e+6)\n        -> Materialize with deduplication  (cost=198781..198781 rows=984768) (actual time=276..276 rows=10000 loops=1)\n            -> Filter: (employees.employee_address_id is not null)  (cost=100304 rows=984768) (actual time=0.985..165 rows=999999 loops=1)\n                -> Covering index scan on employees using employee_address_id  (cost=100304 rows=984768) (actual time=0.984..116 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Nested loop antijoin  (cost=1.8989e+12 rows=1.8989e+12) (actual time=282..946 rows=990000 loops=1)\n    -> Table scan on addresses  (cost=242149 rows=1.92909e+06) (actual time=0.0559..311 rows=1e+6 loops=1)\n    -> Single-row index lookup on <subquery2> using <auto_distinct_key> (employee_address_id=addresses.address_id)  (cost=198781..198781 rows=1) (actual time=536e-6..536e-6 rows=0.01 loops=1e+6)  (cost=0 rows=0.01)\n        -> Materialize with deduplication  (cost=198781..198781 rows=984768) (actual time=276..276 rows=10000 loops=1)  (cost=0 rows=10000)\n            -> Filter: (employees.employee_address_id is not null)  (cost=100304 rows=984768) (actual time=0.985..165 rows=999999 loops=1)\n                -> Covering index scan on employees using employee_address_id  (cost=100304 rows=984768) (actual time=0.984..116 rows=999999 loops=1)",
+          "original_total_cost": 94100306279.0,
+          "new_total_cost": 1898899875002.8777,
+          "delta": 1804799568723.8777,
+          "note": "仅使用 addresses，按新表行数/行宽缩放"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Nested loop antijoin  (cost=1.8989e+12 rows=1.8989e+12) (actual time=282..946 rows=990000 loops=1)\n    -> Table scan on addresses  (cost=242149 rows=1.92909e+06) (actual time=0.0559..311 rows=1e+6 loops=1)\n    -> Single-row index lookup on <subquery2> using <auto_distinct_key> (employee_address_id=addresses.address_id)  (cost=198781..198781 rows=1) (actual time=536e-6..536e-6 rows=0.01 loops=1e+6)  (cost=0 rows=0.01)\n        -> Materialize with deduplication  (cost=198781..198781 rows=984768) (actual time=276..276 rows=10000 loops=1)  (cost=0 rows=10000)\n            -> Filter: (employees.employee_address_id is not null)  (cost=100304 rows=984768) (actual time=0.985..165 rows=999999 loops=1)\n                -> Covering index scan on employees using employee_address_id  (cost=100304 rows=984768) (actual time=0.984..116 rows=999999 loops=1)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Nested loop antijoin  (cost=1.8989e+12 rows=1.8989e+12) (actual time=282..946 rows=990000 loops=1)\n    -> Table scan on addresses  (cost=242149 rows=1.92909e+06) (actual time=0.0559..311 rows=1e+6 loops=1)\n    -> Single-row index lookup on <subquery2> using <auto_distinct_key> (employee_address_id=addresses.address_id)  (cost=198781..198781 rows=1) (actual time=536e-6..536e-6 rows=0.01 loops=1e+6)  (cost=0 rows=0.01)\n        -> Materialize with deduplication  (cost=198781..198781 rows=984768) (actual time=276..276 rows=10000 loops=1)  (cost=0 rows=10000)\n            -> Filter: (employees.employee_address_id is not null)  (cost=100304 rows=984768) (actual time=0.985..165 rows=999999 loops=1)\n                -> Covering index scan on employees using employee_address_id  (cost=100304 rows=984768) (actual time=0.984..116 rows=999999 loops=1)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Nested loop antijoin  (cost=1.8989e+12 rows=1.8989e+12) (actual time=282..946 rows=990000 loops=1)\n    -> Table scan on addresses  (cost=242149 rows=1.92909e+06) (actual time=0.0559..311 rows=1e+6 loops=1)\n    -> Single-row index lookup on <subquery2> using <auto_distinct_key> (employee_address_id=addresses.address_id)  (cost=198781..198781 rows=1) (actual time=536e-6..536e-6 rows=0.01 loops=1e+6)  (cost=0 rows=0.01)\n        -> Materialize with deduplication  (cost=198781..198781 rows=984768) (actual time=276..276 rows=10000 loops=1)  (cost=0 rows=10000)\n            -> Filter: (employees.employee_address_id is not null)  (cost=100304 rows=984768) (actual time=0.985..165 rows=999999 loops=1)\n                -> Covering index scan on employees using employee_address_id  (cost=100304 rows=984768) (actual time=0.984..116 rows=999999 loops=1)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q11.txt": {
+    "final_plan_text": "-> Sort: customers.date_became_customer  (cost=101814 rows=998586) (actual time=551..589 rows=1e+6 loops=1)\n    -> Table scan on customers  (cost=101814 rows=998586) (actual time=0.21..233 rows=1e+6 loops=1)\n",
+    "before_total_cost": 203628.0,
+    "after_total_cost": 203628.0,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Sort: customers.date_became_customer  (cost=101814 rows=998586) (actual time=551..589 rows=1e+6 loops=1)\n    -> Table scan on customers  (cost=101814 rows=998586) (actual time=0.21..233 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Sort: customers.date_became_customer  (cost=101814 rows=998586) (actual time=551..589 rows=1e+6 loops=1)\n    -> Table scan on customers  (cost=101814 rows=998586) (actual time=0.21..233 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Sort: customers.date_became_customer  (cost=101814 rows=998586) (actual time=551..589 rows=1e+6 loops=1)\n    -> Table scan on customers  (cost=101814 rows=998586) (actual time=0.21..233 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Sort: customers.date_became_customer  (cost=101814 rows=998586) (actual time=551..589 rows=1e+6 loops=1)\n    -> Table scan on customers  (cost=101814 rows=998586) (actual time=0.21..233 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Sort: customers.date_became_customer  (cost=101814 rows=998586) (actual time=551..589 rows=1e+6 loops=1)\n    -> Table scan on customers  (cost=101814 rows=998586) (actual time=0.21..233 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Sort: customers.date_became_customer  (cost=101814 rows=998586) (actual time=551..589 rows=1e+6 loops=1)\n    -> Table scan on customers  (cost=101814 rows=998586) (actual time=0.21..233 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q12.txt": {
+    "final_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+    "before_total_cost": 301044.0,
+    "after_total_cost": 301044.0,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 5 row(s)  (cost=100348 rows=5) (actual time=228..228 rows=5 loops=1)\n    -> Sort: customers.date_became_customer, limit input to 5 row(s) per chunk  (cost=100348 rows=998586) (actual time=228..228 rows=5 loops=1)\n        -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0461..170 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q13.txt": {
+    "final_plan_text": "-> Limit: 1 row(s)  (actual time=421..421 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=421..421 rows=2 loops=1)\n            -> Aggregate using temporary table  (actual time=421..421 rows=2 loops=1)\n                -> Table scan on customers  (cost=100348 rows=998586) (actual time=1.01..161 rows=1e+6 loops=1)\n",
+    "before_total_cost": 102032.0,
+    "after_total_cost": 102032.0,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=421..421 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=421..421 rows=2 loops=1)\n            -> Aggregate using temporary table  (actual time=421..421 rows=2 loops=1)\n                -> Table scan on customers  (cost=100348 rows=998586) (actual time=1.01..161 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=421..421 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=421..421 rows=2 loops=1)\n            -> Aggregate using temporary table  (actual time=421..421 rows=2 loops=1)\n                -> Table scan on customers  (cost=100348 rows=998586) (actual time=1.01..161 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=421..421 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=421..421 rows=2 loops=1)\n            -> Aggregate using temporary table  (actual time=421..421 rows=2 loops=1)\n                -> Table scan on customers  (cost=100348 rows=998586) (actual time=1.01..161 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=421..421 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=421..421 rows=2 loops=1)\n            -> Aggregate using temporary table  (actual time=421..421 rows=2 loops=1)\n                -> Table scan on customers  (cost=100348 rows=998586) (actual time=1.01..161 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=421..421 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=421..421 rows=2 loops=1)\n            -> Aggregate using temporary table  (actual time=421..421 rows=2 loops=1)\n                -> Table scan on customers  (cost=100348 rows=998586) (actual time=1.01..161 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=421..421 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=421..421 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=421..421 rows=2 loops=1)\n            -> Aggregate using temporary table  (actual time=421..421 rows=2 loops=1)\n                -> Table scan on customers  (cost=100348 rows=998586) (actual time=1.01..161 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q14.txt": {
+    "final_plan_text": "-> Sort: delivery_routes.route_name  (cost=101467 rows=998968) (actual time=300..329 rows=999999 loops=1)\n    -> Table scan on delivery_routes  (cost=101467 rows=998968) (actual time=0.203..161 rows=999999 loops=1)\n",
+    "before_total_cost": 202934.0,
+    "after_total_cost": 202934.0,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Sort: delivery_routes.route_name  (cost=101467 rows=998968) (actual time=300..329 rows=999999 loops=1)\n    -> Table scan on delivery_routes  (cost=101467 rows=998968) (actual time=0.203..161 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Sort: delivery_routes.route_name  (cost=101467 rows=998968) (actual time=300..329 rows=999999 loops=1)\n    -> Table scan on delivery_routes  (cost=101467 rows=998968) (actual time=0.203..161 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Sort: delivery_routes.route_name  (cost=101467 rows=998968) (actual time=300..329 rows=999999 loops=1)\n    -> Table scan on delivery_routes  (cost=101467 rows=998968) (actual time=0.203..161 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Sort: delivery_routes.route_name  (cost=101467 rows=998968) (actual time=300..329 rows=999999 loops=1)\n    -> Table scan on delivery_routes  (cost=101467 rows=998968) (actual time=0.203..161 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Sort: delivery_routes.route_name  (cost=101467 rows=998968) (actual time=300..329 rows=999999 loops=1)\n    -> Table scan on delivery_routes  (cost=101467 rows=998968) (actual time=0.203..161 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Sort: delivery_routes.route_name  (cost=101467 rows=998968) (actual time=300..329 rows=999999 loops=1)\n    -> Table scan on delivery_routes  (cost=101467 rows=998968) (actual time=0.203..161 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q15.txt": {
+    "final_plan_text": "-> Limit: 1 row(s)  (actual time=0.108..0.108 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.107..0.107 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=0.097..0.0972 rows=1 loops=1)\n            -> Aggregate using temporary table  (actual time=0.0955..0.0955 rows=1 loops=1)\n                -> Nested loop inner join  (cost=1.45 rows=1) (actual time=0.0765..0.0796 rows=1 loops=1)\n                    -> Covering index scan on t2 using route_id  (cost=1.1 rows=1) (actual time=0.0567..0.0595 rows=1 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (route_id=t2.route_id)  (cost=0.35 rows=1) (actual time=0.0177..0.0178 rows=1 loops=1)\n",
+    "before_total_cost": 3.3077,
+    "after_total_cost": 3.3077,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=0.108..0.108 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.107..0.107 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=0.097..0.0972 rows=1 loops=1)\n            -> Aggregate using temporary table  (actual time=0.0955..0.0955 rows=1 loops=1)\n                -> Nested loop inner join  (cost=1.45 rows=1) (actual time=0.0765..0.0796 rows=1 loops=1)\n                    -> Covering index scan on t2 using route_id  (cost=1.1 rows=1) (actual time=0.0567..0.0595 rows=1 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (route_id=t2.route_id)  (cost=0.35 rows=1) (actual time=0.0177..0.0178 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=0.108..0.108 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.107..0.107 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=0.097..0.0972 rows=1 loops=1)\n            -> Aggregate using temporary table  (actual time=0.0955..0.0955 rows=1 loops=1)\n                -> Nested loop inner join  (cost=1.45 rows=1) (actual time=0.0765..0.0796 rows=1 loops=1)\n                    -> Covering index scan on t2 using route_id  (cost=1.1 rows=1) (actual time=0.0567..0.0595 rows=1 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (route_id=t2.route_id)  (cost=0.35 rows=1) (actual time=0.0177..0.0178 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=0.108..0.108 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.107..0.107 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=0.097..0.0972 rows=1 loops=1)\n            -> Aggregate using temporary table  (actual time=0.0955..0.0955 rows=1 loops=1)\n                -> Nested loop inner join  (cost=1.45 rows=1) (actual time=0.0765..0.0796 rows=1 loops=1)\n                    -> Covering index scan on t2 using route_id  (cost=1.1 rows=1) (actual time=0.0567..0.0595 rows=1 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (route_id=t2.route_id)  (cost=0.35 rows=1) (actual time=0.0177..0.0178 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=0.108..0.108 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.107..0.107 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=0.097..0.0972 rows=1 loops=1)\n            -> Aggregate using temporary table  (actual time=0.0955..0.0955 rows=1 loops=1)\n                -> Nested loop inner join  (cost=1.45 rows=1) (actual time=0.0765..0.0796 rows=1 loops=1)\n                    -> Covering index scan on t2 using route_id  (cost=1.1 rows=1) (actual time=0.0567..0.0595 rows=1 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (route_id=t2.route_id)  (cost=0.35 rows=1) (actual time=0.0177..0.0178 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=0.108..0.108 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.107..0.107 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=0.097..0.0972 rows=1 loops=1)\n            -> Aggregate using temporary table  (actual time=0.0955..0.0955 rows=1 loops=1)\n                -> Nested loop inner join  (cost=1.45 rows=1) (actual time=0.0765..0.0796 rows=1 loops=1)\n                    -> Covering index scan on t2 using route_id  (cost=1.1 rows=1) (actual time=0.0567..0.0595 rows=1 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (route_id=t2.route_id)  (cost=0.35 rows=1) (actual time=0.0177..0.0178 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=0.108..0.108 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=0.107..0.107 rows=1 loops=1)\n        -> Table scan on <temporary>  (actual time=0.097..0.0972 rows=1 loops=1)\n            -> Aggregate using temporary table  (actual time=0.0955..0.0955 rows=1 loops=1)\n                -> Nested loop inner join  (cost=1.45 rows=1) (actual time=0.0765..0.0796 rows=1 loops=1)\n                    -> Covering index scan on t2 using route_id  (cost=1.1 rows=1) (actual time=0.0567..0.0595 rows=1 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (route_id=t2.route_id)  (cost=0.35 rows=1) (actual time=0.0177..0.0178 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q16.txt": {
+    "final_plan_text": "-> Table scan on <temporary>  (rows=9796)\n    -> Aggregate using temporary table  (rows=9796)\n        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=0.262..1343 rows=1e+6 loops=1)\n            -> Table scan on t1  (cost=101950 rows=994704) (actual time=0.128..467 rows=1e+6 loops=1)\n            -> Single-row index lookup on t2 using PRIMARY (address_id=t1.address_id)  (cost=1 rows=1) (actual time=739e-6..760e-6 rows=1 loops=1e+6)",
+    "before_total_cost": 1311623.0,
+    "after_total_cost": 1301951.0,
+    "delta": -9672.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (actual time=4835..4837 rows=9796 loops=1)\n    -> Aggregate using temporary table  (actual time=4835..4835 rows=9796 loops=1)\n        -> Nested loop inner join  (cost=1.2e+6 rows=994704) (actual time=0.262..1343 rows=1e+6 loops=1)\n            -> Table scan on t1  (cost=101950 rows=994704) (actual time=0.128..467 rows=1e+6 loops=1)\n            -> Single-row index lookup on t2 using PRIMARY (address_id=t1.address_id)  (cost=1 rows=1) (actual time=739e-6..760e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (actual time=4835..4837 rows=9796 loops=1)\n    -> Aggregate using temporary table  (actual time=4835..4835 rows=9796 loops=1)\n        -> Nested loop inner join  (cost=1.2e+6 rows=994704) (actual time=0.262..1343 rows=1e+6 loops=1)\n            -> Table scan on t1  (cost=101950 rows=994704) (actual time=0.128..467 rows=1e+6 loops=1)\n            -> Single-row index lookup on t2 using PRIMARY (address_id=t1.address_id)  (cost=1 rows=1) (actual time=739e-6..760e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (rows=9796)\n    -> Aggregate using temporary table  (rows=9796)\n        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=0.262..1343 rows=1e+6 loops=1)\n            -> Table scan on t1  (cost=101950 rows=994704) (actual time=0.128..467 rows=1e+6 loops=1)\n            -> Single-row index lookup on t2 using PRIMARY (address_id=t1.address_id)  (cost=1 rows=1) (actual time=739e-6..760e-6 rows=1 loops=1e+6)",
+          "original_total_cost": 1301951.0,
+          "new_total_cost": 1301951.0,
+          "delta": 0.0,
+          "note": "移除旧表 JOIN，替换为新表扫描（忽略 keep_old）"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (rows=9796)\n    -> Aggregate using temporary table  (rows=9796)\n        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=0.262..1343 rows=1e+6 loops=1)\n            -> Table scan on t1  (cost=101950 rows=994704) (actual time=0.128..467 rows=1e+6 loops=1)\n            -> Single-row index lookup on t2 using PRIMARY (address_id=t1.address_id)  (cost=1 rows=1) (actual time=739e-6..760e-6 rows=1 loops=1e+6)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (rows=9796)\n    -> Aggregate using temporary table  (rows=9796)\n        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=0.262..1343 rows=1e+6 loops=1)\n            -> Table scan on t1  (cost=101950 rows=994704) (actual time=0.128..467 rows=1e+6 loops=1)\n            -> Single-row index lookup on t2 using PRIMARY (address_id=t1.address_id)  (cost=1 rows=1) (actual time=739e-6..760e-6 rows=1 loops=1e+6)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (rows=9796)\n    -> Aggregate using temporary table  (rows=9796)\n        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=0.262..1343 rows=1e+6 loops=1)\n            -> Table scan on t1  (cost=101950 rows=994704) (actual time=0.128..467 rows=1e+6 loops=1)\n            -> Single-row index lookup on t2 using PRIMARY (address_id=t1.address_id)  (cost=1 rows=1) (actual time=739e-6..760e-6 rows=1 loops=1e+6)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q2.txt": {
+    "final_plan_text": "-> Limit: 1 row(s)  (actual time=709..709 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=709..709 rows=1 loops=1)\n        -> Stream results  (cost=1.29e+6 rows=10199) (actual time=0.261..707 rows=10001 loops=1)\n            -> Group aggregate: count(0)  (cost=1.29e+6 rows=10199) (actual time=0.255..705 rows=10001 loops=1)\n                -> Nested loop inner join  (cost=1.19e+6 rows=998447) (actual time=0.164..658 rows=1e+6 loops=1)\n                    -> Covering index scan on t2 using product_id  (cost=100507 rows=998447) (actual time=0.142..423 rows=1e+6 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (product_id=t2.product_id)  (cost=0.992 rows=1) (actual time=90.5e-6..113e-6 rows=1 loops=1e+6)\n",
+    "before_total_cost": 3871925.992,
+    "after_total_cost": 3871925.992,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=709..709 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=709..709 rows=1 loops=1)\n        -> Stream results  (cost=1.29e+6 rows=10199) (actual time=0.261..707 rows=10001 loops=1)\n            -> Group aggregate: count(0)  (cost=1.29e+6 rows=10199) (actual time=0.255..705 rows=10001 loops=1)\n                -> Nested loop inner join  (cost=1.19e+6 rows=998447) (actual time=0.164..658 rows=1e+6 loops=1)\n                    -> Covering index scan on t2 using product_id  (cost=100507 rows=998447) (actual time=0.142..423 rows=1e+6 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (product_id=t2.product_id)  (cost=0.992 rows=1) (actual time=90.5e-6..113e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=709..709 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=709..709 rows=1 loops=1)\n        -> Stream results  (cost=1.29e+6 rows=10199) (actual time=0.261..707 rows=10001 loops=1)\n            -> Group aggregate: count(0)  (cost=1.29e+6 rows=10199) (actual time=0.255..705 rows=10001 loops=1)\n                -> Nested loop inner join  (cost=1.19e+6 rows=998447) (actual time=0.164..658 rows=1e+6 loops=1)\n                    -> Covering index scan on t2 using product_id  (cost=100507 rows=998447) (actual time=0.142..423 rows=1e+6 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (product_id=t2.product_id)  (cost=0.992 rows=1) (actual time=90.5e-6..113e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=709..709 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=709..709 rows=1 loops=1)\n        -> Stream results  (cost=1.29e+6 rows=10199) (actual time=0.261..707 rows=10001 loops=1)\n            -> Group aggregate: count(0)  (cost=1.29e+6 rows=10199) (actual time=0.255..705 rows=10001 loops=1)\n                -> Nested loop inner join  (cost=1.19e+6 rows=998447) (actual time=0.164..658 rows=1e+6 loops=1)\n                    -> Covering index scan on t2 using product_id  (cost=100507 rows=998447) (actual time=0.142..423 rows=1e+6 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (product_id=t2.product_id)  (cost=0.992 rows=1) (actual time=90.5e-6..113e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=709..709 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=709..709 rows=1 loops=1)\n        -> Stream results  (cost=1.29e+6 rows=10199) (actual time=0.261..707 rows=10001 loops=1)\n            -> Group aggregate: count(0)  (cost=1.29e+6 rows=10199) (actual time=0.255..705 rows=10001 loops=1)\n                -> Nested loop inner join  (cost=1.19e+6 rows=998447) (actual time=0.164..658 rows=1e+6 loops=1)\n                    -> Covering index scan on t2 using product_id  (cost=100507 rows=998447) (actual time=0.142..423 rows=1e+6 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (product_id=t2.product_id)  (cost=0.992 rows=1) (actual time=90.5e-6..113e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=709..709 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=709..709 rows=1 loops=1)\n        -> Stream results  (cost=1.29e+6 rows=10199) (actual time=0.261..707 rows=10001 loops=1)\n            -> Group aggregate: count(0)  (cost=1.29e+6 rows=10199) (actual time=0.255..705 rows=10001 loops=1)\n                -> Nested loop inner join  (cost=1.19e+6 rows=998447) (actual time=0.164..658 rows=1e+6 loops=1)\n                    -> Covering index scan on t2 using product_id  (cost=100507 rows=998447) (actual time=0.142..423 rows=1e+6 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (product_id=t2.product_id)  (cost=0.992 rows=1) (actual time=90.5e-6..113e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (actual time=709..709 rows=1 loops=1)\n    -> Sort: `count(0)` DESC, limit input to 1 row(s) per chunk  (actual time=709..709 rows=1 loops=1)\n        -> Stream results  (cost=1.29e+6 rows=10199) (actual time=0.261..707 rows=10001 loops=1)\n            -> Group aggregate: count(0)  (cost=1.29e+6 rows=10199) (actual time=0.255..705 rows=10001 loops=1)\n                -> Nested loop inner join  (cost=1.19e+6 rows=998447) (actual time=0.164..658 rows=1e+6 loops=1)\n                    -> Covering index scan on t2 using product_id  (cost=100507 rows=998447) (actual time=0.142..423 rows=1e+6 loops=1)\n                    -> Single-row index lookup on t1 using PRIMARY (product_id=t2.product_id)  (cost=0.992 rows=1) (actual time=90.5e-6..113e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q3.txt": {
+    "final_plan_text": "-> Count rows in customers  (actual time=48.2..48.2 rows=1 loops=1)\n",
+    "before_total_cost": 48.2,
+    "after_total_cost": 48.2,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Count rows in customers  (actual time=48.2..48.2 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Count rows in customers  (actual time=48.2..48.2 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Count rows in customers  (actual time=48.2..48.2 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Count rows in customers  (actual time=48.2..48.2 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Count rows in customers  (actual time=48.2..48.2 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Count rows in customers  (actual time=48.2..48.2 rows=1 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q4.txt": {
+    "final_plan_text": "-> Aggregate: count(distinct customers.payment_method)  (cost=200206 rows=1) (actual time=211..211 rows=1 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.85..133 rows=1e+6 loops=1)\n",
+    "before_total_cost": 300554.0,
+    "after_total_cost": 300554.0,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Aggregate: count(distinct customers.payment_method)  (cost=200206 rows=1) (actual time=211..211 rows=1 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.85..133 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Aggregate: count(distinct customers.payment_method)  (cost=200206 rows=1) (actual time=211..211 rows=1 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.85..133 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Aggregate: count(distinct customers.payment_method)  (cost=200206 rows=1) (actual time=211..211 rows=1 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.85..133 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Aggregate: count(distinct customers.payment_method)  (cost=200206 rows=1) (actual time=211..211 rows=1 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.85..133 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Aggregate: count(distinct customers.payment_method)  (cost=200206 rows=1) (actual time=211..211 rows=1 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.85..133 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Aggregate: count(distinct customers.payment_method)  (cost=200206 rows=1) (actual time=211..211 rows=1 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.85..133 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q5.txt": {
+    "final_plan_text": "-> Sort: trucks.truck_licence_number  (cost=101467 rows=998968) (actual time=327..359 rows=999999 loops=1)\n    -> Table scan on trucks  (cost=101467 rows=998968) (actual time=0.209..185 rows=999999 loops=1)\n",
+    "before_total_cost": 202934.0,
+    "after_total_cost": 202934.0,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Sort: trucks.truck_licence_number  (cost=101467 rows=998968) (actual time=327..359 rows=999999 loops=1)\n    -> Table scan on trucks  (cost=101467 rows=998968) (actual time=0.209..185 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Sort: trucks.truck_licence_number  (cost=101467 rows=998968) (actual time=327..359 rows=999999 loops=1)\n    -> Table scan on trucks  (cost=101467 rows=998968) (actual time=0.209..185 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Sort: trucks.truck_licence_number  (cost=101467 rows=998968) (actual time=327..359 rows=999999 loops=1)\n    -> Table scan on trucks  (cost=101467 rows=998968) (actual time=0.209..185 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Sort: trucks.truck_licence_number  (cost=101467 rows=998968) (actual time=327..359 rows=999999 loops=1)\n    -> Table scan on trucks  (cost=101467 rows=998968) (actual time=0.209..185 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Sort: trucks.truck_licence_number  (cost=101467 rows=998968) (actual time=327..359 rows=999999 loops=1)\n    -> Table scan on trucks  (cost=101467 rows=998968) (actual time=0.209..185 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Sort: trucks.truck_licence_number  (cost=101467 rows=998968) (actual time=327..359 rows=999999 loops=1)\n    -> Table scan on trucks  (cost=101467 rows=998968) (actual time=0.209..185 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q6.txt": {
+    "final_plan_text": "-> Limit: 1 row(s)  (cost=103231 rows=1) (actual time=425..425 rows=1 loops=1)\n    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=103231 rows=924591) (actual time=425..425 rows=1 loops=1)\n        -> Table scan on products  (cost=103231 rows=924591) (actual time=0.685..297 rows=999999 loops=1)\n",
+    "before_total_cost": 309693.0,
+    "after_total_cost": 309693.0,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (cost=103231 rows=1) (actual time=425..425 rows=1 loops=1)\n    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=103231 rows=924591) (actual time=425..425 rows=1 loops=1)\n        -> Table scan on products  (cost=103231 rows=924591) (actual time=0.685..297 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (cost=103231 rows=1) (actual time=425..425 rows=1 loops=1)\n    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=103231 rows=924591) (actual time=425..425 rows=1 loops=1)\n        -> Table scan on products  (cost=103231 rows=924591) (actual time=0.685..297 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "缺少列宽元数据，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (cost=103231 rows=1) (actual time=425..425 rows=1 loops=1)\n    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=103231 rows=924591) (actual time=425..425 rows=1 loops=1)\n        -> Table scan on products  (cost=103231 rows=924591) (actual time=0.685..297 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (cost=103231 rows=1) (actual time=425..425 rows=1 loops=1)\n    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=103231 rows=924591) (actual time=425..425 rows=1 loops=1)\n        -> Table scan on products  (cost=103231 rows=924591) (actual time=0.685..297 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (cost=103231 rows=1) (actual time=425..425 rows=1 loops=1)\n    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=103231 rows=924591) (actual time=425..425 rows=1 loops=1)\n        -> Table scan on products  (cost=103231 rows=924591) (actual time=0.685..297 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Limit: 1 row(s)  (cost=103231 rows=1) (actual time=425..425 rows=1 loops=1)\n    -> Sort: products.product_price DESC, limit input to 1 row(s) per chunk  (cost=103231 rows=924591) (actual time=425..425 rows=1 loops=1)\n        -> Table scan on products  (cost=103231 rows=924591) (actual time=0.685..297 rows=999999 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q7.txt": {
+    "final_plan_text": "-> Table scan on <temporary>  (cost=199e+9..211e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n    -> Temporary table with deduplication  (cost=199e+9..199e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n        -> Nested loop antijoin  (cost=9.93e+10 rows=9.93e+11) (actual time=1209..1726 rows=1e+6 loops=1)\n            -> Table scan on c  (cost=101814 rows=998586) (actual time=0.295..205 rows=1e+6 loops=1)\n            -> Single-row index lookup on <subquery2> using <auto_distinct_key> (customer_id=c.customer_id)  (cost=1.3e+6..1.3e+6 rows=1) (actual time=0.00142..0.00142 rows=0 loops=1e+6)  (rows=0)\n                -> Materialize with deduplication  (cost=1.3e+6..1.3e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)  (rows=0)\n                    -> Filter: (ca.customer_id is not null)  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                            -> Table scan on ca  (cost=101950 rows=994704) (actual time=0.0854..474 rows=1e+6 loops=1)\n                            -> Filter: (a.state_province_county = 'California')  (cost=1 rows=1) (actual time=662e-6..662e-6 rows=0 loops=1e+6)\n                                -> Single-row index lookup on a using PRIMARY (address_id=ca.address_id)  (cost=1 rows=1) (actual time=502e-6..523e-6 rows=1 loops=1e+6)",
+    "before_total_cost": 99302608645.00142,
+    "after_total_cost": 99302608645.00142,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (cost=199e+9..211e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)\n    -> Temporary table with deduplication  (cost=199e+9..199e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)\n        -> Nested loop antijoin  (cost=99.3e+9 rows=993e+9) (actual time=1209..1726 rows=1e+6 loops=1)\n            -> Table scan on c  (cost=101814 rows=998586) (actual time=0.295..205 rows=1e+6 loops=1)\n            -> Single-row index lookup on <subquery2> using <auto_distinct_key> (customer_id=c.customer_id)  (cost=1.3e+6..1.3e+6 rows=1) (actual time=0.00142..0.00142 rows=0 loops=1e+6)\n                -> Materialize with deduplication  (cost=1.3e+6..1.3e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                    -> Filter: (ca.customer_id is not null)  (cost=1.2e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                        -> Nested loop inner join  (cost=1.2e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                            -> Table scan on ca  (cost=101950 rows=994704) (actual time=0.0854..474 rows=1e+6 loops=1)\n                            -> Filter: (a.state_province_county = 'California')  (cost=1 rows=1) (actual time=662e-6..662e-6 rows=0 loops=1e+6)\n                                -> Single-row index lookup on a using PRIMARY (address_id=ca.address_id)  (cost=1 rows=1) (actual time=502e-6..523e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (cost=199e+9..211e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)\n    -> Temporary table with deduplication  (cost=199e+9..199e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)\n        -> Nested loop antijoin  (cost=99.3e+9 rows=993e+9) (actual time=1209..1726 rows=1e+6 loops=1)\n            -> Table scan on c  (cost=101814 rows=998586) (actual time=0.295..205 rows=1e+6 loops=1)\n            -> Single-row index lookup on <subquery2> using <auto_distinct_key> (customer_id=c.customer_id)  (cost=1.3e+6..1.3e+6 rows=1) (actual time=0.00142..0.00142 rows=0 loops=1e+6)\n                -> Materialize with deduplication  (cost=1.3e+6..1.3e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                    -> Filter: (ca.customer_id is not null)  (cost=1.2e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                        -> Nested loop inner join  (cost=1.2e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                            -> Table scan on ca  (cost=101950 rows=994704) (actual time=0.0854..474 rows=1e+6 loops=1)\n                            -> Filter: (a.state_province_county = 'California')  (cost=1 rows=1) (actual time=662e-6..662e-6 rows=0 loops=1e+6)\n                                -> Single-row index lookup on a using PRIMARY (address_id=ca.address_id)  (cost=1 rows=1) (actual time=502e-6..523e-6 rows=1 loops=1e+6)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (cost=199e+9..211e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n    -> Temporary table with deduplication  (cost=199e+9..199e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n        -> Nested loop antijoin  (cost=9.93e+10 rows=9.93e+11) (actual time=1209..1726 rows=1e+6 loops=1)\n            -> Table scan on c  (cost=101814 rows=998586) (actual time=0.295..205 rows=1e+6 loops=1)\n            -> Single-row index lookup on <subquery2> using <auto_distinct_key> (customer_id=c.customer_id)  (cost=1.3e+6..1.3e+6 rows=1) (actual time=0.00142..0.00142 rows=0 loops=1e+6)  (rows=0)\n                -> Materialize with deduplication  (cost=1.3e+6..1.3e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)  (rows=0)\n                    -> Filter: (ca.customer_id is not null)  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                            -> Table scan on ca  (cost=101950 rows=994704) (actual time=0.0854..474 rows=1e+6 loops=1)\n                            -> Filter: (a.state_province_county = 'California')  (cost=1 rows=1) (actual time=662e-6..662e-6 rows=0 loops=1e+6)\n                                -> Single-row index lookup on a using PRIMARY (address_id=ca.address_id)  (cost=1 rows=1) (actual time=502e-6..523e-6 rows=1 loops=1e+6)",
+          "original_total_cost": 99302603766.0,
+          "new_total_cost": 99302603766.0,
+          "delta": 0.0,
+          "note": "移除旧表 JOIN，替换为新表扫描（忽略 keep_old）"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (cost=199e+9..211e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n    -> Temporary table with deduplication  (cost=199e+9..199e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n        -> Nested loop antijoin  (cost=9.93e+10 rows=9.93e+11) (actual time=1209..1726 rows=1e+6 loops=1)\n            -> Table scan on c  (cost=101814 rows=998586) (actual time=0.295..205 rows=1e+6 loops=1)\n            -> Single-row index lookup on <subquery2> using <auto_distinct_key> (customer_id=c.customer_id)  (cost=1.3e+6..1.3e+6 rows=1) (actual time=0.00142..0.00142 rows=0 loops=1e+6)  (rows=0)\n                -> Materialize with deduplication  (cost=1.3e+6..1.3e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)  (rows=0)\n                    -> Filter: (ca.customer_id is not null)  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                            -> Table scan on ca  (cost=101950 rows=994704) (actual time=0.0854..474 rows=1e+6 loops=1)\n                            -> Filter: (a.state_province_county = 'California')  (cost=1 rows=1) (actual time=662e-6..662e-6 rows=0 loops=1e+6)\n                                -> Single-row index lookup on a using PRIMARY (address_id=ca.address_id)  (cost=1 rows=1) (actual time=502e-6..523e-6 rows=1 loops=1e+6)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (cost=199e+9..211e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n    -> Temporary table with deduplication  (cost=199e+9..199e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n        -> Nested loop antijoin  (cost=9.93e+10 rows=9.93e+11) (actual time=1209..1726 rows=1e+6 loops=1)\n            -> Table scan on c  (cost=101814 rows=998586) (actual time=0.295..205 rows=1e+6 loops=1)\n            -> Single-row index lookup on <subquery2> using <auto_distinct_key> (customer_id=c.customer_id)  (cost=1.3e+6..1.3e+6 rows=1) (actual time=0.00142..0.00142 rows=0 loops=1e+6)  (rows=0)\n                -> Materialize with deduplication  (cost=1.3e+6..1.3e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)  (rows=0)\n                    -> Filter: (ca.customer_id is not null)  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                            -> Table scan on ca  (cost=101950 rows=994704) (actual time=0.0854..474 rows=1e+6 loops=1)\n                            -> Filter: (a.state_province_county = 'California')  (cost=1 rows=1) (actual time=662e-6..662e-6 rows=0 loops=1e+6)\n                                -> Single-row index lookup on a using PRIMARY (address_id=ca.address_id)  (cost=1 rows=1) (actual time=502e-6..523e-6 rows=1 loops=1e+6)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Table scan on <temporary>  (cost=199e+9..211e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n    -> Temporary table with deduplication  (cost=199e+9..199e+9 rows=993e+9) (actual time=1835..1835 rows=2 loops=1)  (rows=2)\n        -> Nested loop antijoin  (cost=9.93e+10 rows=9.93e+11) (actual time=1209..1726 rows=1e+6 loops=1)\n            -> Table scan on c  (cost=101814 rows=998586) (actual time=0.295..205 rows=1e+6 loops=1)\n            -> Single-row index lookup on <subquery2> using <auto_distinct_key> (customer_id=c.customer_id)  (cost=1.3e+6..1.3e+6 rows=1) (actual time=0.00142..0.00142 rows=0 loops=1e+6)  (rows=0)\n                -> Materialize with deduplication  (cost=1.3e+6..1.3e+6 rows=994704) (actual time=1209..1209 rows=0 loops=1)  (rows=0)\n                    -> Filter: (ca.customer_id is not null)  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                        -> Nested loop inner join  (cost=1.2e+06 rows=994704) (actual time=1209..1209 rows=0 loops=1)\n                            -> Table scan on ca  (cost=101950 rows=994704) (actual time=0.0854..474 rows=1e+6 loops=1)\n                            -> Filter: (a.state_province_county = 'California')  (cost=1 rows=1) (actual time=662e-6..662e-6 rows=0 loops=1e+6)\n                                -> Single-row index lookup on a using PRIMARY (address_id=ca.address_id)  (cost=1 rows=1) (actual time=502e-6..523e-6 rows=1 loops=1e+6)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q8.txt": {
+    "final_plan_text": "-> Filter: (customers.payment_method = 'Visa')  (cost=100348 rows=99859) (actual time=221..221 rows=0 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0626..177 rows=1e+6 loops=1)\n",
+    "before_total_cost": 200696.0,
+    "after_total_cost": 200696.0,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Filter: (customers.payment_method = 'Visa')  (cost=100348 rows=99859) (actual time=221..221 rows=0 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0626..177 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Filter: (customers.payment_method = 'Visa')  (cost=100348 rows=99859) (actual time=221..221 rows=0 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0626..177 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Filter: (customers.payment_method = 'Visa')  (cost=100348 rows=99859) (actual time=221..221 rows=0 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0626..177 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Filter: (customers.payment_method = 'Visa')  (cost=100348 rows=99859) (actual time=221..221 rows=0 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0626..177 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Filter: (customers.payment_method = 'Visa')  (cost=100348 rows=99859) (actual time=221..221 rows=0 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0626..177 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Filter: (customers.payment_method = 'Visa')  (cost=100348 rows=99859) (actual time=221..221 rows=0 loops=1)\n    -> Table scan on customers  (cost=100348 rows=998586) (actual time=0.0626..177 rows=1e+6 loops=1)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  },
+  "q9.txt": {
+    "final_plan_text": "-> Nested loop inner join  (cost=1.23e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)",
+    "before_total_cost": 2531952.25,
+    "after_total_cost": 2531952.25,
+    "delta": 0.0,
+    "steps": [
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "TableSplit",
+        "result": {
+          "new_plan_text": "-> Nested loop inner join  (cost=1.23e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+6 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)\n",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用该表，跳过"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Nested loop inner join  (cost=1.23e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)",
+          "original_total_cost": 2531952.25,
+          "new_total_cost": 2531952.25,
+          "delta": 0.0,
+          "note": "移除旧表 JOIN，替换为新表扫描（忽略 keep_old）"
+        }
+      },
+      {
+        "op": "TableJoin",
+        "result": {
+          "new_plan_text": "-> Nested loop inner join  (cost=1.23e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "仅单表且 keep_old=True，成本不变"
+        }
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Nested loop inner join  (cost=1.23e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      },
+      {
+        "op": "RedundantColumnDrop",
+        "note": "no evaluator",
+        "plan_cost": null
+      },
+      {
+        "op": "RedundantColumnAdd",
+        "result": {
+          "new_plan_text": "-> Nested loop inner join  (cost=1.23e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n    -> Nested loop inner join  (cost=1.2e+06 rows=99470) (actual time=1204..1204 rows=0 loops=1)\n        -> Table scan on t2  (cost=101950 rows=994704) (actual time=0.15..475 rows=1e+6 loops=1)\n        -> Filter: (t3.state_province_county = 'California')  (cost=1 rows=0.1) (actual time=657e-6..657e-6 rows=0 loops=1e+6)\n            -> Single-row index lookup on t3 using PRIMARY (address_id=t2.address_id)  (cost=1 rows=1) (actual time=497e-6..518e-6 rows=1 loops=1e+6)\n    -> Single-row index lookup on t1 using PRIMARY (customer_id=t2.customer_id)  (cost=0.25 rows=1) (never executed)",
+          "original_total_cost": null,
+          "new_total_cost": null,
+          "delta": 0.0,
+          "note": "计划未引用目标表，跳过"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "actual_orders": {
+    "insert": 484,
+    "update": 484
+  },
+  "actual_order_products": {
+    "insert": 484
+  },
+  "addresses": {
+    "insert": 484,
+    "update": 484
+  },
+  "customers": {
+    "insert": 484,
+    "update": 968
+  },
+  "customer_addresses": {
+    "insert": 484
+  },
+  "order_deliveries": {
+    "insert": 484,
+    "update": 968
+  },
+  "regular_orders": {
+    "insert": 484
+  },
+  "regular_order_products": {
+    "insert": 484
+  },
+  "products": {
+    "update": 484
+  }
+}

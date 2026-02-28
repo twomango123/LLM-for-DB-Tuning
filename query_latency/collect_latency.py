@@ -25,14 +25,11 @@ def _opt_str(cfg, key, default=None):
     return s
 
 
-def read_sql_statement(sql_path: Path) -> str:
+def read_sql_statements(sql_path: Path) -> list[str]:
     text = sql_path.read_text(encoding="utf-8", errors="ignore")
     text = text.lstrip("\ufeff\n\r ")
     parts = [p.strip() for p in text.split(";")]
-    for p in parts:
-        if p:
-            return p
-    return text.strip()
+    return [p for p in parts if p]
 
 
 def natural_query_key(path: Path):
@@ -61,6 +58,13 @@ def measure_query(driver: MySQLDriver, sql: str) -> float:
             raise RuntimeError("statement execution failed")
     end = time.perf_counter()
     return end - start
+
+
+def measure_statements(driver: MySQLDriver, sql_list: list[str]) -> float:
+    total = 0.0
+    for sql in sql_list:
+        total += measure_query(driver, sql)
+    return total
 
 
 def build_driver_config(cfg_section):
@@ -251,10 +255,10 @@ def main():
                 continue
             for idx in range(count):
                 try:
-                    sql = read_sql_statement(path)
-                    if not sql:
+                    sql_list = read_sql_statements(path)
+                    if not sql_list:
                         raise ValueError("空的 SQL 语句")
-                    elapsed_s = measure_query(driver, sql)
+                    elapsed_s = measure_statements(driver, sql_list)
                     elapsed_ms = int(round(elapsed_s * 1000))
                     rec = totals.setdefault(qid, {"count": 0, "total_ms": 0})
                     rec["count"] += 1
@@ -294,10 +298,10 @@ def main():
             query_id = m.group(1) if m else stem
 
             try:
-                sql = read_sql_statement(path)
-                if not sql:
+                sql_list = read_sql_statements(path)
+                if not sql_list:
                     raise ValueError("空的 SQL 语句")
-                elapsed_s = measure_query(driver, sql)
+                elapsed_s = measure_statements(driver, sql_list)
                 elapsed_ms = int(round(elapsed_s * 1000))
                 ok_rows.append((query_id, str(elapsed_ms)))
                 print(f"[OK] {query_id} -> {elapsed_ms} ms  ({path})")

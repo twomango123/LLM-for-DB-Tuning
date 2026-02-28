@@ -1,0 +1,16 @@
+{
+  "spider": {
+    "schema_sql": "output_dir/schema/schema.sql",
+    "sql_dir": "output_dir/sql",
+    "out_dir": "stats/spider",
+    "exec_counts": "output_dir/sql/high_frequencies.csv",
+    "dml_time_cache": "debug/part2/dml_time_cache.json"
+  },
+  "chbenchmark": {
+    "schema_sql": "DataBase/cleaned_sql/schema.sql",
+    "sql_dir": "Data/cleaned_sql/query_and_update",
+    "out_dir": "stats/chbenchmark",
+    "exec_counts": "Data/cleaned_sql/query_and_update/sample_execution_counts_chbench.csv",
+    "dml_time_cache": "debug/part2/dml_time_cache.json"
+  }
+}

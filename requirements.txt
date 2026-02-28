@@ -5,3 +5,4 @@ mysql-connector-python>=8.0.33
 pandas>=1.5.0
 
 python-dotenv>=1.0.0
+openai>=1.30.0
